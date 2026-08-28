@@ -58,4 +58,11 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 ## 📅 [2026-08-28 16:38] - GitHub Push İşlemi
 - Sayfa yönlendirme (routing), alt sayfalar (`gunlugum`, `defterlerim`, `ajandam`) ve ilgili tüm kodlar kullanıcı onayıyla GitHub deposuna (`origin main`) push edildi.
 
+---
+
+## 📅 [2026-08-28 16:43] - Web Desteği & Paket Kurulumu
+- **Eklenen Web Paketleri:** `react-dom`, `react-native-web` ve `@expo/metro-runtime` paketleri kuruldu.
+- **Web Sunucusu:** `npx expo start --web` komutu ile Expo Web sunucusu `http://localhost:8081` üzerinde aktif edildi.
+
+
 
