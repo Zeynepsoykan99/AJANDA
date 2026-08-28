@@ -1,19 +1,21 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import CircleMenuButton from '../components/CircleMenuButton';
 import { COLORS } from '../constants/colors';
 
 export default function HomeScreen() {
+  const router = useRouter();
+
   const menuItems = [
-    { id: 'gunlugum', label: 'günlüğüm' },
-    { id: 'defterlerim', label: 'defterlerim' },
-    { id: 'ajandam', label: 'ajandam' },
+    { id: 'gunlugum', label: 'günlüğüm', route: '/gunlugum' },
+    { id: 'defterlerim', label: 'defterlerim', route: '/defterlerim' },
+    { id: 'ajandam', label: 'ajandam', route: '/ajandam' },
   ];
 
   const handleMenuPress = (item) => {
-    // İlerideki sayfa geçişleri ve işlemler için tıklama dinleyicisi
-    console.log(`${item.label} seçildi`);
+    router.push(item.route);
   };
 
   return (

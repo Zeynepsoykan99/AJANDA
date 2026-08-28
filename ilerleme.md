@@ -37,3 +37,19 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ## 📅 [2026-08-28 16:08] - GitHub Push İşlemi
 - Kullanıcıdan açık onay alındıktan sonra tüm proje kaynak kodları ve geliştirme günlüğü GitHub uzak deposuna (`origin main`) başarıyla push edildi (`https://github.com/Zeynepsoykan99/AJANDA`).
+
+---
+
+## 📅 [2026-08-28 16:22] - Sayfa Yönlendirme (Routing) ve Alt Sayfaların Oluşturulması
+
+### 🚀 Yapılan İşlemler ve Eklenen Özellikler
+- **Yeni Sayfaların Oluşturulması:**
+  - `app/gunlugum.js`: Pudra pembe arka plana, ortada koyu pembe "günlüğüm" başlığına ve sol üstte ana ekrana dönen "← Geri" butonuna sahip sayfa oluşturuldu.
+  - `app/defterlerim.js`: Pudra pembe arka plana, ortada koyu pembe "defterlerim" başlığına ve sol üstte ana ekrana dönen "← Geri" butonuna sahip sayfa oluşturuldu.
+  - `app/ajandam.js`: Pudra pembe arka plana, ortada koyu pembe "ajandam" başlığına ve sol üstte ana ekrana dönen "← Geri" butonuna sahip sayfa oluşturuldu.
+- **Ana Ekran Bağlantıları:**
+  - `app/index.js`: `expo-router`'ın `useRouter` hook'u entegre edildi.
+  - "günlüğüm", "defterlerim" ve "ajandam" dairesel butonlarına `onPress` etkileşimi atanarak ilgili alt sayfalara (`/gunlugum`, `/defterlerim`, `/ajandam`) sorunsuz geçiş sağlandı.
+- **Test ve Doğrulama:**
+  - `npx expo export --dump-sourcemap` ile tüm yönlendirme yapısı, iOS ve Android paket derlemeleri sıfır hata ile test edilip onaylandı.
+
