@@ -3,15 +3,16 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import CircleMenuButton from '../components/CircleMenuButton';
-import { COLORS } from '../constants/colors';
+import { useTheme } from '../context/ThemeContext';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
 
   const menuItems = [
-    { id: 'gunlugum', label: 'günlüğüm', route: '/gunlugum' },
-    { id: 'defterlerim', label: 'defterlerim', route: '/defterlerim' },
-    { id: 'ajandam', label: 'ajandam', route: '/ajandam' },
+    { id: 'gunlugum', label: 'günlüğüm', route: '/gunlugum', icon: 'book-heart-outline' },
+    { id: 'ajandam', label: 'ajandam', route: '/ajandam', icon: 'calendar-heart' },
+    { id: 'notlarim', label: 'notlarım', route: '/defterlerim', icon: 'notebook-outline' },
   ];
 
   const handleMenuPress = (item) => {
@@ -19,15 +20,15 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {/* Başlık Bölümü */}
         <View style={styles.headerContainer}>
-          <Text style={styles.appTitle}>AJANDA</Text>
-          <View style={styles.titleUnderline} />
+          <Text style={[styles.appTitle, { color: colors.textPrimary }]}>AJANDA</Text>
+          <View style={[styles.titleUnderline, { backgroundColor: colors.border }]} />
         </View>
 
         {/* Dairesel Butonlar Listesi */}
@@ -36,6 +37,7 @@ export default function HomeScreen() {
             <CircleMenuButton
               key={item.id}
               label={item.label}
+              iconName={item.icon}
               size={130}
               onPress={() => handleMenuPress(item)}
             />
@@ -49,7 +51,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.powderPink.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -65,14 +66,12 @@ const styles = StyleSheet.create({
   appTitle: {
     fontSize: 26,
     fontWeight: '700',
-    color: COLORS.darkPink.primary,
     letterSpacing: 4,
     textTransform: 'uppercase',
   },
   titleUnderline: {
     width: 48,
     height: 3,
-    backgroundColor: COLORS.powderPink.border,
     borderRadius: 2,
     marginTop: 6,
   },

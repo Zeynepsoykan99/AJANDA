@@ -69,6 +69,63 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 ## 📅 [2026-08-30 11:23] - GitHub Push İşlemi
 - Kullanıcı onayıyla Web desteği paketleri (`react-dom`, `react-native-web`, `@expo/metro-runtime`) ve güncellenen yapılandırma dosyaları GitHub uzak deposuna (`origin main`) push edildi.
 
+---
 
+## 📅 [2026-08-30 12:06 - 12:20] - Ajandam Modülü: Tema Motoru, Kapak Sistemi, Dinamik Sayfalar ve Sticker Altyapısı
 
+### 🚀 Mimari Plan ve Onay
+- Kapsamlı mimari plan oluşturularak kullanıcı onayına sunuldu ve onaylandı.
+- 6 fazlı uygulama planı (Altyapı → Ana Ekran → Kapak → Sayfa → Sticker → Finalizasyon) takip edildi.
 
+### 📦 Paket Kurulumları
+- `react-native-gesture-handler` (~2.24.0): Sticker sürükle-bırak gesture yönetimi
+- `react-native-reanimated` (~3.18.0): Akıcı sticker animasyonları
+- `babel.config.js`: `react-native-reanimated/plugin` eklendi (son plugin olarak)
+
+### 🎨 Faz 1: Tema Motoru (Theme Engine) Altyapısı
+- **[NEW] `constants/themes.js`**: 5 adet girly tema tanımı (Pudra Pembe, Lavanta, Şeftali, Nane Yeşili, Bebek Mavisi). Her tema ID, isim, emoji ve 10 renk değeri içerir. `getThemeById()` ve `getAllThemes()` yardımcı fonksiyonları.
+- **[NEW] `context/ThemeContext.js`**: React Context tabanlı `ThemeProvider` ve `useTheme()` hook. AsyncStorage'dan kaydedilmiş temayı yükler, tema değişikliğinde AsyncStorage'a kaydeder.
+- **[NEW] `services/storageService.js`**: AsyncStorage CRUD servisi. Tema (`@ajanda_theme`), kapak (`@ajanda_cover`) ve sayfalar (`@ajanda_pages`) için get/set/add/update/delete/reorder fonksiyonları. Tüm işlemler try/catch sarılı.
+- **[MODIFY] `app/_layout.js`**: `GestureHandlerRootView` ve `ThemeProvider` sarmalayıcıları eklendi. Statik `COLORS` yerine dinamik `useTheme().colors` kullanımına geçildi.
+- **[MODIFY] `constants/colors.js`**: Artık `themes.js`'deki varsayılan temadan renkleri re-export eder (geriye dönük uyumluluk).
+
+### 🏠 Faz 2: Ana Ekran Güncellemeleri
+- **[MODIFY] `components/CircleMenuButton.js`**: `iconName` prop eklendi, `@expo/vector-icons/MaterialCommunityIcons` ile dairelerin ortasına ikon render. Statik renkler `useTheme()` hook ile değiştirildi. NativeWind className kullanımı kaldırıldı.
+- **[MODIFY] `app/index.js`**: 3 menü öğesine ikon bilgisi eklendi (book-heart-outline, calendar-heart, notebook-outline). `defterlerim` label'ı `notlarım` olarak güncellendi (dosya adı korundu). Tema entegrasyonu tamamlandı.
+
+### 📔 Faz 3: Ajanda Kapağı (Cover) Sistemi
+- **[NEW] `constants/coverTemplates.js`**: 5 adet kapak şablonu tanımı (Çiçekli Klasik, Minimal Kalp, Yıldızlı Gece, Kelebek Bahçesi, Tatlı Kurdele). Her şablon: arka plan rengi, bordür, vurgu rengi, desen tipi (dots/hearts/stars/lines), dekorasyon ikonu ve emoji.
+- **[NEW] `components/CoverDisplay.js`**: Kapak render bileşeni. Seçili şablona göre dekoratif desen (ikon tabanlı), kullanıcı ismi, not metni ve emoji dekorasyonlarını render eder.
+- **[NEW] `components/CoverEditor.js`**: Tam ekran modal. Yatay kaydırılabilir şablon galerisi, isim/not TextInput alanları, canlı kapak önizleme ve kaydetme butonu.
+- **[MODIFY] `app/ajandam.js`**: Tamamen yeniden tasarlandı. Kapak ekranı: CoverDisplay, düzenle butonu (CoverEditor modal'ını açar), "Ajandamı Aç" butonu (/ajandam/pages'e navigasyon). AsyncStorage'dan kapak verilerini yükler/kaydeder.
+
+### 📄 Faz 4: Dinamik Sayfa Ekleme Sistemi
+- **[NEW] `constants/pageTemplates.js`**: 4 kategori (To-Do, Aylık Ajanda, Haftalık Ajanda, Boş Sayfa), her birinde 3 farklı girly şablon (toplam 12 şablon). `generatePageId()`, `createDefaultPageData()`, `getPageTemplate()`, `getTemplatesForCategory()` yardımcı fonksiyonları.
+- **[NEW] `components/pages/TodoPage.js`**: To-Do list bileşeni. Kalp/yıldız/daire checkbox stilleri, görev ekleme/silme/tamamlama, boş durum gösterimi.
+- **[NEW] `components/pages/MonthlyPage.js`**: Aylık takvim bileşeni. Ay gezinme, takvim grid, bugün vurgulama, gün bazlı etkinlik görüntüleme. Türkçe ay/gün isimleri.
+- **[NEW] `components/pages/WeeklyPage.js`**: Haftalık plan bileşeni. 7 günlük genişletilebilir (expandable) gün bölümleri, bugün vurgulama, görev ekleme/silme/tamamlama.
+- **[NEW] `components/pages/BlankPage.js`**: Boş sayfa bileşeni. Çizgili, noktalı veya düz arka plan seçenekleri ile tam ekran serbest metin alanı.
+- **[NEW] `components/AddPageModal.js`**: 3 adımlı sihirbaz: (1) Kategori seç (2x2 ikon kartları), (2) Şablon seç (liste), (3) Başlık gir + oluştur.
+- **[NEW] `components/PageThumbnail.js`**: Sayfa önizleme kartı. Kategori ikonu, başlık, kategori badge'i, özet bilgi (görev sayısı/etkinlik sayısı vb.) ve oluşturma tarihi.
+- **[NEW] `app/ajandam/_layout.js`**: Ajanda iç Stack navigasyonu (slide_from_right animasyonu).
+- **[NEW] `app/ajandam/pages.js`**: Sayfa listesi ekranı. FlatList ile sayfa kartları, boş durum gösterimi, FAB butonu (AddPageModal'ı açar), uzun basarak sayfa silme (Alert ile onay).
+- **[NEW] `app/ajandam/[pageId].js`**: Dinamik sayfa görüntüleme. Kategoriye göre doğru bileşeni render eder. Debounced auto-save (500ms). Sticker ekleme/taşıma/silme entegrasyonu. Üst barda geri, başlık ve sticker menü butonu.
+
+### 🎀 Faz 5: Sticker (Çıkartma) Altyapısı
+- **[NEW] `constants/stickerPacks.js`**: 6 sticker paketi (Kalpler, Yıldızlar, Doğa, Dekoratif, Yiyecekler, Ruh Hali), her pakette 6-8 emoji sticker (toplam 46 sticker).
+- **[NEW] `components/stickers/DraggableSticker.js`**: `react-native-gesture-handler` Pan gesture ile sürükle-bırak, `react-native-reanimated` ile spring ölçekleme animasyonu, uzun basma (600ms) ile silme.
+- **[NEW] `components/stickers/StickerCanvas.js`**: Sayfa içeriğinin üzerine absolute overlay. `pointerEvents="box-none"` ile sticker olmayan alanlara dokunma geçişi.
+- **[NEW] `components/stickers/StickerMenu.js`**: Alt kısımdan açılan modal. Yatay kategori sekmeleri ve emoji sticker grid'i.
+
+### 📁 Yeni Dosya Yapısı Özeti
+```
+[NEW]  constants/themes.js, coverTemplates.js, pageTemplates.js, stickerPacks.js
+[NEW]  context/ThemeContext.js
+[NEW]  services/storageService.js
+[NEW]  components/CoverDisplay.js, CoverEditor.js, AddPageModal.js, PageThumbnail.js
+[NEW]  components/pages/TodoPage.js, MonthlyPage.js, WeeklyPage.js, BlankPage.js
+[NEW]  components/stickers/DraggableSticker.js, StickerCanvas.js, StickerMenu.js
+[NEW]  app/ajandam/_layout.js, pages.js, [pageId].js
+[MODIFY] app/_layout.js, app/index.js, app/ajandam.js
+[MODIFY] constants/colors.js, babel.config.js
+```

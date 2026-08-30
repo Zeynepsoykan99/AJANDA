@@ -1,20 +1,32 @@
-﻿export const COLORS = {
+/**
+ * AJANDA - Renk Sabitleri (Geriye dönük uyumluluk)
+ *
+ * Bu dosya artık themes.js'deki varsayılan temadan renkleri re-export eder.
+ * Yeni kodlarda useTheme() hook'unu kullanmayı tercih edin.
+ */
+
+import { THEMES, DEFAULT_THEME_ID } from './themes';
+
+const defaultTheme = THEMES[DEFAULT_THEME_ID];
+
+// Eski COLORS formatıyla uyumluluk
+export const COLORS = {
   // Arka plan pudra pembe tonları
   powderPink: {
-    background: '#FDEEF2',
-    light: '#FFF5F8',
-    card: '#FFFFFF',
-    border: '#F8BBD0',
-    shadow: '#E1BEE7',
+    background: defaultTheme.colors.background,
+    light: defaultTheme.colors.backgroundLight,
+    card: defaultTheme.colors.card,
+    border: defaultTheme.colors.border,
+    shadow: defaultTheme.colors.shadow,
   },
   // Koyu pembe metin ve vurgu tonları
   darkPink: {
-    text: '#AD1457',
-    primary: '#C2185B',
-    deep: '#880E4F',
-    accent: '#D81B60',
+    text: defaultTheme.colors.textSecondary,
+    primary: defaultTheme.colors.textPrimary,
+    deep: defaultTheme.colors.textDeep,
+    accent: defaultTheme.colors.accent,
   },
-  white: '#FFFFFF',
+  white: defaultTheme.colors.white,
 };
 
 export default COLORS;
