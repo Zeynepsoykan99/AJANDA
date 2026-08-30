@@ -64,5 +64,11 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 - **Eklenen Web Paketleri:** `react-dom`, `react-native-web` ve `@expo/metro-runtime` paketleri kuruldu.
 - **Web Sunucusu:** `npx expo start --web` komutu ile Expo Web sunucusu `http://localhost:8081` üzerinde aktif edildi.
 
+---
+
+## 📅 [2026-08-30 11:23] - GitHub Push İşlemi
+- Kullanıcı onayıyla Web desteği paketleri (`react-dom`, `react-native-web`, `@expo/metro-runtime`) ve güncellenen yapılandırma dosyaları GitHub uzak deposuna (`origin main`) push edildi.
+
+
 
 
