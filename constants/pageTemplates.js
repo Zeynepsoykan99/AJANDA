@@ -38,6 +38,11 @@ export const PAGE_CATEGORIES = [
 export const TEMPLATE_IMAGES = {
   weekly_cute_pink_planner: require('../assets/templates/planner_pink_cute.jpg'),
   weekly_floral_grid_planner: require('../assets/templates/planner_floral_grid.jpg'),
+  weekly_flower_cloud_planner: require('../assets/templates/planner_flower_cloud.jpg'),
+  weekly_ribbon_envelope_planner: require('../assets/templates/planner_ribbon_envelope.jpg'),
+  weekly_cozy_botanical_planner: require('../assets/templates/planner_cozy_botanical.jpg'),
+  weekly_kawaii_cats_planner: require('../assets/templates/planner_kawaii_cats.jpg'),
+  weekly_blue_floral_planner: require('../assets/templates/planner_blue_floral.jpg'),
 };
 
 export const PAGE_TEMPLATES = {
@@ -91,7 +96,7 @@ export const PAGE_TEMPLATES = {
       description: 'Birebir orijinal el çizimi pembe haftalık planlayıcı',
       type: 'image_template',
       colors: { bg: '#FFF5F8', accent: '#E91E63', header: '#C2185B', day: '#FFFFFF', border: '#F8BBD0' },
-      aspectRatio: 0.703, // 720x1024
+      aspectRatio: 0.703,
     },
     {
       id: 'weekly_floral_grid_planner',
@@ -99,7 +104,47 @@ export const PAGE_TEMPLATES = {
       description: 'Birebir orijinal çiçekli kareli haftalık planlayıcı',
       type: 'image_template',
       colors: { bg: '#FFFDE7', accent: '#F57F17', header: '#E65100', day: '#FFFFFF', border: '#FFE082' },
-      aspectRatio: 0.66, // 676x1024
+      aspectRatio: 0.66,
+    },
+    {
+      id: 'weekly_flower_cloud_planner',
+      name: 'Çiçekli Bulut Şablon 🌸',
+      description: 'Pastel çiçekli ve çay fincanlı haftalık planlayıcı',
+      type: 'image_template',
+      colors: { bg: '#FFF5F8', accent: '#E91E63', header: '#C2185B', day: '#FFFFFF', border: '#F8BBD0' },
+      aspectRatio: 0.707,
+    },
+    {
+      id: 'weekly_ribbon_envelope_planner',
+      name: 'Kurdeleli & Zarflı Şablon 🎀',
+      description: 'Pembe saten kurdeleli ve mektup zarflı haftalık planlayıcı',
+      type: 'image_template',
+      colors: { bg: '#FFFDF9', accent: '#D81B60', header: '#880E4F', day: '#FFFFFF', border: '#F8BBD0' },
+      aspectRatio: 0.707,
+    },
+    {
+      id: 'weekly_cozy_botanical_planner',
+      name: 'Cozy Botanik To-Do Şablon 🌿',
+      description: 'Kahve fincanı, kitaplar ve botanik yapraklar',
+      type: 'image_template',
+      colors: { bg: '#FDFBF7', accent: '#8D6E63', header: '#4E342E', day: '#FFFFFF', border: '#D7CCC8' },
+      aspectRatio: 0.77,
+    },
+    {
+      id: 'weekly_kawaii_cats_planner',
+      name: 'Sevimli Kedili & Washi Bantlı Şablon 🐱',
+      description: 'Pati izleri, sevimli kedicikler ve renkli bantlar',
+      type: 'image_template',
+      colors: { bg: '#FFFDF5', accent: '#FB8C00', header: '#E65100', day: '#FFFFFF', border: '#FFE0B2' },
+      aspectRatio: 0.67,
+    },
+    {
+      id: 'weekly_blue_floral_planner',
+      name: 'Mavi Çiçekli Şablon 💙',
+      description: 'Sade pastel mavi çiçek detaylı haftalık planlayıcı',
+      type: 'image_template',
+      colors: { bg: '#F4F7FB', accent: '#1976D2', header: '#0D47A1', day: '#FFFFFF', border: '#BBDEFB' },
+      aspectRatio: 0.707,
     },
   ],
   blank: [

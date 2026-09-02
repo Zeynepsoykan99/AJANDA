@@ -348,6 +348,35 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 ## 📅 [2026-09-02 14:32] - GitHub Push İşlemi
 - Kullanıcı onayıyla "Eski Haftalık Şablonların Temizlenmesi, Yalnızca Orijinal Görsellerin Bırakılması ve Metinsiz Dikdörtgen Seçim Ekranı" değişiklikleri GitHub uzak deposuna (`origin main`) push edildi (`https://github.com/Zeynepsoykan99/AJANDA`).
 
+---
+
+## 📅 [2026-09-02 14:45] - 5 Yeni Haftalık Planlayıcı Görsel Şablonunun Entegrasyonu
+
+### 🖼️ 1. Yeni Görsellerin Sisteme Eklenmesi (`assets/templates/`)
+- Kullanıcının `gorsel/` klasörüne yüklediği 5 yeni haftalık planlayıcı görseli tespit edildi ve optimize edilerek `assets/templates/` dizinine aktarıldı:
+  - `planner_flower_cloud.jpg` (🌸 **Çiçekli Bulut Şablon** - Pastel çiçekler, pembe kurdele bulut ve çay fincanı illüstrasyonlu)
+  - `planner_ribbon_envelope.jpg` (🎀 **Kurdeleli & Zarflı Şablon** - Saten pembe kurdeleler ve kalp mektup zarflı)
+  - `planner_cozy_botanical.jpg` (🌿 **Cozy Botanik To-Do Şablon** - Sıcak kahve, kitaplar ve botanik to-do listesi)
+  - `planner_kawaii_cats.jpg` (🐱 **Sevimli Kedili & Washi Bantlı Şablon** - Pati izleri, sevimli kediler, washi bantlar ve Goals alanı)
+  - `planner_blue_floral.jpg` (💙 **Mavi Çiçekli Şablon** - Minimal pastel mavi çiçek buketli zarif haftalık plan)
+
+### 📋 2. Şablon Listesi & Galeri Güncellemesi (`constants/pageTemplates.js`)
+- `constants/pageTemplates.js` içindeki `TEMPLATE_IMAGES` ve `PAGE_TEMPLATES.weekly` listesine 5 yeni şablon eklendi (toplam 7 orijinal görsel şablon).
+- Yeni şablonlar da önceki sade kurala tam uygun olarak:
+  - Yeni sayfa ekleme menüsünde altlarında/içlerinde hiçbir metin veya ikon olmadan doğrudan **dikey dikdörtgen görsel (thumbnail)** olarak listelenir.
+  - Tıklandığında pembe çerçeveyle seçilir.
+
+### 📐 3. Full-Bleed Uçtan Uca Kaplama ve Çizim Desteği
+- Yeni şablonlar da `ImageTemplatePage.js` üzerinden sıfır kenar boşluğuyla ekranı uçtan uca kaplar (`resizeMode="cover"`, `padding: 0, margin: 0`).
+- Şeffaf `DrawingCanvas` (Apple Pencil / Stylus) katmanı yeni görsellerin de üstüne milimetrik olarak oturur ve serbest el yazısı yazmayı destekler.
+
+---
+
+## 📅 [2026-09-02 14:48] - GitHub Push İşlemi
+- Kullanıcı onayıyla "5 Yeni Haftalık Planlayıcı Görsel Şablonu Entegrasyonu ve Metinsiz Galeri" değişiklikleri GitHub uzak deposuna (`origin main`) push edildi (`https://github.com/Zeynepsoykan99/AJANDA`).
+
+
+
 
 
 
