@@ -440,3 +440,23 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 ### 🎨 2. Görünmez Renk Paleti (Dropdown) Onarımı
 - **Sorun:** Önceki adımda "sayfa sıçraması" için eklenen `overflow: 'hidden'` kuralı nedeniyle açılır menü (renk paleti) kesiliyor (klipleniyor) ve tıklamaları almıyordu.
 - **Çözüm:** `app/ajandam/[pageId].js` içindeki `headerBar` stilinden `overflow: 'hidden'` kaldırıldı ve `zIndex: 100` eklendi. Renk paleti artık kesilmeden aşağı açılıyor ve altındaki çizim katmanı tıklamaları yutmadığı için renk değişimi sorunsuz çalışıyor.
+
+---
+
+## 📅 [2026-09-02 15:48] - Sınırsız Renk Seçici (Color Wheel) Entegrasyonu
+
+### 🎨 1. Kütüphane Kurulumu ve Altyapı
+- 60fps performans ve pürüzsüz kaydırma deneyimi için `reanimated-color-picker` kütüphanesi projeye (`npx expo install`) dahil edildi. (Mevcut `react-native-reanimated` altyapısı kullanıldı).
+
+### 🎛️ 2. Arayüz ve Özel Renk Butonu (UI)
+- `DrawingToolbar` bileşenindeki mevcut renklerin sonuna özel bir **"+" (Özel Renk Ekle)** butonu eklendi.
+- Kullanıcının seçtiği yeni renklerin, paleti her açtığında kolayca erişebilmesi için `customColors` adlı dinamik bir state dizisinde (son 5 renk) tutulması ve ana renk listesinin yanında sergilenmesi sağlandı.
+
+### 🖼️ 3. Zarif Modal ve Çark Tasarımı
+- Özel renk ekle butonuna basıldığında ekranı hafif karartan (`rgba(0,0,0,0.5)`) şık bir **React Native Modal** penceresi eklendi.
+- Modal içeriğine:
+  - `Preview`: Rengin canlı önizlemesi.
+  - `Panel1`: Renk parlaklığı/koyuluğu ayar paneli.
+  - `HueCircular`: Rengin ana tonunu seçmek için dairesel gökkuşağı çarkı.
+- Modalın altına, seçilen rengi onaylamak ("Uygula") veya vazgeçmek ("İptal") için butonlar eklendi.
+- Seçilen özel renk anında kalemin veya klavyenin aktif rengi (`currentColor` / `textColor`) olarak ayarlanır.

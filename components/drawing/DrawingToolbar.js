@@ -4,9 +4,12 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  Modal,
+  Dimensions,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import ColorPicker, { Panel1, HueCircular, Preview } from 'reanimated-color-picker';
 
 const INK_COLORS = [
   { id: 'rose', color: '#C2185B', name: 'Gül Kurusu' },
@@ -55,6 +58,26 @@ export default function DrawingToolbar({
 }) {
   const { colors } = useTheme();
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+  const [isCustomColorModalVisible, setIsCustomColorModalVisible] = useState(false);
+  const [customColors, setCustomColors] = useState([]);
+  const [tempColor, setTempColor] = useState('#FF0000'); // Modal içindeki geçici renk
+
+  const onSelectColor = (colorHex) => {
+    setTempColor(colorHex);
+  };
+
+  const applyCustomColor = () => {
+    // Aynı rengi tekrar eklememek için kontrol
+    if (!customColors.includes(tempColor)) {
+      setCustomColors((prev) => [...prev, tempColor].slice(-5)); // Son 5 özel rengi sakla
+    }
+    
+    if (isDrawingMode) onChangeColor(tempColor);
+    if (isTextMode) onChangeTextColor(tempColor);
+    
+    setIsCustomColorModalVisible(false);
+    setIsColorPickerOpen(false);
+  };
 
   return (
     <View style={[styles.dockContainer, { backgroundColor: colors.card, borderColor: colors.border }, style]}>
@@ -235,7 +258,7 @@ export default function DrawingToolbar({
         </>
       )}
 
-      {/* Açılır Renk Paleti */}
+      {/* Açılır Renk Paleti (Dropdown) */}
       {isColorPickerOpen && (
         <View
           style={[
@@ -259,6 +282,34 @@ export default function DrawingToolbar({
                 ]}
               />
             ))}
+
+            {/* Eklenen Özel Renkler */}
+            {customColors.map((customColor, index) => (
+              <TouchableOpacity
+                key={`custom_${index}`}
+                onPress={() => {
+                  if (isDrawingMode) onChangeColor(customColor);
+                  if (isTextMode) onChangeTextColor(customColor);
+                  setIsColorPickerOpen(false);
+                }}
+                style={[
+                  styles.swatchBtn,
+                  { backgroundColor: customColor },
+                  (isDrawingMode ? currentColor === customColor : textColor === customColor) && styles.selectedSwatch,
+                ]}
+              />
+            ))}
+
+            {/* Yeni Özel Renk Ekle Butonu */}
+            <TouchableOpacity
+              onPress={() => {
+                setTempColor(isDrawingMode ? currentColor : textColor);
+                setIsCustomColorModalVisible(true);
+              }}
+              style={styles.addCustomColorBtn}
+            >
+              <MaterialCommunityIcons name="plus" size={16} color={colors.textSecondary} />
+            </TouchableOpacity>
           </View>
 
           {/* Çizim modundaysa kalınlık seçimi */}
@@ -294,6 +345,44 @@ export default function DrawingToolbar({
           )}
         </View>
       )}
+
+      {/* Sınırsız Renk Seçici (Color Picker) Modalı */}
+      <Modal
+        visible={isCustomColorModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsCustomColorModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Özel Renk Seç</Text>
+            
+            <View style={styles.colorPickerContainer}>
+              <ColorPicker style={{ width: '100%', alignItems: 'center', gap: 15 }} value={tempColor} onComplete={(c) => onSelectColor(c.hex)}>
+                <Preview style={styles.previewStyle} />
+                <Panel1 style={styles.panelStyle} />
+                <HueCircular containerStyle={styles.hueStyle} thumbSize={24} />
+              </ColorPicker>
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: colors.border }]}
+                onPress={() => setIsCustomColorModalVisible(false)}
+              >
+                <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>İptal</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: colors.accent }]}
+                onPress={applyCustomColor}
+              >
+                <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Uygula</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -382,13 +471,13 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
     zIndex: 120,
-    width: 220,
+    width: 230,
   },
   colorsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     marginBottom: 6,
   },
   swatchBtn: {
@@ -406,12 +495,23 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3,
   },
+  addCustomColorBtn: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: '#00000030',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
   widthsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderTopWidth: 0.5,
     borderTopColor: '#00000010',
     paddingTop: 6,
+    marginTop: 4,
   },
   widthBtn: {
     flex: 1,
@@ -429,5 +529,61 @@ const styles = StyleSheet.create({
   widthText: {
     fontSize: 9,
     fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: 280,
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  colorPickerContainer: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewStyle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+  },
+  panelStyle: {
+    width: 200,
+    height: 150,
+    borderRadius: 12,
+  },
+  hueStyle: {
+    width: 180,
+    height: 180,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 25,
+    gap: 12,
+  },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
   },
 });
