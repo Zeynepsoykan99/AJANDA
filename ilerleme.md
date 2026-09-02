@@ -235,3 +235,41 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 ## 📅 [2026-09-02 12:06] - GitHub Push İşlemi
 - Kullanıcı onayıyla "Apple Pencil / Stylus Çizim Desteği", "Kırtasiye Kalemliği Dock'u", "Pembe Kareli Papatyalı Şablonlar" ve "Vintage Çiçekli Kapaklar" GitHub uzak deposuna (`origin main`) push edildi (`https://github.com/Zeynepsoykan99/AJANDA`).
 
+---
+
+## 📅 [2026-09-02 12:40] - SDK 52 Commit İptali (Rollback) & Doğrudan Expo SDK 54 Geçişi
+
+### ⏪ Git Geçmişi Temizliği
+- Kullanıcının telefonundaki Expo Go uygulamasının **SDK 54** desteklemesi ("the installed version of expo go is for sdk 54") nedeniyle, daha önce yapılan SDK 52 commit'i yerel depoda geri alındı (`git reset --hard cde8554`).
+- GitHub'daki commit geçmişini temizlemek üzere `git push --force` işlemi onay için hazırlandı.
+
+### 🔄 Expo SDK 54 Yükseltmesi & Paket Senkronizasyonu
+- `package.json` doğrudan Expo SDK 54 kararlı sürümüne uyarlandı ve tüm bağımlılıklar senkronize edildi:
+  - `expo`: `~54.0.37`
+  - `react`: `19.1.0`
+  - `react-dom`: `19.1.0`
+  - `react-native`: `0.81.5`
+  - `expo-router`: `~6.0.24`
+  - `react-native-reanimated`: `~4.1.1`
+  - `react-native-worklets`: `0.5.1` (Reanimated 4 motoru)
+  - `react-native-gesture-handler`: `~2.28.0`
+  - `react-native-safe-area-context`: `~5.6.0`
+  - `react-native-screens`: `~4.16.0`
+  - `react-native-svg`: `15.12.1` (Apple Pencil çizim motoru)
+  - `react-native-web`: `^0.21.0`
+  - `babel-preset-expo`: `~54.0.10`
+  - `@expo/vector-icons`: `^15.0.3`
+  - `@react-native-async-storage/async-storage`: `2.2.0`
+  - `expo-constants`: `~18.0.14`
+  - `expo-linking`: `~8.0.12`
+  - `expo-status-bar`: `~3.0.9`
+- `expo install --check` ile doğrulanarak tüm bağımlılıkların hatasız ve güncel olduğu teyit edildi (`Dependencies are up to date`).
+- `expo export` ile Web, Android ve iOS paketleri sıfır hatayla derlendi.
+
+---
+
+## 📅 [2026-09-02 12:42] - GitHub Force Push İşlemi
+- Kullanıcı onayıyla önceki SDK 52 ara commit'i iptal edildi ve "Expo SDK 54 Geçişi & Paket Senkronizasyonu" değişiklikleri GitHub uzak deposuna (`origin main`) `git push --force` ile push edilerek temiz bir commit geçmişi sağlandı (`https://github.com/Zeynepsoykan99/AJANDA`).
+
+
+
