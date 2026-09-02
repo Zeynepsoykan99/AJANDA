@@ -408,14 +408,23 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 ## 📅 [2026-09-02 15:05] - GitHub Push İşlemi
 - Kullanıcı onayıyla "Sayfa Atlama/Kayma Sorununun Giderilmesi & Serbest Klavye Metin Kutuları Entegrasyonu" değişiklikleri GitHub uzak deposuna (`origin main`) push edildi (`https://github.com/Zeynepsoykan99/AJANDA`).
 
+---
 
+## 📅 [2026-09-02 15:15] - Çizim Katmanına (DrawingCanvas) Gerçek İşlevsellik Kazandırılması
 
+### ✍️ 1. Dinamik Dokunma (Gesture) Yakalama ve Stale Closure Düzeltmesi
+- `components/drawing/DrawingCanvas.js` içerisindeki `PanResponder` kancasının (hook) eski state değerlerine hapsolması (Stale Closure) problemi çözüldü.
+- Artık araç çubuğunda "Çizim" modu aktif edildiğinde katman anında tüm dokunmaları yakalayarak Apple Pencil veya parmak hareketlerini sorunsuz algılar duruma geldi.
 
+### 🎨 2. Pürüzsüz SVG Rendering ve Bézier Eğrileri
+- Kullanıcının anlık çizim hareketleri (koordinatlar) Quadratic Bézier eğrilerine (SVG `<Path d="M... Q..." />`) dönüştürülerek robotik olmayan, doğal ve pürüzsüz bir el yazısı görünümü sağlandı.
+- Saniyede 60 kare (60fps) performansını korumak için, halen çizilmekte olan "anlık çizgi" hafif bir state ile, tamamlanan çizgiler ise kalıcı diziyle render edilmektedir.
 
+### 🛠️ 3. Araç Çubuğu Özelliklerinin (Kalem, Fosforlu, Silgi) Entegrasyonu
+- **Jel Kalem:** Standart kalınlık ve %100 opak (net) çizgiler üretir.
+- **Fosforlu Kalem:** `strokeWidth` standart değerin 3.5 katına çıkarıldı ve SVG `strokeOpacity: 0.4` yapılarak yarı saydam hale getirildi. Ajandanın arka planındaki çizgiler fosforlu kalemin altından görünmeye devam eder.
+- **Vektör Silgisi:** Piksel silgisi yerine akıllı vektör silgisi (`Math.hypot`) algoritması kuruldu. Silgi modundayken dokunulan noktaya 25 piksel yarıçapta bulunan tüm çizgi vektörleri anında sayfadan silinir.
 
-
-
-
-
-
-
+### 💾 4. Vektör Kalıcılığı (State Persistence)
+- Çizimler tamamlandığı anda renk, opaklık, kalınlık ve Bézier veri stringiyle birlikte `page.drawings` listesine eklenir ve `StorageService.updatePage` kullanılarak cihaza kalıcı kaydedilir.
+- Ajanda yeniden açıldığında tüm çizimler milimetrik olarak aynı yerde yüklenir.
