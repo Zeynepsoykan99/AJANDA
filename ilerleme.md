@@ -460,3 +460,12 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
   - `HueCircular`: Rengin ana tonunu seçmek için dairesel gökkuşağı çarkı.
 - Modalın altına, seçilen rengi onaylamak ("Uygula") veya vazgeçmek ("İptal") için butonlar eklendi.
 - Seçilen özel renk anında kalemin veya klavyenin aktif rengi (`currentColor` / `textColor`) olarak ayarlanır.
+
+---
+
+## 📅 [2026-09-02 16:08] - Dairesel Renk Çarkı (Full Spectrum Color Disc) Revizyonu
+
+### 🎡 1. Sadeleştirilmiş Gerçek Renk Çarkı Deneyimi
+- Özel renk seçim ekranındaki karmaşık kare paneller ve sürgü benzeri halkalar tamamen kaldırılarak yerine `Panel3` bileşeni eklendi.
+- Böylece kullanıcı, doğrudan içi 360 derece kesintisiz renk spektrumuyla dolu olan **tek bir dev dairesel disk** üzerinden hem rengi (hue) hem de doygunluğu (saturation) tek dokunuşla seçebilir duruma geldi.
+- Renk çarkının hemen altına 50x50px boyutlarında şık ve daha büyük bir dairesel Canlı Önizleme (`Preview`) eklendi; parmak diskin üzerinde gezdikçe bu önizleme anlık olarak değişir.

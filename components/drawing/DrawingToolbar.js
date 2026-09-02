@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
-import ColorPicker, { Panel1, HueCircular, Preview } from 'reanimated-color-picker';
+import ColorPicker, { Panel3, Preview } from 'reanimated-color-picker';
 
 const INK_COLORS = [
   { id: 'rose', color: '#C2185B', name: 'Gül Kurusu' },
@@ -358,10 +358,9 @@ export default function DrawingToolbar({
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Özel Renk Seç</Text>
             
             <View style={styles.colorPickerContainer}>
-              <ColorPicker style={{ width: '100%', alignItems: 'center', gap: 15 }} value={tempColor} onComplete={(c) => onSelectColor(c.hex)}>
-                <Preview style={styles.previewStyle} />
-                <Panel1 style={styles.panelStyle} />
-                <HueCircular containerStyle={styles.hueStyle} thumbSize={24} />
+              <ColorPicker style={{ width: '100%', alignItems: 'center', gap: 20 }} value={tempColor} onComplete={(c) => onSelectColor(c.hex)}>
+                <Panel3 style={styles.panel3Style} thumbSize={28} />
+                <Preview style={styles.previewStyle} hideInitialColor />
               </ColorPicker>
             </View>
 
@@ -558,20 +557,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   previewStyle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     borderWidth: 2,
     borderColor: '#e0e0e0',
   },
-  panelStyle: {
-    width: 200,
-    height: 150,
-    borderRadius: 12,
-  },
-  hueStyle: {
-    width: 180,
-    height: 180,
+  panel3Style: {
+    width: 220,
+    height: 220,
+    borderRadius: 110,
   },
   modalButtons: {
     flexDirection: 'row',
