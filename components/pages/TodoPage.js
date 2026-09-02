@@ -8,19 +8,38 @@ import {
   ScrollView,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import useResponsiveLayout from '../../hooks/useResponsiveLayout';
+import WashiTape from '../stationery/WashiTape';
+import StickyNote from '../stationery/StickyNote';
+import PaperSheet from '../stationery/PaperSheet';
+import SpiralBinder from '../stationery/SpiralBinder';
+
+const CATEGORIES = [
+  { id: 'priority', name: 'Günün Öncelikleri', emoji: '🎀', tapeColor: '#F48FB1' },
+  { id: 'study', name: 'Dersler & Ödevler', emoji: '📚', tapeColor: '#CE93D8' },
+  { id: 'personal', name: 'Kişisel & Alışkanlıklar', emoji: '🌸', tapeColor: '#FFCC80' },
+];
 
 /**
- * TodoPage - To-Do List şablon bileşeni
- * Kalpli/yıldızlı checkbox'lar ile yapılacaklar listesi.
- *
- * @param {object} template - Şablon tanımı (pageTemplates.js'den)
- * @param {object} data - Sayfa verisi { items: [{ id, text, completed }] }
- * @param {function} onDataChange - Veri değişiklik fonksiyonu
+ * TodoPage - Kırtasiye Çalışma ve Görev Planı Şablonu
+ * Öğrencilere yönelik kategorize edilmiş (Dersler, Öncelikler, Notlar),
+ * iPad'de çok sütunlu açık defter, mobilde kartlı sevimli defter listesi.
  */
 export default function TodoPage({ template, data, onDataChange }) {
+  const { isTwoPage, isTablet } = useResponsiveLayout();
+  const [selectedCategory, setSelectedCategory] = useState('priority');
   const [newItemText, setNewItemText] = useState('');
+  const [activeCategoryInput, setActiveCategoryInput] = useState('priority');
 
   const items = data?.items || [];
+  const reminderNote = data?.reminderNote || '';
+
+  const colors = template?.colors || {
+    bg: '#FFF0F5',
+    accent: '#E91E63',
+    check: '#C2185B',
+    line: '#FCE4EC',
+  };
 
   const getCheckboxIcon = (completed) => {
     const style = template?.checkboxStyle || 'heart';
@@ -42,17 +61,22 @@ export default function TodoPage({ template, data, onDataChange }) {
     [items, data, onDataChange]
   );
 
-  const handleAddItem = useCallback(() => {
-    if (newItemText.trim()) {
+  const handleAddItem = useCallback(
+    (targetCategory) => {
+      const text = newItemText.trim();
+      if (!text) return;
+
       const newItem = {
         id: `todo_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-        text: newItemText.trim(),
+        text,
+        category: targetCategory || selectedCategory,
         completed: false,
       };
       onDataChange({ ...data, items: [...items, newItem] });
       setNewItemText('');
-    }
-  }, [newItemText, items, data, onDataChange]);
+    },
+    [newItemText, selectedCategory, items, data, onDataChange]
+  );
 
   const handleDeleteItem = useCallback(
     (itemId) => {
@@ -62,175 +86,319 @@ export default function TodoPage({ template, data, onDataChange }) {
     [items, data, onDataChange]
   );
 
-  const colors = template?.colors || {
-    bg: '#FFF0F5',
-    accent: '#E91E63',
-    check: '#C2185B',
-    line: '#FCE4EC',
+  const handleReminderNoteChange = useCallback(
+    (text) => {
+      onDataChange({ ...data, reminderNote: text });
+    },
+    [data, onDataChange]
+  );
+
+  // Kategoriye göre filtrelenmiş görevleri getir (kategorisiz olanlar priority'e eklenir)
+  const getItemsForCategory = (catId) => {
+    return items.filter((item) => (item.category || 'priority') === catId);
   };
 
-  return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* To-Do Liste */}
-        {items.map((item, index) => (
-          <View
-            key={item.id}
-            style={[styles.todoItem, { borderBottomColor: colors.line }]}
-          >
-            <TouchableOpacity
-              onPress={() => handleToggleItem(item.id)}
-              style={styles.checkbox}
-            >
-              <MaterialCommunityIcons
-                name={getCheckboxIcon(item.completed)}
-                size={24}
-                color={item.completed ? colors.check : colors.accent + '80'}
-              />
-            </TouchableOpacity>
-            <Text
-              style={[
-                styles.todoText,
-                { color: colors.accent },
-                item.completed && styles.completedText,
-              ]}
-              numberOfLines={2}
-            >
-              {item.text}
-            </Text>
-            <TouchableOpacity
-              onPress={() => handleDeleteItem(item.id)}
-              style={styles.deleteButton}
-            >
-              <MaterialCommunityIcons
-                name="close-circle-outline"
-                size={18}
-                color={colors.accent + '60'}
-              />
-            </TouchableOpacity>
-          </View>
-        ))}
+  // Bir kategori listesi render fonksiyonu
+  const renderCategoryCard = (cat) => {
+    const catItems = getItemsForCategory(cat.id);
+    const completedCount = catItems.filter((i) => i.completed).length;
 
-        {/* Boş liste mesajı */}
-        {items.length === 0 && (
-          <View style={styles.emptyContainer}>
-            <MaterialCommunityIcons
-              name={template?.checkboxStyle === 'star' ? 'star-outline' : 'heart-outline'}
-              size={48}
-              color={colors.accent + '40'}
+    return (
+      <View key={cat.id} style={styles.categoryCard}>
+        {/* Washi Bant Başlığı */}
+        <View style={styles.cardHeader}>
+          <WashiTape
+            color={cat.tapeColor}
+            width={isTablet ? 170 : 150}
+            height={24}
+            rotation={cat.id === 'study' ? 1.5 : -1.5}
+            pattern="dots"
+            label={`${cat.emoji} ${cat.name}`}
+          />
+          <Text style={styles.counterText}>
+            {completedCount}/{catItems.length}
+          </Text>
+        </View>
+
+        {/* Görev Satırları */}
+        <View style={styles.itemsWrapper}>
+          {catItems.map((item) => (
+            <View key={item.id} style={styles.todoRow}>
+              <TouchableOpacity
+                onPress={() => handleToggleItem(item.id)}
+                style={styles.checkboxBtn}
+              >
+                <MaterialCommunityIcons
+                  name={getCheckboxIcon(item.completed)}
+                  size={20}
+                  color={item.completed ? colors.check : colors.accent + '80'}
+                />
+              </TouchableOpacity>
+              <Text
+                style={[
+                  styles.itemText,
+                  { color: colors.accent },
+                  item.completed && styles.itemCompleted,
+                ]}
+                numberOfLines={2}
+              >
+                {item.text}
+              </Text>
+              <TouchableOpacity
+                onPress={() => handleDeleteItem(item.id)}
+                style={styles.deleteBtn}
+              >
+                <MaterialCommunityIcons
+                  name="close-circle-outline"
+                  size={16}
+                  color={colors.accent + '50'}
+                />
+              </TouchableOpacity>
+            </View>
+          ))}
+
+          {catItems.length === 0 && (
+            <Text style={styles.emptyCatText}>
+              Henüz bu bölüme görev eklenmedi
+            </Text>
+          )}
+
+          {/* Hızlı Ekleme Çubuğu */}
+          <View style={styles.inlineAddRow}>
+            <TextInput
+              style={[styles.inlineInput, { borderColor: cat.tapeColor }]}
+              value={activeCategoryInput === cat.id ? newItemText : ''}
+              onChangeText={(text) => {
+                setActiveCategoryInput(cat.id);
+                setNewItemText(text);
+              }}
+              placeholder={`${cat.name} ekle...`}
+              placeholderTextColor="#9E9E9E"
+              onSubmitEditing={() => handleAddItem(cat.id)}
+              returnKeyType="done"
             />
-            <Text style={[styles.emptyText, { color: colors.accent + '80' }]}>
-              Henüz bir görev eklemediniz
-            </Text>
+            <TouchableOpacity
+              onPress={() => handleAddItem(cat.id)}
+              style={[styles.inlineAddBtn, { backgroundColor: colors.check }]}
+            >
+              <MaterialCommunityIcons name="plus" size={16} color="#FFFFFF" />
+            </TouchableOpacity>
           </View>
-        )}
-      </ScrollView>
-
-      {/* Yeni görev ekleme alanı */}
-      <View
-        style={[
-          styles.addContainer,
-          {
-            backgroundColor: colors.bg,
-            borderTopColor: colors.line,
-          },
-        ]}
-      >
-        <TextInput
-          style={[
-            styles.addInput,
-            {
-              borderColor: colors.line,
-              color: colors.accent,
-              backgroundColor: '#FFFFFF',
-            },
-          ]}
-          value={newItemText}
-          onChangeText={setNewItemText}
-          placeholder="Yeni görev ekle..."
-          placeholderTextColor={colors.accent + '60'}
-          onSubmitEditing={handleAddItem}
-          returnKeyType="done"
-        />
-        <TouchableOpacity
-          onPress={handleAddItem}
-          style={[styles.addButton, { backgroundColor: colors.check }]}
-          disabled={!newItemText.trim()}
-        >
-          <MaterialCommunityIcons name="plus" size={22} color="#FFFFFF" />
-        </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    );
+  };
+
+  // -------------------------------------------------------------
+  // TABLET / ÇİFT SAYFA GÖRÜNÜMÜ
+  // -------------------------------------------------------------
+  if (isTwoPage) {
+    return (
+      <View style={styles.twoPageContainer}>
+        {/* SOL SAYFA: Öncelikler & Dersler */}
+        <PaperSheet ruling="lined" style={styles.pageHalf}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
+            <View style={styles.pageWatermark}>
+              <Text style={styles.watermarkText}>DAILY STUDY & TO-DO 📚</Text>
+            </View>
+            {renderCategoryCard(CATEGORIES[0])}
+            {renderCategoryCard(CATEGORIES[1])}
+          </ScrollView>
+        </PaperSheet>
+
+        {/* ORTA SPİRAL CİLT */}
+        <SpiralBinder type="center" ringColor="rosegold" ringCount={16} />
+
+        {/* SAĞ SAYFA: Kişisel & Yapışkan Notlar */}
+        <PaperSheet ruling="lined" style={styles.pageHalf}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
+            {renderCategoryCard(CATEGORIES[2])}
+
+            <View style={styles.stickySection}>
+              <StickyNote
+                title="Günün Hatırlatıcısı & Sınavlar 🌸"
+                content={reminderNote}
+                onChangeContent={handleReminderNoteChange}
+                color="#FFF9C4"
+                tapeColor="#FFCC80"
+                placeholder="Önemli sınav tarihleri, teslim edilecek ödevler ve motivasyon sözü..."
+              />
+            </View>
+          </ScrollView>
+        </PaperSheet>
+      </View>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // MOBİL GÖRÜNÜMÜ (Kartlı ve Sekmeli)
+  // -------------------------------------------------------------
+  return (
+    <PaperSheet ruling="lined" style={styles.singlePage}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.mobileScroll}
+      >
+        {/* Başlık Rozeti */}
+        <View style={styles.mobileBadgeWrapper}>
+          <WashiTape
+            color="#F48FB1"
+            width={200}
+            height={26}
+            pattern="hearts"
+            label="🌸 GÜNLÜK HEDEF & TO-DO 🌸"
+          />
+        </View>
+
+        {/* Tüm Kategoriler */}
+        {CATEGORIES.map((cat) => renderCategoryCard(cat))}
+
+        {/* Post-it Hatırlatıcı */}
+        <View style={styles.mobileStickyWrapper}>
+          <StickyNote
+            title="Önemli Not 🎀"
+            content={reminderNote}
+            onChangeContent={handleReminderNoteChange}
+            color="#FFF9C4"
+            tapeColor="#FFCC80"
+            placeholder="Unutulmaması gerekenler..."
+          />
+        </View>
+      </ScrollView>
+    </PaperSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  twoPageContainer: {
     flex: 1,
+    flexDirection: 'row',
+    height: '100%',
+  },
+  pageHalf: {
+    flex: 1,
+    marginHorizontal: 4,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 100,
+    padding: 14,
+    paddingBottom: 24,
   },
-  todoItem: {
+  pageWatermark: {
+    marginBottom: 8,
+    opacity: 0.6,
+  },
+  watermarkText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#AD1457',
+    letterSpacing: 2,
+  },
+  stickySection: {
+    marginTop: 10,
+  },
+
+  singlePage: {
+    flex: 1,
+  },
+  mobileScroll: {
+    padding: 12,
+    paddingBottom: 80,
+  },
+  mobileBadgeWrapper: {
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  mobileStickyWrapper: {
+    marginTop: 14,
+    marginBottom: 20,
+  },
+
+  categoryCard: {
+    backgroundColor: '#FFFFFFEE',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#F8BBD040',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  counterText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#AD1457',
+    backgroundColor: '#FCE4EC',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  itemsWrapper: {
+    gap: 4,
+  },
+  todoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
+    paddingVertical: 6,
+    borderBottomWidth: 0.8,
+    borderBottomColor: '#F8BBD030',
   },
-  checkbox: {
-    marginRight: 12,
-    padding: 2,
+  checkboxBtn: {
+    paddingRight: 8,
   },
-  todoText: {
+  itemText: {
     flex: 1,
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 13,
+    lineHeight: 18,
   },
-  completedText: {
+  itemCompleted: {
     textDecorationLine: 'line-through',
-    opacity: 0.5,
+    opacity: 0.45,
   },
-  deleteButton: {
+  deleteBtn: {
     padding: 4,
-    marginLeft: 8,
   },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-    gap: 12,
-  },
-  emptyText: {
-    fontSize: 15,
+  emptyCatText: {
+    fontSize: 12,
+    color: '#BDBDBD',
     fontStyle: 'italic',
+    paddingVertical: 6,
+    textAlign: 'center',
   },
-  addContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+  inlineAddRow: {
     flexDirection: 'row',
-    padding: 16,
-    borderTopWidth: 1,
-    gap: 10,
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
   },
-  addInput: {
+  inlineInput: {
     flex: 1,
-    borderWidth: 1.5,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 15,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 12,
+    backgroundColor: '#FFFFFF',
   },
-  addButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+  inlineAddBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },

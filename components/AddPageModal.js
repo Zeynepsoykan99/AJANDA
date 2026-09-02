@@ -18,6 +18,7 @@ import {
   generatePageId,
   createDefaultPageData,
 } from '../constants/pageTemplates';
+import useResponsiveLayout from '../hooks/useResponsiveLayout';
 
 /**
  * AddPageModal - Yeni sayfa ekleme modal bileşeni
@@ -30,6 +31,7 @@ import {
  */
 export default function AddPageModal({ visible, onClose, onAdd }) {
   const { colors } = useTheme();
+  const { isTablet } = useResponsiveLayout();
 
   const [step, setStep] = useState(1); // 1: Kategori, 2: Şablon, 3: Başlık
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -87,7 +89,7 @@ export default function AddPageModal({ visible, onClose, onAdd }) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         {/* Üst Bar */}
-        <View style={styles.header}>
+        <View style={[styles.header, isTablet && styles.tabletModalContainer]}>
           <TouchableOpacity
             onPress={step > 1 ? () => setStep(step - 1) : resetAndClose}
             style={styles.headerBtn}
@@ -109,7 +111,7 @@ export default function AddPageModal({ visible, onClose, onAdd }) {
         </View>
 
         {/* Adım göstergesi */}
-        <View style={styles.stepIndicator}>
+        <View style={[styles.stepIndicator, isTablet && styles.tabletModalContainer]}>
           {[1, 2, 3].map((s) => (
             <View
               key={s}
@@ -126,7 +128,10 @@ export default function AddPageModal({ visible, onClose, onAdd }) {
         </View>
 
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            isTablet && styles.tabletModalContainer,
+          ]}
           showsVerticalScrollIndicator={false}
         >
           {/* Adım 1: Kategori Seçimi */}
@@ -350,6 +355,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingBottom: 40,
+  },
+  tabletModalContainer: {
+    maxWidth: 680,
+    width: '100%',
+    alignSelf: 'center',
   },
   // Kategori Kartları
   categoriesGrid: {

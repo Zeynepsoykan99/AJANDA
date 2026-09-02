@@ -14,6 +14,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { COVER_TEMPLATES } from '../constants/coverTemplates';
 import CoverDisplay from './CoverDisplay';
+import useResponsiveLayout from '../hooks/useResponsiveLayout';
 
 /**
  * CoverEditor - Kapak düzenleme modal bileşeni
@@ -26,6 +27,7 @@ import CoverDisplay from './CoverDisplay';
  */
 export default function CoverEditor({ visible, onClose, coverData, onSave }) {
   const { colors } = useTheme();
+  const { isTablet } = useResponsiveLayout();
 
   const [selectedTemplateId, setSelectedTemplateId] = useState(
     coverData?.templateId || COVER_TEMPLATES[0].id
@@ -58,7 +60,7 @@ export default function CoverEditor({ visible, onClose, coverData, onSave }) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         {/* Üst Bar */}
-        <View style={styles.header}>
+        <View style={[styles.header, isTablet && styles.tabletContainer]}>
           <TouchableOpacity onPress={onClose} style={styles.headerButton}>
             <MaterialCommunityIcons
               name="close"
@@ -79,7 +81,10 @@ export default function CoverEditor({ visible, onClose, coverData, onSave }) {
         </View>
 
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            isTablet && styles.tabletContainer,
+          ]}
           showsVerticalScrollIndicator={false}
         >
           {/* Kapak Önizleme */}
@@ -251,6 +256,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 40,
+  },
+  tabletContainer: {
+    maxWidth: 680,
+    width: '100%',
+    alignSelf: 'center',
   },
   previewContainer: {
     alignItems: 'center',

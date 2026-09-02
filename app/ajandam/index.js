@@ -12,6 +12,7 @@ import {
 } from '../../constants/coverTemplates';
 import CoverDisplay from '../../components/CoverDisplay';
 import CoverEditor from '../../components/CoverEditor';
+import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 
 /**
  * AjandamScreen - Ajanda Kapağı Ekranı
@@ -21,6 +22,7 @@ import CoverEditor from '../../components/CoverEditor';
 export default function AjandamScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { isTablet } = useResponsiveLayout();
 
   const [coverData, setCoverData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -135,7 +137,12 @@ export default function AjandamScreen() {
       </View>
 
       {/* Ajandayı Aç Butonu */}
-      <View style={styles.openButtonContainer}>
+      <View
+        style={[
+          styles.openButtonContainer,
+          isTablet && { maxWidth: 440, alignSelf: 'center' },
+        ]}
+      >
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={handleOpenAgenda}

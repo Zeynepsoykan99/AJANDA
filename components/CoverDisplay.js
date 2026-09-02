@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import useResponsiveLayout from '../hooks/useResponsiveLayout';
 
 /**
  * CoverDisplay - Ajanda kapağını render eden bileşen
@@ -11,6 +12,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
  * @param {string} userNote - Kullanıcının yazdığı not
  */
 export default function CoverDisplay({ template, userName, userNote }) {
+  const { isTablet } = useResponsiveLayout();
   if (!template) return null;
 
   return (
@@ -21,6 +23,7 @@ export default function CoverDisplay({ template, userName, userNote }) {
           backgroundColor: template.backgroundColor,
           borderColor: template.borderColor,
         },
+        isTablet && styles.tabletCover,
       ]}
     >
       {/* Desen Katmanı */}
@@ -28,11 +31,33 @@ export default function CoverDisplay({ template, userName, userNote }) {
         {renderPattern(template.pattern, template.patternColor)}
       </View>
 
+      {/* Dikişli İç Çerçeve Efekti (Stitched Border) */}
+      <View
+        style={[
+          styles.stitchedFrame,
+          { borderColor: template.borderColor + '90' },
+        ]}
+      />
+
+      {/* Metalik Köşe Koruyucuları (Corner Protectors) */}
+      <View style={[styles.cornerProtector, styles.cornerTopLeft]} />
+      <View style={[styles.cornerProtector, styles.cornerTopRight]} />
+      <View style={[styles.cornerProtector, styles.cornerBottomLeft]} />
+      <View style={[styles.cornerProtector, styles.cornerBottomRight]} />
+
+      {/* Defter Kapatma Lastiği (Elastic Closure Band) */}
+      <View
+        style={[
+          styles.elasticClosureBand,
+          { backgroundColor: template.borderColor + 'BB' },
+        ]}
+      />
+
       {/* Üst dekorasyon */}
       <View style={styles.topDecoration}>
         <MaterialCommunityIcons
           name={template.decorationIcon}
-          size={40}
+          size={isTablet ? 48 : 40}
           color={template.accentColor}
         />
       </View>
@@ -153,6 +178,7 @@ function getTitleStyle(titleStyle) {
 const styles = StyleSheet.create({
   coverContainer: {
     width: '85%',
+    maxWidth: 460,
     aspectRatio: 0.72,
     borderRadius: 20,
     borderWidth: 3,
@@ -161,10 +187,73 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     // Gölge
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    elevation: 10,
+    position: 'relative',
+  },
+  tabletCover: {
+    maxWidth: 520,
+    maxHeight: 740,
+    borderWidth: 4,
+    borderRadius: 26,
+  },
+  stitchedFrame: {
+    ...StyleSheet.absoluteFillObject,
+    margin: 8,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    zIndex: 1,
+    pointerEvents: 'none',
+  },
+  cornerProtector: {
+    position: 'absolute',
+    width: 22,
+    height: 22,
+    borderColor: '#FFD54F', // Altın rengi köşe koruyucusu
+    zIndex: 5,
+  },
+  cornerTopLeft: {
+    top: 4,
+    left: 4,
+    borderTopWidth: 3,
+    borderLeftWidth: 3,
+    borderTopLeftRadius: 10,
+  },
+  cornerTopRight: {
+    top: 4,
+    right: 4,
+    borderTopWidth: 3,
+    borderRightWidth: 3,
+    borderTopRightRadius: 10,
+  },
+  cornerBottomLeft: {
+    bottom: 4,
+    left: 4,
+    borderBottomWidth: 3,
+    borderLeftWidth: 3,
+    borderBottomLeftRadius: 10,
+  },
+  cornerBottomRight: {
+    bottom: 4,
+    right: 4,
+    borderBottomWidth: 3,
+    borderRightWidth: 3,
+    borderBottomRightRadius: 10,
+  },
+  elasticClosureBand: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    right: 28,
+    width: 14,
+    zIndex: 2,
+    opacity: 0.75,
+    borderLeftWidth: 0.5,
+    borderRightWidth: 0.5,
+    borderColor: '#00000020',
   },
   patternOverlay: {
     ...StyleSheet.absoluteFillObject,

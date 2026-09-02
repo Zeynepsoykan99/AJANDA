@@ -155,6 +155,41 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 ### 🔧 Rota Çakışması Düzeltmesi (Expo Router)
 - **[MOVE] `app/ajandam.js` → `app/ajandam/index.js`**: Expo Router'da aynı isimde hem dosya (`ajandam.js`) hem de dizin (`ajandam/`) bulunması rota çakışmasına yol açıyordu. Dosya, dizin içine `index.js` olarak taşındı. Tüm import yolları `../` → `../../` olarak güncellendi.
 
-### 📌 Not
-- Web dağıtımı (Vercel) tamamen iptal edilmiştir. Proje yalnızca mobil (iOS/Android) platformu hedefleyerek geliştirilmeye devam edecektir.
+---
+
+## 📅 [2026-09-02 11:15] - iPad / Tablet Odaklı "Dijital Kırtasiye" Dönüşümü
+
+### 🎨 Yeni Vizyon & Kırtasiye Efekt Kütüphanesi
+- **[NEW] `hooks/useResponsiveLayout.js`**: iPad ve tablet ekranlarını (`width >= 700` veya `min >= 600`) algılayan, çift sayfa (`isTwoPage`) ve maksimum içerik kısıtlamalarını yöneten responsive layout hook'u.
+- **[NEW] `components/stationery/WashiTape.js`**: Desenli (puantiyeli, çizgili, kalpli), hafif şeffaf, tırtıklı kenarlı pastel dekoratif washi bant bileşeni.
+- **[NEW] `components/stationery/StickyNote.js`**: Gerçekçi kıvrık köşe gölgesi, washi bant tutturucusu ve pastel renkleriyle post-it yapışkan not bileşeni.
+- **[NEW] `components/stationery/SpiralBinder.js`**: 3D metalik parlaklık ve gölge efektli spiral telli defter halkaları ve delik izleri (`punch holes`).
+- **[NEW] `components/stationery/PaperSheet.js`**: Krem/fildişi rengi kağıt tabanı, çizgili satırlar, noktalı ızgara (BuJo) ve sol marj çizgisi efektleri.
+- **[NEW] `components/stationery/NotebookContainer.js`**: Dış sert kapak kenarlığı, saten ayraç kurdelesi, sayfa katman gölgesi (`page stack`) ve telli defter kasası.
+
+### 📔 Sayfa Şablonlarının Dönüşümü
+- **[MODIFY] `components/pages/WeeklyPage.js`**:
+  - Tablette **çift sayfa açık ajanda (two-page spread)** düzeni (Sol sayfa: Pzt-Sal-Çar, Ortada spiral cilt, Sağ sayfa: Per-Cum-Hafta sonu + Haftalık Hedefler Post-iti).
+  - Washi bantlı gün başlıkları, kalp/yıldız checkbox'lar ve çizgili defter satırlarına doğrudan yazı yazma deneyimi.
+- **[MODIFY] `components/pages/TodoPage.js`**:
+  - Öğrenci masası konseptinde 3 ayrı kategoriye ayrıldı (Günün Öncelikleri, Dersler & Ödevler, Kişisel & Alışkanlıklar).
+  - Tablette çok sütunlu açık defter panosu ve hatırlatıcı post-it kartı.
+- **[MODIFY] `components/pages/MonthlyPage.js`**:
+  - Geniş masa takvimi pedi, fosforlu kalem (highlighter) etkinlik etiketleri, gün düzenleme modalı ve yan hedef paneli.
+- **[MODIFY] `components/pages/BlankPage.js`**:
+  - Çift sayfalı açık Bullet Journal (noktalı/çizgili), iki sayfaya yayılan serbest not ve karalama alanı.
+
+### 🏠 Arayüz ve Navigasyon İyileştirmeleri
+- **[MODIFY] `app/ajandam/[pageId].js`**: Sayfalar `NotebookContainer` içine alınarak gerçek bir açık telli ajandaya dönüştürüldü.
+- **[MODIFY] `components/CoverDisplay.js`**: Altın/metalik köşe koruyucuları (`corner protectors`), dikişli iç çerçeve ve defter kapatma lastiği (`elastic band`) eklendi.
+- **[MODIFY] `app/ajandam/index.js`**: Kapak ekranı tablet boyutlarına göre ortalandı ve ölçeklendi.
+- **[MODIFY] `app/index.js`**: Ana ekran menü butonları tabletlerde geniş yatay sırada (`flexDirection: row`) ve daha büyük dokunma alanlarıyla konumlandırıldı.
+- **[MODIFY] `app/ajandam/pages.js`**, **`components/AddPageModal.js`**, **`components/CoverEditor.js`**: Tabletlerde geniş ekran sınırlandırması (`maxWidth`) ile estetik merkezleme yapıldı.
+
+---
+
+## 📅 [2026-09-02 11:21] - GitHub Push İşlemi
+- Kullanıcı onayıyla "iPad/Tablet Dijital Kırtasiye" özellikleri, spiral cilt, washi bant, post-it, kağıt tabanı ve güncellenen tüm şablonlar GitHub uzak deposuna (`origin main`) push edildi (`https://github.com/Zeynepsoykan99/AJANDA`).
+
+
 

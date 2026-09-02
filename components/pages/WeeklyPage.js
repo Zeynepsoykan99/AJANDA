@@ -8,24 +8,31 @@ import {
   ScrollView,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import useResponsiveLayout from '../../hooks/useResponsiveLayout';
+import WashiTape from '../stationery/WashiTape';
+import StickyNote from '../stationery/StickyNote';
+import SpiralBinder from '../stationery/SpiralBinder';
+import PaperSheet from '../stationery/PaperSheet';
 
 const DAY_NAMES_FULL = [
   'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar',
 ];
 
+const DAY_EMOJIS = ['🌸', '✨', '🎀', '🌷', '🧁', '🏖️', '☕'];
+
+const WASHI_PATTERNS = ['dots', 'stripes', 'hearts', 'dots', 'stripes', 'hearts', 'dots'];
+
 /**
- * WeeklyPage - Haftalık Ajanda şablon bileşeni
- * 7 günlük plan ile her güne görev ekleme.
- *
- * @param {object} template - Şablon tanımı
- * @param {object} data - { weekStartDate, days: [{ dayOfWeek, items }] }
- * @param {function} onDataChange - Veri değişiklik fonksiyonu
+ * WeeklyPage - Kırtasiye Haftalık Plan Şablonu
+ * iPad/Tablet'te çift sayfalı telli ajanda düzeni,
+ * mobilde sevimli washi bantlı günlük kartlar ve post-it notları sunar.
  */
 export default function WeeklyPage({ template, data, onDataChange }) {
-  const [expandedDay, setExpandedDay] = useState(null);
+  const { isTwoPage, isTablet } = useResponsiveLayout();
   const [newItemTexts, setNewItemTexts] = useState({});
 
   const days = data?.days || DAY_NAMES_FULL.map((_, i) => ({ dayOfWeek: i, items: [] }));
+  const weeklyNote = data?.weeklyNote || '';
 
   const colors = template?.colors || {
     bg: '#FFF0F5',
@@ -98,251 +105,338 @@ export default function WeeklyPage({ template, data, onDataChange }) {
     [days, data, onDataChange]
   );
 
+  const handleWeeklyNoteChange = useCallback(
+    (text) => {
+      onDataChange({ ...data, weeklyNote: text });
+    },
+    [data, onDataChange]
+  );
+
   const todayDow = (new Date().getDay() + 6) % 7; // 0=Pazartesi
 
-  return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+  // Tek bir gün bloğunu render et
+  const renderDayBlock = (dayIndex) => {
+    const day = days.find((d) => d.dayOfWeek === dayIndex) || { dayOfWeek: dayIndex, items: [] };
+    const isToday = dayIndex === todayDow;
+    const dayName = DAY_NAMES_FULL[dayIndex];
+    const emoji = DAY_EMOJIS[dayIndex];
+    const washiPattern = WASHI_PATTERNS[dayIndex];
+
+    return (
+      <View
+        key={dayIndex}
+        style={[
+          styles.dayBox,
+          isToday && styles.todayBox,
+          { borderColor: colors.border },
+        ]}
       >
-        {days.map((day) => {
-          const isToday = day.dayOfWeek === todayDow;
-          const isExpanded = expandedDay === day.dayOfWeek;
-
-          return (
-            <View key={day.dayOfWeek} style={styles.daySection}>
-              {/* Gün Başlığı */}
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() =>
-                  setExpandedDay(isExpanded ? null : day.dayOfWeek)
-                }
-                style={[
-                  styles.dayHeader,
-                  {
-                    backgroundColor: isToday ? colors.accent : colors.day,
-                    borderColor: colors.border,
-                  },
-                ]}
-              >
-                <View style={styles.dayHeaderLeft}>
-                  <MaterialCommunityIcons
-                    name={isExpanded ? 'chevron-down' : 'chevron-right'}
-                    size={20}
-                    color={isToday ? '#FFFFFF' : colors.accent}
-                  />
-                  <Text
-                    style={[
-                      styles.dayName,
-                      { color: isToday ? '#FFFFFF' : colors.header },
-                    ]}
-                  >
-                    {DAY_NAMES_FULL[day.dayOfWeek]}
-                  </Text>
-                  {isToday && (
-                    <View
-                      style={[
-                        styles.todayBadge,
-                        { backgroundColor: '#FFFFFF30' },
-                      ]}
-                    >
-                      <Text style={styles.todayBadgeText}>Bugün</Text>
-                    </View>
-                  )}
-                </View>
-                <Text
-                  style={[
-                    styles.itemCount,
-                    { color: isToday ? '#FFFFFF99' : colors.accent + '80' },
-                  ]}
-                >
-                  {day.items.length} görev
-                </Text>
-              </TouchableOpacity>
-
-              {/* Genişletilmiş İçerik */}
-              {isExpanded && (
-                <View
-                  style={[
-                    styles.dayContent,
-                    {
-                      backgroundColor: colors.day,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                >
-                  {/* Mevcut görevler */}
-                  {day.items.map((item) => (
-                    <View key={item.id} style={styles.weekItem}>
-                      <TouchableOpacity
-                        onPress={() =>
-                          handleToggleItem(day.dayOfWeek, item.id)
-                        }
-                      >
-                        <MaterialCommunityIcons
-                          name={
-                            item.completed
-                              ? 'checkbox-marked-circle'
-                              : 'checkbox-blank-circle-outline'
-                          }
-                          size={20}
-                          color={
-                            item.completed
-                              ? colors.accent
-                              : colors.accent + '60'
-                          }
-                        />
-                      </TouchableOpacity>
-                      <Text
-                        style={[
-                          styles.weekItemText,
-                          { color: colors.header },
-                          item.completed && styles.completedItem,
-                        ]}
-                      >
-                        {item.text}
-                      </Text>
-                      <TouchableOpacity
-                        onPress={() =>
-                          handleDeleteItem(day.dayOfWeek, item.id)
-                        }
-                      >
-                        <MaterialCommunityIcons
-                          name="close"
-                          size={16}
-                          color={colors.accent + '60'}
-                        />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-
-                  {/* Yeni görev ekleme */}
-                  <View style={styles.addRow}>
-                    <TextInput
-                      style={[
-                        styles.addInput,
-                        {
-                          borderColor: colors.border,
-                          color: colors.header,
-                        },
-                      ]}
-                      value={newItemTexts[day.dayOfWeek] || ''}
-                      onChangeText={(text) =>
-                        setNewItemTexts((prev) => ({
-                          ...prev,
-                          [day.dayOfWeek]: text,
-                        }))
-                      }
-                      placeholder="Görev ekle..."
-                      placeholderTextColor={colors.accent + '50'}
-                      onSubmitEditing={() => handleAddItem(day.dayOfWeek)}
-                      returnKeyType="done"
-                    />
-                    <TouchableOpacity
-                      onPress={() => handleAddItem(day.dayOfWeek)}
-                      style={[
-                        styles.addBtn,
-                        { backgroundColor: colors.accent },
-                      ]}
-                    >
-                      <MaterialCommunityIcons
-                        name="plus"
-                        size={18}
-                        color="#FFFFFF"
-                      />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              )}
+        {/* Washi Bantlı Gün Başlığı */}
+        <View style={styles.washiHeader}>
+          <WashiTape
+            color={isToday ? '#F48FB1' : '#F8BBD0'}
+            width={isTablet ? 130 : 110}
+            height={22}
+            rotation={dayIndex % 2 === 0 ? -1.5 : 1.5}
+            pattern={washiPattern}
+            label={`${emoji} ${dayName}`}
+          />
+          {isToday && (
+            <View style={styles.todayPill}>
+              <Text style={styles.todayPillText}>Bugün</Text>
             </View>
-          );
-        })}
+          )}
+        </View>
+
+        {/* Görev Satırları (Defter Çizgisi) */}
+        <View style={styles.taskList}>
+          {day.items.map((item) => (
+            <View key={item.id} style={styles.taskLine}>
+              <TouchableOpacity
+                onPress={() => handleToggleItem(day.dayOfWeek, item.id)}
+                style={styles.checkboxTouch}
+              >
+                <MaterialCommunityIcons
+                  name={item.completed ? 'heart' : 'heart-outline'}
+                  size={18}
+                  color={item.completed ? colors.accent : colors.accent + '80'}
+                />
+              </TouchableOpacity>
+              <Text
+                style={[
+                  styles.taskText,
+                  { color: colors.header },
+                  item.completed && styles.taskCompleted,
+                ]}
+                numberOfLines={2}
+              >
+                {item.text}
+              </Text>
+              <TouchableOpacity
+                onPress={() => handleDeleteItem(day.dayOfWeek, item.id)}
+                style={styles.deleteTouch}
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={14}
+                  color={colors.accent + '60'}
+                />
+              </TouchableOpacity>
+            </View>
+          ))}
+
+          {/* Yeni Satır Ekleme */}
+          <View style={styles.addRow}>
+            <TextInput
+              style={[styles.addInput, { color: colors.header, borderColor: colors.border }]}
+              value={newItemTexts[day.dayOfWeek] || ''}
+              onChangeText={(text) =>
+                setNewItemTexts((prev) => ({
+                  ...prev,
+                  [day.dayOfWeek]: text,
+                }))
+              }
+              placeholder="Yeni plan veya ders yaz..."
+              placeholderTextColor={colors.accent + '50'}
+              onSubmitEditing={() => handleAddItem(day.dayOfWeek)}
+              returnKeyType="done"
+            />
+            <TouchableOpacity
+              onPress={() => handleAddItem(day.dayOfWeek)}
+              style={[styles.addBtn, { backgroundColor: colors.accent }]}
+            >
+              <MaterialCommunityIcons name="plus" size={16} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  // -------------------------------------------------------------
+  // TABLET / ÇİFT SAYFA GÖRÜNÜMÜ
+  // -------------------------------------------------------------
+  if (isTwoPage) {
+    return (
+      <View style={styles.twoPageContainer}>
+        {/* SOL SAYFA: Pazartesi, Salı, Çarşamba */}
+        <PaperSheet ruling="lined" style={styles.pageHalf}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.pageScrollContent}
+          >
+            <View style={styles.pageCornerDeco}>
+              <Text style={styles.decoWatermark}>WEEKLY PLANNER 🌸</Text>
+            </View>
+            {[0, 1, 2].map((i) => renderDayBlock(i))}
+          </ScrollView>
+        </PaperSheet>
+
+        {/* ORTADAKİ SPİRAL BİNDER HALKALARI */}
+        <SpiralBinder type="center" ringColor="rosegold" ringCount={16} />
+
+        {/* SAĞ SAYFA: Perşembe, Cuma, Cumartesi, Pazar + Post-it */}
+        <PaperSheet ruling="lined" style={styles.pageHalf}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.pageScrollContent}
+          >
+            {[3, 4].map((i) => renderDayBlock(i))}
+
+            {/* Hafta sonu çiftli blok */}
+            <View style={styles.weekendRow}>
+              <View style={styles.weekendHalf}>{renderDayBlock(5)}</View>
+              <View style={styles.weekendHalf}>{renderDayBlock(6)}</View>
+            </View>
+
+            {/* Haftanın Notları / Post-It */}
+            <View style={styles.stickyWrapper}>
+              <StickyNote
+                title="Haftalık Hedefler & Notlar 🎀"
+                content={weeklyNote}
+                onChangeContent={handleWeeklyNoteChange}
+                color="#FFF9C4"
+                tapeColor="#FFCC80"
+                placeholder="Bu hafta hangi sınavlar var? Hedefler ve motivasyon notları..."
+              />
+            </View>
+          </ScrollView>
+        </PaperSheet>
+      </View>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // MOBİL / TEK SAYFA GÖRÜNÜMÜ
+  // -------------------------------------------------------------
+  return (
+    <PaperSheet ruling="lined" style={styles.singlePage}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.mobileScrollContent}
+      >
+        <View style={styles.mobileHeaderBadge}>
+          <WashiTape
+            color="#F48FB1"
+            width={180}
+            height={26}
+            pattern="hearts"
+            label="🎀 HAFTALIK DERS & PLAN 🎀"
+          />
+        </View>
+
+        {/* 7 Günün Tamamı */}
+        {[0, 1, 2, 3, 4, 5, 6].map((i) => renderDayBlock(i))}
+
+        {/* Alt Post-it Notu */}
+        <View style={styles.mobileSticky}>
+          <StickyNote
+            title="Haftanın Notları 🌸"
+            content={weeklyNote}
+            onChangeContent={handleWeeklyNoteChange}
+            color="#FFF9C4"
+            tapeColor="#FFCC80"
+            placeholder="Bu haftanın önemli notları, sınavlar ve hatırlatmalar..."
+          />
+        </View>
       </ScrollView>
-    </View>
+    </PaperSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  // Tablet Çift Sayfa Düzeni
+  twoPageContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    height: '100%',
+  },
+  pageHalf: {
+    flex: 1,
+    marginHorizontal: 4,
+  },
+  pageScrollContent: {
+    padding: 14,
+    paddingBottom: 24,
+  },
+  pageCornerDeco: {
+    alignItems: 'flex-start',
+    marginBottom: 8,
+    opacity: 0.6,
+  },
+  decoWatermark: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#AD1457',
+    letterSpacing: 2,
+  },
+  weekendRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  weekendHalf: {
     flex: 1,
   },
-  scrollContent: {
+  stickyWrapper: {
+    marginTop: 12,
+  },
+
+  // Mobil Tek Sayfa Düzeni
+  singlePage: {
+    flex: 1,
+  },
+  mobileScrollContent: {
     padding: 12,
-    paddingBottom: 40,
+    paddingBottom: 80,
   },
-  daySection: {
-    marginBottom: 6,
+  mobileHeaderBadge: {
+    alignItems: 'center',
+    marginVertical: 10,
   },
-  dayHeader: {
+  mobileSticky: {
+    marginTop: 16,
+    marginBottom: 24,
+  },
+
+  // Ortak Gün Bloğu
+  dayBox: {
+    backgroundColor: '#FFFFFFEE',
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 10,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 1.5,
+  },
+  todayBox: {
+    borderWidth: 1.5,
+    borderColor: '#E91E63',
+    backgroundColor: '#FFF8F9',
+  },
+  washiHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    borderWidth: 1,
+    marginBottom: 8,
   },
-  dayHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  dayName: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  todayBadge: {
+  todayPill: {
+    backgroundColor: '#E91E63',
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 8,
+    borderRadius: 10,
   },
-  todayBadgeText: {
+  todayPillText: {
     color: '#FFFFFF',
     fontSize: 10,
     fontWeight: '700',
   },
-  itemCount: {
-    fontSize: 12,
-    fontWeight: '500',
+  taskList: {
+    gap: 4,
   },
-  dayContent: {
-    marginTop: 2,
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-  },
-  weekItem: {
+  taskLine: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 8,
+    paddingVertical: 5,
+    borderBottomWidth: 0.8,
+    borderBottomColor: '#F8BBD040',
   },
-  weekItemText: {
+  checkboxTouch: {
+    paddingRight: 8,
+  },
+  taskText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
+    lineHeight: 18,
   },
-  completedItem: {
+  taskCompleted: {
     textDecorationLine: 'line-through',
-    opacity: 0.5,
+    opacity: 0.45,
+  },
+  deleteTouch: {
+    padding: 4,
   },
   addRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
   },
   addInput: {
     flex: 1,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 13,
+    borderWidth: 0.8,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    fontSize: 12,
+    backgroundColor: '#FFFFFF',
   },
   addBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -1,110 +1,195 @@
-import React from 'react';
-import { View, StyleSheet, TextInput } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import { View, StyleSheet, TextInput, ScrollView, Text } from 'react-native';
+import useResponsiveLayout from '../../hooks/useResponsiveLayout';
+import PaperSheet from '../stationery/PaperSheet';
+import SpiralBinder from '../stationery/SpiralBinder';
+import WashiTape from '../stationery/WashiTape';
+import StickyNote from '../stationery/StickyNote';
 
 /**
- * BlankPage - Boş Sayfa şablon bileşeni
- * Serbest metin alanı: çizgili, noktalı veya düz.
- *
- * @param {object} template - Şablon tanımı
- * @param {object} data - { content: string }
- * @param {function} onDataChange - Veri değişiklik fonksiyonu
+ * BlankPage - Kırtasiye Boş Defter & Bullet Journal Şablonu
+ * iPad'de iki açık sayfalı telli defter, mobilde kaliteli krem renkli çizgili/noktalı kağıt.
  */
 export default function BlankPage({ template, data, onDataChange }) {
+  const { isTwoPage, isTablet } = useResponsiveLayout();
+
   const content = data?.content || '';
+  const rightContent = data?.rightContent || '';
+  const quickNote = data?.quickNote || '';
 
   const colors = template?.colors || {
-    bg: '#FFFFFF',
+    bg: '#FFFDF9',
     accent: '#C2185B',
-    line: '#FCE4EC',
+    line: '#F8BBD040',
   };
 
   const lineStyle = template?.lineStyle || 'horizontal';
+  const rulingType =
+    lineStyle === 'horizontal' ? 'lined' : lineStyle === 'dots' ? 'dotted' : 'blank';
 
-  return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      {/* Desen arka planı */}
-      {lineStyle === 'horizontal' && (
-        <View style={styles.linesContainer}>
-          {Array.from({ length: 30 }).map((_, i) => (
-            <View
-              key={`line-${i}`}
-              style={[styles.horizontalLine, { backgroundColor: colors.line }]}
+  // -------------------------------------------------------------
+  // TABLET / ÇİFT SAYFA DEFTER
+  // -------------------------------------------------------------
+  if (isTwoPage) {
+    return (
+      <View style={styles.twoPageContainer}>
+        {/* SOL SAYFA */}
+        <PaperSheet
+          ruling={rulingType}
+          paperColor="#FFFDF9"
+          lineColor={colors.line}
+          showMargin={rulingType === 'lined'}
+          style={styles.pageHalf}
+        >
+          <View style={styles.washiCorner}>
+            <WashiTape
+              color="#F8BBD0"
+              width={140}
+              height={22}
+              pattern="dots"
+              label="🎀 GÜNLÜK & NOTLAR"
             />
-          ))}
-        </View>
-      )}
+          </View>
+          <TextInput
+            style={[styles.textArea, { color: colors.accent }]}
+            value={content}
+            onChangeText={(text) => onDataChange({ ...data, content: text })}
+            placeholder="Sevgili Ajandam, bugün..."
+            placeholderTextColor="#BDBDBD"
+            multiline
+            textAlignVertical="top"
+          />
+        </PaperSheet>
 
-      {lineStyle === 'dots' && (
-        <View style={styles.dotsContainer}>
-          {Array.from({ length: 20 }).map((_, row) =>
-            Array.from({ length: 12 }).map((_, col) => (
-              <View
-                key={`dot-${row}-${col}`}
-                style={[
-                  styles.dot,
-                  {
-                    backgroundColor: colors.line,
-                    top: 28 + row * 28,
-                    left: 20 + col * 28,
-                  },
-                ]}
+        {/* ORTA SPİRAL CİLT */}
+        <SpiralBinder type="center" ringColor="rosegold" ringCount={16} />
+
+        {/* SAĞ SAYFA */}
+        <PaperSheet
+          ruling={rulingType}
+          paperColor="#FFFDF9"
+          lineColor={colors.line}
+          style={styles.pageHalf}
+        >
+          <View style={styles.rightPageContent}>
+            <View style={styles.washiCornerRight}>
+              <WashiTape
+                color="#CE93D8"
+                width={130}
+                height={22}
+                pattern="stripes"
+                label="✨ DÜŞÜNCELER"
               />
-            ))
-          )}
-        </View>
-      )}
+            </View>
 
-      {/* Metin Alanı */}
+            <TextInput
+              style={[styles.textArea, { color: colors.accent, flex: 1 }]}
+              value={rightContent}
+              onChangeText={(text) =>
+                onDataChange({ ...data, rightContent: text })
+              }
+              placeholder="Fikirler, şiirler, çizim notları..."
+              placeholderTextColor="#BDBDBD"
+              multiline
+              textAlignVertical="top"
+            />
+
+            <View style={styles.stickyCorner}>
+              <StickyNote
+                title="Günün İlhamı 🌸"
+                content={quickNote}
+                onChangeContent={(text) =>
+                  onDataChange({ ...data, quickNote: text })
+                }
+                color="#FFF9C4"
+                tapeColor="#FFCC80"
+                placeholder="Bugün beni gülümseten bir şey..."
+              />
+            </View>
+          </View>
+        </PaperSheet>
+      </View>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // MOBİL / TEK SAYFA
+  // -------------------------------------------------------------
+  return (
+    <PaperSheet
+      ruling={rulingType}
+      paperColor="#FFFDF9"
+      lineColor={colors.line}
+      showMargin={rulingType === 'lined'}
+      style={styles.singlePage}
+    >
+      <View style={styles.mobileWashiHeader}>
+        <WashiTape
+          color="#F8BBD0"
+          width={160}
+          height={24}
+          pattern="hearts"
+          label="🌸 SEVGİLİ GÜNLÜK 🌸"
+        />
+      </View>
+
       <TextInput
-        style={[
-          styles.textArea,
-          {
-            color: colors.accent,
-            lineHeight: lineStyle === 'horizontal' ? 28 : 24,
-          },
-        ]}
+        style={[styles.textArea, { color: colors.accent }]}
         value={content}
         onChangeText={(text) => onDataChange({ ...data, content: text })}
         placeholder="Yazmaya başla..."
-        placeholderTextColor={colors.accent + '40'}
+        placeholderTextColor="#BDBDBD"
         multiline
         textAlignVertical="top"
-        scrollEnabled
       />
-    </View>
+    </PaperSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  twoPageContainer: {
     flex: 1,
-    position: 'relative',
+    flexDirection: 'row',
+    height: '100%',
   },
-  linesContainer: {
-    ...StyleSheet.absoluteFillObject,
-    paddingTop: 20,
+  pageHalf: {
+    flex: 1,
+    marginHorizontal: 4,
+    padding: 12,
   },
-  horizontalLine: {
-    height: 1,
+  rightPageContent: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  washiCorner: {
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  washiCornerRight: {
+    alignItems: 'flex-end',
+    marginBottom: 8,
+  },
+  stickyCorner: {
+    marginTop: 10,
     width: '100%',
-    marginBottom: 27,
+    maxWidth: 240,
+    alignSelf: 'flex-end',
   },
-  dotsContainer: {
-    ...StyleSheet.absoluteFillObject,
+
+  singlePage: {
+    flex: 1,
+    padding: 12,
   },
-  dot: {
-    position: 'absolute',
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
+  mobileWashiHeader: {
+    alignItems: 'center',
+    marginVertical: 6,
   },
+
   textArea: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 22,
-    paddingBottom: 20,
-    fontSize: 16,
-    zIndex: 1,
+    fontSize: 14,
+    lineHeight: 28, // Kağıt çizgilerine tam oturması için 28px
+    paddingHorizontal: 16,
+    paddingTop: 8,
   },
 });

@@ -4,10 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import CircleMenuButton from '../components/CircleMenuButton';
 import { useTheme } from '../context/ThemeContext';
+import useResponsiveLayout from '../hooks/useResponsiveLayout';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { isTablet } = useResponsiveLayout();
 
   const menuItems = [
     { id: 'gunlugum', label: 'günlüğüm', route: '/gunlugum', icon: 'book-heart-outline' },
@@ -32,13 +34,13 @@ export default function HomeScreen() {
         </View>
 
         {/* Dairesel Butonlar Listesi */}
-        <View style={styles.menuContainer}>
+        <View style={[styles.menuContainer, isTablet && styles.tabletMenuContainer]}>
           {menuItems.map((item) => (
             <CircleMenuButton
               key={item.id}
               label={item.label}
               iconName={item.icon}
-              size={130}
+              size={isTablet ? 160 : 130}
               onPress={() => handleMenuPress(item)}
             />
           ))}
@@ -80,5 +82,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+  },
+  tabletMenuContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 40,
+    marginTop: 24,
   },
 });

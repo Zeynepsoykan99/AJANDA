@@ -18,6 +18,8 @@ import WeeklyPage from '../../components/pages/WeeklyPage';
 import BlankPage from '../../components/pages/BlankPage';
 import StickerCanvas from '../../components/stickers/StickerCanvas';
 import StickerMenu from '../../components/stickers/StickerMenu';
+import NotebookContainer from '../../components/stationery/NotebookContainer';
+import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 
 /**
  * PageViewScreen - Dinamik sayfa görüntüleme ve düzenleme
@@ -27,6 +29,7 @@ export default function PageViewScreen() {
   const router = useRouter();
   const { pageId } = useLocalSearchParams();
   const { colors } = useTheme();
+  const { isTablet, isTwoPage, maxContentWidth } = useResponsiveLayout();
 
   const [page, setPage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -258,9 +261,25 @@ export default function PageViewScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Sayfa İçeriği + Sticker Canvas */}
-      <View style={styles.contentArea}>
-        {renderPageContent()}
+      {/* Sayfa İçeriği + NotebookContainer + Sticker Canvas */}
+      <View
+        style={[
+          styles.contentArea,
+          isTablet && {
+            maxWidth: maxContentWidth,
+            alignSelf: 'center',
+            width: '100%',
+            paddingVertical: 10,
+          },
+        ]}
+      >
+        <NotebookContainer
+          coverColor={template?.colors?.border || colors.border}
+          showSpiral={!isTwoPage}
+        >
+          {renderPageContent()}
+        </NotebookContainer>
+
         <StickerCanvas
           stickers={page.stickers || []}
           onStickerMove={handleStickerMove}

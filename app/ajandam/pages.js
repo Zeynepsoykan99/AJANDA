@@ -14,6 +14,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { StorageService } from '../../services/storageService';
 import PageThumbnail from '../../components/PageThumbnail';
 import AddPageModal from '../../components/AddPageModal';
+import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 
 /**
  * PagesScreen - Ajanda Sayfa Listesi
@@ -22,6 +23,7 @@ import AddPageModal from '../../components/AddPageModal';
 export default function PagesScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { isTablet } = useResponsiveLayout();
 
   const [pages, setPages] = useState([]);
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
@@ -108,7 +110,7 @@ export default function PagesScreen() {
       edges={['top', 'bottom']}
     >
       {/* Üst Bar */}
-      <View style={styles.headerBar}>
+      <View style={[styles.headerBar, isTablet && styles.tabletContainer]}>
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => router.back()}
@@ -135,23 +137,25 @@ export default function PagesScreen() {
       </View>
 
       {/* Sayfa Listesi */}
-      <FlatList
-        data={pages}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <PageThumbnail
-            page={item}
-            onPress={() => handleOpenPage(item)}
-            onLongPress={() => handleDeletePage(item)}
-          />
-        )}
-        contentContainerStyle={[
-          styles.listContent,
-          pages.length === 0 && styles.emptyListContent,
-        ]}
-        ListEmptyComponent={renderEmptyState}
-        showsVerticalScrollIndicator={false}
-      />
+      <View style={[{ flex: 1 }, isTablet && styles.tabletContainer]}>
+        <FlatList
+          data={pages}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <PageThumbnail
+              page={item}
+              onPress={() => handleOpenPage(item)}
+              onLongPress={() => handleDeletePage(item)}
+            />
+          )}
+          contentContainerStyle={[
+            styles.listContent,
+            pages.length === 0 && styles.emptyListContent,
+          ]}
+          ListEmptyComponent={renderEmptyState}
+          showsVerticalScrollIndicator={false}
+        />
+      </View>
 
       {/* FAB - Yeni Sayfa Ekle */}
       <TouchableOpacity
@@ -219,6 +223,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  tabletContainer: {
+    width: '100%',
+    maxWidth: 860,
+    alignSelf: 'center',
   },
   fab: {
     position: 'absolute',
