@@ -1,0 +1,224 @@
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTheme } from '../../context/ThemeContext';
+import { StorageService } from '../../services/storageService';
+import { getPageTemplate, PAGE_CATEGORIES } from '../../constants/pageTemplates';
+import TodoPage from '../../components/pages/TodoPage';
+import NotebookContainer from '../../components/stationery/NotebookContainer';
+import useResponsiveLayout from '../../hooks/useResponsiveLayout';
+
+/**
+ * TodoViewScreen - Sadece To-Do listesini görüntüler ve düzenler
+ */
+export default function TodoViewScreen() {
+  const router = useRouter();
+  const { pageId } = useLocalSearchParams();
+  const { colors } = useTheme();
+  const { isTablet, isTwoPage, maxContentWidth } = useResponsiveLayout();
+
+  const [page, setPage] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const saveTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const pages = await StorageService.getPages();
+        const found = pages.find((p) => p.id === pageId);
+        if (found) {
+          setPage(found);
+        }
+      } catch (error) {
+        console.warn('Liste yüklenirken hata:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  }, [pageId]);
+
+  const handleDataChange = useCallback(
+    (newData) => {
+      setPage((prev) => {
+        const updated = { ...prev, data: newData };
+
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+        }
+        saveTimeoutRef.current = setTimeout(async () => {
+          await StorageService.updatePage(prev.id, { data: newData });
+        }, 500);
+
+        return updated;
+      });
+    },
+    []
+  );
+
+  if (isLoading) {
+    return (
+      <SafeAreaView
+        style={[styles.safeArea, { backgroundColor: colors.background }]}
+        edges={['top', 'bottom']}
+      >
+        <ActivityIndicator size="large" color={colors.accent} />
+      </SafeAreaView>
+    );
+  }
+
+  if (!page) {
+    return (
+      <SafeAreaView
+        style={[styles.safeArea, { backgroundColor: colors.background }]}
+        edges={['top', 'bottom']}
+      >
+        <Text style={[styles.errorText, { color: colors.textSecondary }]}>
+          Liste bulunamadı
+        </Text>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Text style={[styles.backLink, { color: colors.accent }]}>
+            Geri Dön
+          </Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
+  const template = getPageTemplate('todo', page.templateId);
+  const category = PAGE_CATEGORIES.find((c) => c.id === 'todo');
+
+  return (
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: colors.background }]}
+      edges={['top', 'bottom']}
+    >
+      {/* Üst Bar */}
+      <View
+        style={[
+          styles.headerBar,
+          { borderBottomColor: colors.border },
+        ]}
+      >
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => router.back()}
+          style={[
+            styles.headerButton,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <MaterialCommunityIcons
+            name="arrow-left"
+            size={20}
+            color={colors.textSecondary}
+          />
+        </TouchableOpacity>
+
+        <View style={styles.headerCenter}>
+          <Text
+            style={[styles.pageTitle, { color: colors.textPrimary }]}
+            numberOfLines={1}
+          >
+            {page.title}
+          </Text>
+          <Text style={[styles.categoryLabel, { color: colors.textSecondary + '99' }]}>
+            {category?.emoji} Yapılacaklar
+          </Text>
+        </View>
+
+        <View style={styles.headerButton} />
+      </View>
+
+      {/* Liste İçeriği */}
+      <View
+        style={[
+          styles.contentArea,
+          isTablet && {
+            maxWidth: maxContentWidth,
+            alignSelf: 'center',
+            width: '100%',
+            paddingVertical: 10,
+          },
+        ]}
+      >
+        <NotebookContainer
+          coverColor={template?.colors?.bg || colors.border}
+          showSpiral={!isTwoPage}
+        >
+          <TodoPage
+            template={template}
+            data={page.data}
+            onDataChange={handleDataChange}
+          />
+        </NotebookContainer>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
+  headerBar: {
+    height: 56,
+    minHeight: 56,
+    maxHeight: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    zIndex: 100,
+  },
+  headerButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 8,
+    overflow: 'hidden',
+  },
+  pageTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  categoryLabel: {
+    fontSize: 10,
+    fontWeight: '500',
+    marginTop: 1,
+  },
+  contentArea: {
+    flex: 1,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  errorText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 100,
+  },
+  backLink: {
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 16,
+  },
+});

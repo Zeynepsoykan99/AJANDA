@@ -139,7 +139,7 @@ export default function AddPageModal({ visible, onClose, onAdd }) {
           {/* Adım 1: Kategori Seçimi */}
           {step === 1 && (
             <View style={styles.categoriesGrid}>
-              {PAGE_CATEGORIES.map((category) => (
+              {PAGE_CATEGORIES.filter(c => c.id !== 'todo').map((category) => (
                 <TouchableOpacity
                   key={category.id}
                   activeOpacity={0.7}

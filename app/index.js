@@ -15,6 +15,7 @@ export default function HomeScreen() {
     { id: 'gunlugum', label: 'günlüğüm', route: '/gunlugum', icon: 'book-heart-outline' },
     { id: 'ajandam', label: 'ajandam', route: '/ajandam', icon: 'calendar-heart' },
     { id: 'notlarim', label: 'notlarım', route: '/defterlerim', icon: 'notebook-outline' },
+    { id: 'todolist', label: 'yapılacaklar', route: '/todolist', icon: 'format-list-checkbox' },
   ];
 
   const handleMenuPress = (item) => {
@@ -79,15 +80,16 @@ const styles = StyleSheet.create({
   },
   menuContainer: {
     width: '100%',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 20,
+    paddingHorizontal: 10,
   },
   tabletMenuContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
     gap: 40,
+    paddingHorizontal: 40,
     marginTop: 24,
   },
 });

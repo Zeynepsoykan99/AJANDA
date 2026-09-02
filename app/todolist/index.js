@@ -13,57 +13,57 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { StorageService } from '../../services/storageService';
 import PageThumbnail from '../../components/PageThumbnail';
-import AddPageModal from '../../components/AddPageModal';
+import AddTodoModal from '../../components/AddTodoModal';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 
 /**
- * PagesScreen - Ajanda Sayfa Listesi
- * Eklenen sayfaları listeler, yeni sayfa ekleme ve silme imkanı sunar.
+ * TodoListScreen - Yapılacaklar Ana Ekranı
+ * Yalnızca To-Do kategorisindeki sayfaları listeler.
  */
-export default function PagesScreen() {
+export default function TodoListScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { isTablet } = useResponsiveLayout();
 
-  const [pages, setPages] = useState([]);
+  const [todoPages, setTodoPages] = useState([]);
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Sayfaları yükle
+  // To-Do Sayfalarını yükle
   useEffect(() => {
-    loadPages();
+    loadTodoPages();
   }, []);
 
-  const loadPages = async () => {
+  const loadTodoPages = async () => {
     try {
-      const savedPages = await StorageService.getPages();
-      const ajandaPages = savedPages.filter(p => p.category !== 'todo');
-      setPages(ajandaPages.sort((a, b) => (a.order || 0) - (b.order || 0)));
+      const allPages = await StorageService.getPages();
+      const todos = allPages.filter((page) => page.category === 'todo');
+      setTodoPages(todos.sort((a, b) => (a.order || 0) - (b.order || 0)));
     } catch (error) {
-      console.warn('Sayfalar yüklenirken hata:', error);
+      console.warn('To-Do sayfaları yüklenirken hata:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Yeni sayfa ekle
-  const handleAddPage = useCallback(
+  // Yeni To-Do ekle
+  const handleAddTodo = useCallback(
     async (newPage) => {
       const updatedPages = await StorageService.addPage(newPage);
       if (updatedPages) {
-        const ajandaPages = updatedPages.filter(p => p.category !== 'todo');
-        setPages(ajandaPages.sort((a, b) => (a.order || 0) - (b.order || 0)));
+        const todos = updatedPages.filter((page) => page.category === 'todo');
+        setTodoPages(todos.sort((a, b) => (a.order || 0) - (b.order || 0)));
       }
     },
     []
   );
 
-  // Sayfa sil
-  const handleDeletePage = useCallback(
+  // To-Do sil
+  const handleDeleteTodo = useCallback(
     (page) => {
       Alert.alert(
-        'Sayfayı Sil',
-        `"${page.title}" sayfasını silmek istediğinize emin misiniz?`,
+        'Listeyi Sil',
+        `"${page.title}" listesini silmek istediğinize emin misiniz?`,
         [
           { text: 'İptal', style: 'cancel' },
           {
@@ -72,8 +72,8 @@ export default function PagesScreen() {
             onPress: async () => {
               const updated = await StorageService.deletePage(page.id);
               if (updated) {
-                const ajandaPages = updated.filter(p => p.category !== 'todo');
-                setPages(ajandaPages.sort((a, b) => (a.order || 0) - (b.order || 0)));
+                const todos = updated.filter((p) => p.category === 'todo');
+                setTodoPages(todos.sort((a, b) => (a.order || 0) - (b.order || 0)));
               }
             },
           },
@@ -83,10 +83,10 @@ export default function PagesScreen() {
     []
   );
 
-  // Sayfayı aç
-  const handleOpenPage = useCallback(
+  // To-Do aç
+  const handleOpenTodo = useCallback(
     (page) => {
-      router.push(`/ajandam/${page.id}`);
+      router.push(`/todolist/${page.id}`);
     },
     [router]
   );
@@ -94,15 +94,15 @@ export default function PagesScreen() {
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
       <MaterialCommunityIcons
-        name="notebook-outline"
+        name="checkbox-marked-circle-outline"
         size={64}
         color={colors.accent + '40'}
       />
       <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
-        Henüz sayfa eklenmedi
+        Yapılacak iş kalmadı!
       </Text>
       <Text style={[styles.emptyDesc, { color: colors.textSecondary + '99' }]}>
-        Aşağıdaki + butonuna basarak ilk sayfanı ekle!
+        Yeni bir yapılacaklar listesi oluşturmak için + butonuna dokunun.
       </Text>
     </View>
   );
@@ -133,34 +133,34 @@ export default function PagesScreen() {
         </TouchableOpacity>
 
         <Text style={[styles.pageTitle, { color: colors.textPrimary }]}>
-          Sayfalarım
+          Yapılacaklar
         </Text>
 
         <View style={styles.backButton} />
       </View>
 
-      {/* Sayfa Listesi */}
+      {/* To-Do Listesi */}
       <View style={[{ flex: 1 }, isTablet && styles.tabletContainer]}>
         <FlatList
-          data={pages}
+          data={todoPages}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <PageThumbnail
               page={item}
-              onPress={() => handleOpenPage(item)}
-              onLongPress={() => handleDeletePage(item)}
+              onPress={() => handleOpenTodo(item)}
+              onLongPress={() => handleDeleteTodo(item)}
             />
           )}
           contentContainerStyle={[
             styles.listContent,
-            pages.length === 0 && styles.emptyListContent,
+            todoPages.length === 0 && styles.emptyListContent,
           ]}
           ListEmptyComponent={renderEmptyState}
           showsVerticalScrollIndicator={false}
         />
       </View>
 
-      {/* FAB - Yeni Sayfa Ekle */}
+      {/* FAB - Yeni To-Do Ekle */}
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={() => setIsAddModalVisible(true)}
@@ -170,10 +170,10 @@ export default function PagesScreen() {
       </TouchableOpacity>
 
       {/* Sayfa Ekleme Modal */}
-      <AddPageModal
+      <AddTodoModal
         visible={isAddModalVisible}
         onClose={() => setIsAddModalVisible(false)}
-        onAdd={handleAddPage}
+        onAdd={handleAddTodo}
       />
     </SafeAreaView>
   );

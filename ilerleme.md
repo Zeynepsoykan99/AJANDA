@@ -478,3 +478,19 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 - **Sorun:** Tam sayfa şablonlardaki (Örn: `planner_flower_cloud.jpg`) `ImageBackground` bileşeni `resizeMode="cover"` olarak ayarlandığı için, tablet/telefon ekranıyla eşleşmeyen kenarlar zorla doldurulmaya çalışılıyor ve "Weekly Planner" yazısı gibi detaylar ekran dışına taşıp kırpılıyordu.
 - **Çözüm:** `ImageTemplatePage.js` dosyasındaki ölçeklendirme ayarı **`resizeMode="contain"`** olarak güncellendi.
 - **Sonuç:** Görsel hiçbir pikseli kaybolmadan, en-boy oranı korunarak ekrana sığabilecek en büyük boyutta yerleştirildi. Altta veya üstte oluşabilecek mikroskobik boşluklar, ana çerçevenin beyaz arka planı (`#FFFFFF`) ile pürüzsüzce kaynaşarak doğal kağıt görünümünü bozmadan entegre edildi.
+
+---
+
+## 📅 [2026-09-02 16:47] - To-Do List (Yapılacaklar) Ana Modülünün Ayrıştırılması
+
+### 🗂️ 1. Mimari Ayrışma ve Klasör Yapısı
+- Önceden Ajandam modülü içine gömülü olan "Yapılacaklar (To-Do List)" özelliği, bağımsız bir ana modül olarak dışarı çıkartıldı.
+- Expo Router altyapısı kullanılarak `/todolist` route'unu temsil eden `app/todolist/index.js` (ana liste ekranı) ve `app/todolist/[pageId].js` (detay sayfası) dosyaları oluşturuldu.
+
+### 📱 2. Ana Ekran (Home) 2x2 Grid Düzeni
+- Ana ekrana (`app/index.js`) 4. modül olarak "Yapılacaklar" butonu eklendi. (İkon: `format-list-checkbox`).
+- Eskiden alt alta (veya yan yana) dizilen 3'lü buton mimarisi, 4 buton olması nedeniyle pürüzsüz ve estetik bir **2x2 Grid (Kare)** formuna dönüştürüldü. `flexWrap: 'wrap'` kullanılarak hem tablet hem de telefon ekranlarında kusursuz hizalanması sağlandı.
+
+### 🧹 3. Veri Kaynağı Optimizasyonu ve Temizlik
+- Yapılacaklar modülüne özel, sadece şablon ve başlık seçtiren hızlandırılmış `components/AddTodoModal.js` oluşturuldu.
+- `app/ajandam/pages.js` ve `AddPageModal.js` içerisinden `todo` kategorisi engellenerek listelerin birbirine karışması önlendi. Eski To-Do listeleriniz `StorageService` üzerinde güvende tutuldu ve otomatik olarak yeni sayfaya aktarıldı.
