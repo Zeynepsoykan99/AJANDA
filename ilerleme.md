@@ -151,6 +151,7 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 - **[DELETE] `vercel.json`**: Proje ana dizininden tamamen silindi.
 - **[MODIFY] `.gitignore`**: Vercel dağıtımı için eklenen `.vercel/` satırı kaldırıldı.
 - **[MODIFY] `package.json`**: Vercel için eklenen `"build": "expo export --platform web"` betiği silindi.
+- **[CHECK] `Vercel Link Taraması`**: Proje kod tabanında (README.md, config dosyaları vb.) herhangi bir `.vercel.app` linki kalmadığı teyit edildi. (GitHub About sayfasındaki linkin manuel kaldırılması gerektiği raporlandı).
 
 ### 🔧 Rota Çakışması Düzeltmesi (Expo Router)
 - **[MOVE] `app/ajandam.js` → `app/ajandam/index.js`**: Expo Router'da aynı isimde hem dosya (`ajandam.js`) hem de dizin (`ajandam/`) bulunması rota çakışmasına yol açıyordu. Dosya, dizin içine `index.js` olarak taşındı. Tüm import yolları `../` → `../../` olarak güncellendi.
