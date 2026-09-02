@@ -20,6 +20,8 @@ import StickerCanvas from '../../components/stickers/StickerCanvas';
 import StickerMenu from '../../components/stickers/StickerMenu';
 import NotebookContainer from '../../components/stationery/NotebookContainer';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
+import DrawingCanvas from '../../components/drawing/DrawingCanvas';
+import DrawingToolbar from '../../components/drawing/DrawingToolbar';
 
 /**
  * PageViewScreen - Dinamik sayfa görüntüleme ve düzenleme
@@ -34,6 +36,12 @@ export default function PageViewScreen() {
   const [page, setPage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isStickerMenuVisible, setIsStickerMenuVisible] = useState(false);
+
+  // Tablet Kalemi & Çizim Durumu
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
+  const [drawingTool, setDrawingTool] = useState('pen'); // 'pen' | 'highlighter' | 'eraser'
+  const [drawingColor, setDrawingColor] = useState('#C2185B');
+  const [drawingWidth, setDrawingWidth] = useState(3);
 
   // Auto-save timer ref
   const saveTimeoutRef = useRef(null);
@@ -74,6 +82,35 @@ export default function PageViewScreen() {
     },
     []
   );
+
+  // Çizimleri güncelle (debounced auto-save)
+  const handleDrawingsChange = useCallback(
+    (newDrawings) => {
+      setPage((prev) => {
+        const updated = { ...prev, drawings: newDrawings };
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+        }
+        saveTimeoutRef.current = setTimeout(async () => {
+          await StorageService.updatePage(prev.id, { drawings: newDrawings });
+        }, 500);
+        return updated;
+      });
+    },
+    []
+  );
+
+  // Son çizgiyi geri al
+  const handleUndoDrawing = useCallback(() => {
+    setPage((prev) => {
+      const current = prev.drawings || [];
+      if (current.length === 0) return prev;
+      const updatedDrawings = current.slice(0, current.length - 1);
+      const updated = { ...prev, drawings: updatedDrawings };
+      StorageService.updatePage(prev.id, { drawings: updatedDrawings });
+      return updated;
+    });
+  }, []);
 
   // Sticker ekle
   const handleAddSticker = useCallback(
@@ -246,22 +283,37 @@ export default function PageViewScreen() {
           </Text>
         </View>
 
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => setIsStickerMenuVisible(true)}
-          style={[
-            styles.headerButton,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-            },
-          ]}
-        >
-          <Text style={{ fontSize: 18 }}>🎀</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRightGroup}>
+          <DrawingToolbar
+            isDrawingMode={isDrawingMode}
+            onToggleDrawingMode={() => setIsDrawingMode(!isDrawingMode)}
+            currentTool={drawingTool}
+            onChangeTool={setDrawingTool}
+            currentColor={drawingColor}
+            onChangeColor={setDrawingColor}
+            currentWidth={drawingWidth}
+            onChangeWidth={setDrawingWidth}
+            onUndo={handleUndoDrawing}
+            canUndo={(page.drawings || []).length > 0}
+          />
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => setIsStickerMenuVisible(true)}
+            style={[
+              styles.headerButton,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <Text style={{ fontSize: 18 }}>🎀</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Sayfa İçeriği + NotebookContainer + Sticker Canvas */}
+      {/* Sayfa İçeriği + NotebookContainer + Çizim Katmanı + Sticker Canvas */}
       <View
         style={[
           styles.contentArea,
@@ -280,6 +332,17 @@ export default function PageViewScreen() {
           {renderPageContent()}
         </NotebookContainer>
 
+        {/* Apple Pencil & Çizim Katmanı */}
+        <DrawingCanvas
+          isDrawingMode={isDrawingMode}
+          tool={drawingTool}
+          color={drawingColor}
+          strokeWidth={drawingWidth}
+          drawings={page.drawings || []}
+          onDrawingsChange={handleDrawingsChange}
+        />
+
+        {/* Sticker Katmanı */}
         <StickerCanvas
           stickers={page.stickers || []}
           onStickerMove={handleStickerMove}
@@ -316,6 +379,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerRightGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   headerCenter: {
     flex: 1,

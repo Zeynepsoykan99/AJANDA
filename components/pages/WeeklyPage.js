@@ -13,6 +13,8 @@ import WashiTape from '../stationery/WashiTape';
 import StickyNote from '../stationery/StickyNote';
 import SpiralBinder from '../stationery/SpiralBinder';
 import PaperSheet from '../stationery/PaperSheet';
+import GridPaperSheet from '../stationery/GridPaperSheet';
+import { DaisyFlower, RibbonBow, FloralCorner, DoodleHeart } from '../stationery/FloralDecorations';
 
 const DAY_NAMES_FULL = [
   'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar',
@@ -114,6 +116,12 @@ export default function WeeklyPage({ template, data, onDataChange }) {
 
   const todayDow = (new Date().getDay() + 6) % 7; // 0=Pazartesi
 
+  const isGrid = Boolean(template?.paperType?.includes('grid'));
+  const SheetComponent = isGrid ? GridPaperSheet : PaperSheet;
+  const sheetProps = isGrid
+    ? { gridColor: template?.colors?.grid || '#F8BBD055' }
+    : { ruling: 'lined' };
+
   // Tek bir gün bloğunu render et
   const renderDayBlock = (dayIndex) => {
     const day = days.find((d) => d.dayOfWeek === dayIndex) || { dayOfWeek: dayIndex, items: [] };
@@ -133,14 +141,28 @@ export default function WeeklyPage({ template, data, onDataChange }) {
       >
         {/* Washi Bantlı Gün Başlığı */}
         <View style={styles.washiHeader}>
-          <WashiTape
-            color={isToday ? '#F48FB1' : '#F8BBD0'}
-            width={isTablet ? 130 : 110}
-            height={22}
-            rotation={dayIndex % 2 === 0 ? -1.5 : 1.5}
-            pattern={washiPattern}
-            label={`${emoji} ${dayName}`}
-          />
+          <View style={styles.titleWithDeco}>
+            <WashiTape
+              color={isToday ? '#F48FB1' : colors.border}
+              width={isTablet ? 130 : 110}
+              height={22}
+              rotation={dayIndex % 2 === 0 ? -1.5 : 1.5}
+              pattern={washiPattern}
+              label={`${emoji} ${dayName}`}
+            />
+            {template?.decorations === 'daisy_ribbon' && (
+              <DaisyFlower size={18} style={{ marginLeft: 4 }} />
+            )}
+            {template?.decorations === 'lavender_bow' && (
+              <RibbonBow size={18} color="#CE93D8" style={{ marginLeft: 4 }} />
+            )}
+            {template?.decorations === 'buttercup_daisy' && (
+              <DaisyFlower size={18} style={{ marginLeft: 4 }} />
+            )}
+            {template?.decorations === 'cloud_ribbon' && (
+              <DoodleHeart size={14} color="#90CAF9" style={{ marginLeft: 4 }} />
+            )}
+          </View>
           {isToday && (
             <View style={styles.todayPill}>
               <Text style={styles.todayPillText}>Bugün</Text>
@@ -220,23 +242,31 @@ export default function WeeklyPage({ template, data, onDataChange }) {
     return (
       <View style={styles.twoPageContainer}>
         {/* SOL SAYFA: Pazartesi, Salı, Çarşamba */}
-        <PaperSheet ruling="lined" style={styles.pageHalf}>
+        <SheetComponent {...sheetProps} style={styles.pageHalf}>
+          {template?.decorations === 'daisy_ribbon' && (
+            <FloralCorner position="top-left" />
+          )}
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.pageScrollContent}
           >
             <View style={styles.pageCornerDeco}>
-              <Text style={styles.decoWatermark}>WEEKLY PLANNER 🌸</Text>
+              <Text style={styles.decoWatermark}>
+                {template?.name ? template.name.toUpperCase() : 'WEEKLY PLANNER'} 🌸
+              </Text>
             </View>
             {[0, 1, 2].map((i) => renderDayBlock(i))}
           </ScrollView>
-        </PaperSheet>
+        </SheetComponent>
 
         {/* ORTADAKİ SPİRAL BİNDER HALKALARI */}
         <SpiralBinder type="center" ringColor="rosegold" ringCount={16} />
 
         {/* SAĞ SAYFA: Perşembe, Cuma, Cumartesi, Pazar + Post-it */}
-        <PaperSheet ruling="lined" style={styles.pageHalf}>
+        <SheetComponent {...sheetProps} style={styles.pageHalf}>
+          {template?.decorations === 'daisy_ribbon' && (
+            <FloralCorner position="top-right" />
+          )}
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.pageScrollContent}
@@ -261,7 +291,7 @@ export default function WeeklyPage({ template, data, onDataChange }) {
               />
             </View>
           </ScrollView>
-        </PaperSheet>
+        </SheetComponent>
       </View>
     );
   }
@@ -270,7 +300,10 @@ export default function WeeklyPage({ template, data, onDataChange }) {
   // MOBİL / TEK SAYFA GÖRÜNÜMÜ
   // -------------------------------------------------------------
   return (
-    <PaperSheet ruling="lined" style={styles.singlePage}>
+    <SheetComponent {...sheetProps} style={styles.singlePage}>
+      {template?.decorations === 'daisy_ribbon' && (
+        <FloralCorner position="top-right" />
+      )}
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.mobileScrollContent}
@@ -281,7 +314,7 @@ export default function WeeklyPage({ template, data, onDataChange }) {
             width={180}
             height={26}
             pattern="hearts"
-            label="🎀 HAFTALIK DERS & PLAN 🎀"
+            label={`🎀 ${template?.name || 'HAFTALIK PLAN'} 🎀`}
           />
         </View>
 
@@ -300,7 +333,7 @@ export default function WeeklyPage({ template, data, onDataChange }) {
           />
         </View>
       </ScrollView>
-    </PaperSheet>
+    </SheetComponent>
   );
 }
 
@@ -381,6 +414,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 8,
+  },
+  titleWithDeco: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   todayPill: {
     backgroundColor: '#E91E63',

@@ -134,6 +134,22 @@ function renderPattern(patternType, patternColor) {
         iconName = 'minus';
         size = 14 + (i % 3) * 4;
         break;
+      case 'floral':
+        iconName = i % 2 === 0 ? 'flower-tulip-outline' : 'flower-outline';
+        size = 14 + (i % 3) * 5;
+        break;
+      case 'leaves':
+        iconName = i % 2 === 0 ? 'leaf' : 'sprout-outline';
+        size = 13 + (i % 3) * 4;
+        break;
+      case 'bows':
+        iconName = 'bow-tie';
+        size = 12 + (i % 3) * 4;
+        break;
+      case 'watercolor':
+        iconName = 'circle-slice-8';
+        size = 16 + (i % 4) * 6;
+        break;
       default:
         break;
     }

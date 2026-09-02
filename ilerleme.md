@@ -191,5 +191,47 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 ## 📅 [2026-09-02 11:21] - GitHub Push İşlemi
 - Kullanıcı onayıyla "iPad/Tablet Dijital Kırtasiye" özellikleri, spiral cilt, washi bant, post-it, kağıt tabanı ve güncellenen tüm şablonlar GitHub uzak deposuna (`origin main`) push edildi (`https://github.com/Zeynepsoykan99/AJANDA`).
 
+---
 
+## 📅 [2026-09-02 12:00] - Apple Pencil / Stylus Çizim Desteği, Kırtasiye Kalemliği & Yeni Çiçekli/Kareli Şablonlar
+
+### 📦 Paket Kurulumu
+- `react-native-svg` (^15.15.2): Expo SDK 57 uyumlu vektörel çizim katmanı ve desen motoru.
+
+### ✍️ Apple Pencil & Çizim Katmanı (Drawing Engine)
+- **[NEW] `components/drawing/DrawingCanvas.js`**:
+  - Şeffaf SVG çizim katmanı.
+  - Quadratic Bézier (`Q`) eğri yumuşatması ile pürüzsüz el yazısı ve çizim desteği.
+  - Fosforlu kalem modu (`strokeOpacity: 0.42`), jel kalem modu (`strokeOpacity: 0.95`) ve silgi modu (yakındaki çizgileri silme).
+  - Çizimler sayfa verisi içine (`page.drawings`) debounced olarak otomatik kaydedilir.
+- **[NEW] `components/drawing/DrawingToolbar.js`**:
+  - Kırtasiye kalemliği araç çubuğu.
+  - **Mod Geçişi:** ✍️ Çizim (Kalem) vs ⌨️ Yazı (Klavye) modu.
+  - **Araçlar:** Jel Kalem, Fosforlu Vurgulayıcı, Silgi, Geri Al (Undo).
+  - **Pastel Mürekkep Paleti:** Gül kurusu, lavanta moru, moka kahve, gece mavisi, adaçayı yeşili, fosforlu sarı, fosforlu şeftali.
+  - **Kalınlık Seçici:** İnce (2px), Orta (4px), Kalın (7px).
+
+### 🌸 Yeni Kareli Zemin & Çiçek/Kurdele Vektör Süslemeleri
+- **[NEW] `components/stationery/GridPaperSheet.js`**: SVG pattern tabanlı açık pembe, lila veya sarı kareli (grid) kırtasiye kağıdı tabanı.
+- **[NEW] `components/stationery/FloralDecorations.js`**: Papatya çiçekleri (`DaisyFlower`), fiyonk kurdeleler (`RibbonBow`), el çizimi kalpler (`DoodleHeart`) ve köşe aranjmanı (`FloralCorner`).
+
+### 📔 Zenginleştirilmiş Haftalık Şablonlar & Kapaklar
+- **[MODIFY] `constants/pageTemplates.js`**:
+  - `weekly_daisy_pink_grid`: "Papatyalı Pembe Grid" (açık pembe kareli zemin, papatyalar ve kurdeleler).
+  - `weekly_lavender_ribbon`: "Lavanta & Kurdele" (lila kareli zemin, mor fiyonklar).
+  - `weekly_buttercup_sun`: "Güneş Papatyası" (sıcak vanilya/sarı kareli zemin ve papatyalar).
+  - `weekly_cloud_daydream`: "Bebek Mavisi Bulutlar" (pastel mavi kareli zemin ve kurdeleler).
+- **[MODIFY] `constants/coverTemplates.js` & `components/CoverDisplay.js`**:
+  - `vintage_rose`: "Vintage Pembe Güllü" (beyaz zemin üzerine pembe güller ve altın çerçeve).
+  - `botanical_olive`: "Minimal Okaliptüs" (fildişi zemin üzerine botanik yapraklar).
+  - `watercolor_dream`: "Suluboya Hayal" (pastel suluboya geçişi).
+  - `coquette_bows`: "Coquette İnci & Fiyonk" (pudra pembe ve fiyonklar).
+  - `renderPattern` fonksiyonuna `floral`, `leaves`, `watercolor` ve `bows` desen tipleri eklendi.
+- **[MODIFY] `app/ajandam/[pageId].js`**: `DrawingToolbar` üst bara, `DrawingCanvas` defter içerisine entegre edildi; klavye/çizim modu ve sayfa çizim verisi bağlandı.
+- **[MODIFY] `components/pages/WeeklyPage.js`**: `GridPaperSheet` ve papatya/fiyonk dekorasyonları ile güncellendi.
+
+---
+
+## 📅 [2026-09-02 12:06] - GitHub Push İşlemi
+- Kullanıcı onayıyla "Apple Pencil / Stylus Çizim Desteği", "Kırtasiye Kalemliği Dock'u", "Pembe Kareli Papatyalı Şablonlar" ve "Vintage Çiçekli Kapaklar" GitHub uzak deposuna (`origin main`) push edildi (`https://github.com/Zeynepsoykan99/AJANDA`).
 
