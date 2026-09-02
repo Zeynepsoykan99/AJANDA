@@ -9,12 +9,14 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import {
   PAGE_CATEGORIES,
   PAGE_TEMPLATES,
+  getTemplatesForCategory,
   generatePageId,
   createDefaultPageData,
 } from '../constants/pageTemplates';
@@ -48,9 +50,9 @@ export default function AddPageModal({ visible, onClose, onAdd }) {
 
   const handleCategorySelect = (category) => {
     setSelectedCategory(category);
-    const templates = PAGE_TEMPLATES[category.id];
-    if (templates?.length > 0) {
-      setSelectedTemplateId(templates[0].id);
+    const tmpls = getTemplatesForCategory(category.id);
+    if (tmpls?.length > 0) {
+      setSelectedTemplateId(tmpls[0].id);
     }
     setStep(2);
   };
@@ -74,7 +76,7 @@ export default function AddPageModal({ visible, onClose, onAdd }) {
   };
 
   const templates = selectedCategory
-    ? PAGE_TEMPLATES[selectedCategory.id] || []
+    ? getTemplatesForCategory(selectedCategory.id)
     : [];
 
   return (
@@ -202,23 +204,50 @@ export default function AddPageModal({ visible, onClose, onAdd }) {
                     style={[
                       styles.templatePreview,
                       { backgroundColor: tmpl.colors.accent + '15' },
+                      tmpl.image && styles.imagePreviewContainer,
                     ]}
                   >
-                    <MaterialCommunityIcons
-                      name={selectedCategory?.icon || 'file-outline'}
-                      size={36}
-                      color={tmpl.colors.accent}
-                    />
+                    {tmpl.image ? (
+                      <Image
+                        source={tmpl.image}
+                        style={styles.templateThumbnail}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <MaterialCommunityIcons
+                        name={selectedCategory?.icon || 'file-outline'}
+                        size={36}
+                        color={tmpl.colors.accent}
+                      />
+                    )}
                   </View>
                   <View style={styles.templateInfo}>
-                    <Text
-                      style={[
-                        styles.templateName,
-                        { color: tmpl.colors.accent },
-                      ]}
-                    >
-                      {tmpl.name}
-                    </Text>
+                    <View style={styles.templateTitleRow}>
+                      <Text
+                        style={[
+                          styles.templateName,
+                          { color: tmpl.colors.accent },
+                        ]}
+                      >
+                        {tmpl.name}
+                      </Text>
+                      {tmpl.type === 'image_template' && (
+                        <View style={styles.originalBadge}>
+                          <Text style={styles.originalBadgeText}>Orijinal</Text>
+                        </View>
+                      )}
+                    </View>
+                    {tmpl.description && (
+                      <Text
+                        style={[
+                          styles.templateDesc,
+                          { color: colors.textSecondary },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {tmpl.description}
+                      </Text>
+                    )}
                     <View style={styles.colorSwatches}>
                       {Object.values(tmpl.colors)
                         .slice(0, 4)
@@ -412,9 +441,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  imagePreviewContainer: {
+    padding: 0,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: '#F8BBD0',
+  },
+  templateThumbnail: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+  },
   templateInfo: {
     flex: 1,
-    gap: 6,
+    gap: 4,
+  },
+  templateTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  originalBadge: {
+    backgroundColor: '#E91E63',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  originalBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  templateDesc: {
+    fontSize: 12,
+    marginTop: -2,
+    marginBottom: 2,
   },
   templateName: {
     fontSize: 15,

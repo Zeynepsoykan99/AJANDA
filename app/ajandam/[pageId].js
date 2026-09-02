@@ -16,6 +16,7 @@ import TodoPage from '../../components/pages/TodoPage';
 import MonthlyPage from '../../components/pages/MonthlyPage';
 import WeeklyPage from '../../components/pages/WeeklyPage';
 import BlankPage from '../../components/pages/BlankPage';
+import ImageTemplatePage from '../../components/pages/ImageTemplatePage';
 import StickerCanvas from '../../components/stickers/StickerCanvas';
 import StickerMenu from '../../components/stickers/StickerMenu';
 import NotebookContainer from '../../components/stationery/NotebookContainer';
@@ -221,6 +222,15 @@ export default function PageViewScreen() {
           />
         );
       case 'weekly':
+        if (template?.type === 'image_template') {
+          return (
+            <ImageTemplatePage
+              template={template}
+              data={page.data}
+              onDataChange={handleDataChange}
+            />
+          );
+        }
         return (
           <WeeklyPage
             template={template}
@@ -327,7 +337,7 @@ export default function PageViewScreen() {
       >
         <NotebookContainer
           coverColor={template?.colors?.border || colors.border}
-          showSpiral={!isTwoPage}
+          showSpiral={template?.type === 'image_template' ? false : !isTwoPage}
         >
           {renderPageContent()}
         </NotebookContainer>

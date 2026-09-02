@@ -271,5 +271,38 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 ## 📅 [2026-09-02 12:42] - GitHub Force Push İşlemi
 - Kullanıcı onayıyla önceki SDK 52 ara commit'i iptal edildi ve "Expo SDK 54 Geçişi & Paket Senkronizasyonu" değişiklikleri GitHub uzak deposuna (`origin main`) `git push --force` ile push edilerek temiz bir commit geçmişi sağlandı (`https://github.com/Zeynepsoykan99/AJANDA`).
 
+---
+
+## 📅 [2026-09-02 13:10] - Orijinal Haftalık Planlayıcı Görsellerinin Sayfa Şablonu Olarak Entegrasyonu & Apple Pencil Çizim Uyumu
+
+### 🖼️ Görsel Entegrasyonu (Assets)
+- `gorsel/planner.jpg` ➔ `assets/templates/planner_pink_cute.jpg` (Pembe, çilekli, kurdeleli ve post-it tarzı sevimli haftalık plan).
+- `gorsel/planner2.jpg` ➔ `assets/templates/planner_floral_grid.jpg` (Papatya buketli, sarı/pembe kareli zeminli haftalık plan).
+- `constants/pageTemplates.js` içerisine `TEMPLATE_IMAGES` ve iki yeni görsel şablon tanımı eklendi:
+  - `weekly_cute_pink_planner`: "Pembe & Çilekli Şablon 🍓" (Orijinal el çizimi pembe haftalık planlayıcı)
+  - `weekly_floral_grid_planner`: "Papatyalı Grid Şablon 🌼" (Orijinal çiçekli kareli haftalık planlayıcı)
+
+### 📑 Şablon Galerisi Güncellemesi (`AddPageModal.js`)
+- Yeni sayfa ekleme modalındaki şablon listesine görsel küçük resim (thumbnail) desteği eklendi.
+- Orijinal şablonlar listenin en başında estetik pembe kenarlıklar, gerçek minyatür önizlemeler ve "Orijinal" rozeti ile listelendi.
+
+### 📄 Sayfa Yapısı & Arka Plan (`ImageTemplatePage.js`)
+- **[NEW] `components/pages/ImageTemplatePage.js`**:
+  - Seçilen şablonun yüksek çözünürlüklü görselini `ImageBackground` ile tam sayfa olarak yükler.
+  - Tablet ve iPad ekranlarında orijinal en/boy oranını koruyarak (aspectRatio) gölgeli gerçekçi kırtasiye kağıdı olarak konumlandırır.
+
+### ✍️ Çizim Katmanı Uyumu (`DrawingCanvas`)
+- `app/ajandam/[pageId].js` güncellendi:
+  - `DrawingCanvas` (Apple Pencil / Stylus şeffaf çizim katmanı) doğrudan bu görsel şablonun üzerine tam ekran oturacak şekilde bağlandı.
+  - Kullanıcı klavye yerine kalemiyle doğrudan görsel üzerindeki gün kutularına ve not alanlarına el yazısıyla serbestçe yazabilir, fosforlu kalemle boyayabilir veya silebilir.
+  - `NotebookContainer` üzerindeki tel/spiral, görsel şablon seçildiğinde görselin düzenini bozmamak için otomatik gizlenir.
+
+---
+
+## 📅 [2026-09-02 14:10] - GitHub Push İşlemi
+- Kullanıcı onayıyla "Orijinal Görsel Tabanlı Haftalık Plan Şablonları, Galeri Thumbnailleri ve Çizim Katmanı Entegrasyonu" değişiklikleri GitHub uzak deposuna (`origin main`) push edildi (`https://github.com/Zeynepsoykan99/AJANDA`).
+
+
+
 
 

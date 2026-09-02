@@ -35,6 +35,11 @@ export const PAGE_CATEGORIES = [
   },
 ];
 
+export const TEMPLATE_IMAGES = {
+  weekly_cute_pink_planner: require('../assets/templates/planner_pink_cute.jpg'),
+  weekly_floral_grid_planner: require('../assets/templates/planner_floral_grid.jpg'),
+};
+
 export const PAGE_TEMPLATES = {
   todo: [
     {
@@ -80,6 +85,22 @@ export const PAGE_TEMPLATES = {
     },
   ],
   weekly: [
+    {
+      id: 'weekly_cute_pink_planner',
+      name: 'Pembe & Çilekli Şablon 🍓',
+      description: 'Birebir orijinal el çizimi pembe haftalık planlayıcı',
+      type: 'image_template',
+      colors: { bg: '#FFF5F8', accent: '#E91E63', header: '#C2185B', day: '#FFFFFF', border: '#F8BBD0' },
+      aspectRatio: 0.703, // 720x1024
+    },
+    {
+      id: 'weekly_floral_grid_planner',
+      name: 'Papatyalı Grid Şablon 🌼',
+      description: 'Birebir orijinal çiçekli kareli haftalık planlayıcı',
+      type: 'image_template',
+      colors: { bg: '#FFFDE7', accent: '#F57F17', header: '#E65100', day: '#FFFFFF', border: '#FFE082' },
+      aspectRatio: 0.66, // 676x1024
+    },
     {
       id: 'weekly_daisy_pink_grid',
       name: 'Papatyalı Pembe Grid',
@@ -159,14 +180,21 @@ export const PAGE_TEMPLATES = {
 export function getPageTemplate(categoryId, templateId) {
   const categoryTemplates = PAGE_TEMPLATES[categoryId];
   if (!categoryTemplates) return null;
-  return categoryTemplates.find((t) => t.id === templateId) || categoryTemplates[0];
+  const tmpl = categoryTemplates.find((t) => t.id === templateId) || categoryTemplates[0];
+  if (tmpl && TEMPLATE_IMAGES[tmpl.id]) {
+    return { ...tmpl, image: TEMPLATE_IMAGES[tmpl.id] };
+  }
+  return tmpl;
 }
 
 /**
  * Kategorinin tüm şablonlarını döndürür.
  */
 export function getTemplatesForCategory(categoryId) {
-  return PAGE_TEMPLATES[categoryId] || [];
+  const templates = PAGE_TEMPLATES[categoryId] || [];
+  return templates.map((tmpl) =>
+    TEMPLATE_IMAGES[tmpl.id] ? { ...tmpl, image: TEMPLATE_IMAGES[tmpl.id] } : tmpl
+  );
 }
 
 /**
