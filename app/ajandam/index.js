@@ -3,15 +3,15 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useTheme } from '../context/ThemeContext';
-import { StorageService } from '../services/storageService';
+import { useTheme } from '../../context/ThemeContext';
+import { StorageService } from '../../services/storageService';
 import {
   COVER_TEMPLATES,
   DEFAULT_COVER_TEMPLATE_ID,
   getCoverTemplateById,
-} from '../constants/coverTemplates';
-import CoverDisplay from '../components/CoverDisplay';
-import CoverEditor from '../components/CoverEditor';
+} from '../../constants/coverTemplates';
+import CoverDisplay from '../../components/CoverDisplay';
+import CoverEditor from '../../components/CoverEditor';
 
 /**
  * AjandamScreen - Ajanda Kapağı Ekranı

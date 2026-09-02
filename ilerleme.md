@@ -135,3 +135,26 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 ## 📅 [2026-08-30 12:47] - GitHub Push İşlemi
 - Kullanıcı onayıyla "Ajandam" modülü altyapısı, tema motoru, kapak sistemi, dinamik sayfalar, sticker altyapısı ve tüm güncellenen kaynak kodlar GitHub uzak deposuna (`origin main`) push edildi (`https://github.com/Zeynepsoykan99/AJANDA`).
 
+---
+
+## 📅 [2026-08-30 13:00] - Vercel Web Canlıya Alma (Production Deployment) ⚠️ İPTAL EDİLDİ
+
+### 🚀 Yapılan İşlemler (Sonradan geri alındı)
+- Vercel dağıtımı denendi ancak beyaz ekran sorunu yaşandı.
+- Web dağıtımından vazgeçildi, aşağıdaki temizlik adımları uygulandı.
+
+---
+
+## 📅 [2026-09-02 10:49] - Vercel Kalıntılarının Temizlenmesi ve Rota Çakışması Düzeltmesi
+
+### 🧹 Temizlik İşlemleri
+- **[DELETE] `vercel.json`**: Proje ana dizininden tamamen silindi.
+- **[MODIFY] `.gitignore`**: Vercel dağıtımı için eklenen `.vercel/` satırı kaldırıldı.
+- **[MODIFY] `package.json`**: Vercel için eklenen `"build": "expo export --platform web"` betiği silindi.
+
+### 🔧 Rota Çakışması Düzeltmesi (Expo Router)
+- **[MOVE] `app/ajandam.js` → `app/ajandam/index.js`**: Expo Router'da aynı isimde hem dosya (`ajandam.js`) hem de dizin (`ajandam/`) bulunması rota çakışmasına yol açıyordu. Dosya, dizin içine `index.js` olarak taşındı. Tüm import yolları `../` → `../../` olarak güncellendi.
+
+### 📌 Not
+- Web dağıtımı (Vercel) tamamen iptal edilmiştir. Proje yalnızca mobil (iOS/Android) platformu hedefleyerek geliştirilmeye devam edecektir.
+
