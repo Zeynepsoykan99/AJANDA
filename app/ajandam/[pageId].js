@@ -323,26 +323,31 @@ export default function PageViewScreen() {
         </View>
       </View>
 
-      {/* Sayfa İçeriği + NotebookContainer + Çizim Katmanı + Sticker Canvas */}
+      {/* Sayfa İçeriği + NotebookContainer (normal şablonlar) / Tam Ekran Görsel (image_template) */}
       <View
         style={[
           styles.contentArea,
-          isTablet && {
+          isTablet && template?.type !== 'image_template' && {
             maxWidth: maxContentWidth,
             alignSelf: 'center',
             width: '100%',
             paddingVertical: 10,
           },
+          template?.type === 'image_template' && styles.fullBleedContentArea,
         ]}
       >
-        <NotebookContainer
-          coverColor={template?.colors?.border || colors.border}
-          showSpiral={template?.type === 'image_template' ? false : !isTwoPage}
-        >
-          {renderPageContent()}
-        </NotebookContainer>
+        {template?.type === 'image_template' ? (
+          renderPageContent()
+        ) : (
+          <NotebookContainer
+            coverColor={template?.colors?.border || colors.border}
+            showSpiral={!isTwoPage}
+          >
+            {renderPageContent()}
+          </NotebookContainer>
+        )}
 
-        {/* Apple Pencil & Çizim Katmanı */}
+        {/* Apple Pencil & Çizim Katmanı - Uçtan uca tam hizalı */}
         <DrawingCanvas
           isDrawingMode={isDrawingMode}
           tool={drawingTool}
@@ -350,6 +355,7 @@ export default function PageViewScreen() {
           strokeWidth={drawingWidth}
           drawings={page.drawings || []}
           onDrawingsChange={handleDrawingsChange}
+          style={styles.fullBleedCanvas}
         />
 
         {/* Sticker Katmanı */}
@@ -412,6 +418,21 @@ const styles = StyleSheet.create({
   contentArea: {
     flex: 1,
     position: 'relative',
+  },
+  fullBleedContentArea: {
+    padding: 0,
+    margin: 0,
+    width: '100%',
+    height: '100%',
+  },
+  fullBleedCanvas: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    width: '100%',
+    height: '100%',
   },
   errorText: {
     fontSize: 16,

@@ -302,6 +302,32 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 ## 📅 [2026-09-02 14:10] - GitHub Push İşlemi
 - Kullanıcı onayıyla "Orijinal Görsel Tabanlı Haftalık Plan Şablonları, Galeri Thumbnailleri ve Çizim Katmanı Entegrasyonu" değişiklikleri GitHub uzak deposuna (`origin main`) push edildi (`https://github.com/Zeynepsoykan99/AJANDA`).
 
+---
+
+## 📅 [2026-09-02 14:18] - Görsel Şablonların Tam Sayfa (Full Bleed) Kaplama & Çizim Katmanı Hizalama Güncellemesi
+
+### 📐 Tam Sayfa Kaplama (Full Bleed) & Sıfır Boşluk
+- **`components/pages/ImageTemplatePage.js`**:
+  - `ImageBackground` bileşenine `width: '100%'`, `height: '100%'`, `flex: 1` ve `resizeMode="cover"` uygulandı.
+  - Şablonun etrafındaki gereksiz `ScrollView` padding'leri, sabit genişlik kısıtlamaları (`680px` vb.), kart kenarlıkları ve gölgeler tamamen kaldırıldı.
+  - `container` genişlik ve yüksekliği `%100` yapılarak iç/dış tüm boşluklar (`padding: 0, margin: 0`) sıfırlandı; görsel doğrudan defterin sayfası haline getirildi.
+
+### 🖼️ Kapsayıcı ve Defter Çerçevesi Ayrımı (`app/ajandam/[pageId].js`)
+- `app/ajandam/[pageId].js` güncellendi:
+  - Görsel tabanlı şablonlarda (`template.type === 'image_template'`), dış kapak çerçevesi olan `NotebookContainer` atlanarak görsel doğrudan uçtan uca render edildi.
+  - Böylece görselin etrafında hiçbir beyazlık, deri cilt payı veya çerçeve boşluğu kalmadan ekranı tam kaplaması sağlandı.
+
+### ✍️ Çizim Katmanı Milimetrik Hizalaması (`DrawingCanvas`)
+- `DrawingCanvas` katmanı `position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, width: '100%', height: '100%'` ile tam sayfa kaplayan görselin tam üstüne milimi milimine oturtuldu.
+- Apple Pencil / Stylus ile yapılan çizimler ve işaretlemeler görsel üzerindeki gün bloklarına birebir hizalı çalışır hale getirildi.
+
+---
+
+## 📅 [2026-09-02 14:22] - GitHub Push İşlemi
+- Kullanıcı onayıyla "Görsel Planlayıcı Şablonlarına Full-Bleed Tam Sayfa Kaplama ve Milimetrik Çizim Katmanı Hizalaması" değişiklikleri GitHub uzak deposuna (`origin main`) push edildi (`https://github.com/Zeynepsoykan99/AJANDA`).
+
+
+
 
 
 
