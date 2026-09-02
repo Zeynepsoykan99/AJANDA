@@ -21,21 +21,25 @@ const DraggableTextBlock = ({
   onBlur,
   onDelete,
   onMoveEnd,
+  onResizeEnd,
 }) => {
   const [pos, setPos] = useState({ x: block.x, y: block.y });
+  const [boxWidth, setBoxWidth] = useState(block.width || 120);
 
   useEffect(() => {
     setPos({ x: block.x, y: block.y });
   }, [block.x, block.y]);
 
-  const panResponder = useRef(
+  useEffect(() => {
+    if (block.width) setBoxWidth(block.width);
+  }, [block.width]);
+
+  // Sürükle (Taşı) PanResponder
+  const dragPanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => !isEditing,
       onMoveShouldSetPanResponder: (_, gestureState) =>
         !isEditing && (Math.abs(gestureState.dx) > 3 || Math.abs(gestureState.dy) > 3),
-      onPanResponderGrant: () => {
-        // Drag başladı
-      },
       onPanResponderMove: (_, gestureState) => {
         setPos({
           x: block.x + gestureState.dx,
@@ -44,12 +48,30 @@ const DraggableTextBlock = ({
       },
       onPanResponderRelease: (_, gestureState) => {
         if (Math.abs(gestureState.dx) < 3 && Math.abs(gestureState.dy) < 3) {
-          // Tap algılandı
           onEdit(block.id);
         } else {
-          // Drag bitti, kaydet
           onMoveEnd(block.id, block.x + gestureState.dx, block.y + gestureState.dy);
         }
+      },
+    })
+  ).current;
+
+  // Genişlik (Resize) PanResponder
+  const initialWidthRef = useRef(boxWidth);
+  const resizePanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        initialWidthRef.current = boxWidth;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        const newWidth = Math.max(60, initialWidthRef.current + gestureState.dx);
+        setBoxWidth(newWidth);
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        const finalWidth = Math.max(60, initialWidthRef.current + gestureState.dx);
+        onResizeEnd(block.id, finalWidth);
       },
     })
   ).current;
@@ -58,10 +80,10 @@ const DraggableTextBlock = ({
     <View
       style={[
         styles.blockContainer,
-        { left: pos.x, top: pos.y },
+        { left: pos.x, top: pos.y, width: boxWidth },
         isEditing && styles.blockEditing,
       ]}
-      {...(!isEditing ? panResponder.panHandlers : {})}
+      {...(!isEditing ? dragPanResponder.panHandlers : {})}
     >
       {isEditing ? (
         <View style={styles.inputWrapper}>
@@ -81,12 +103,19 @@ const DraggableTextBlock = ({
               },
             ]}
           />
+
+          {/* Sağ Taraftaki Boyutlandırma Tutamacı (Resize Handle) */}
+          <View style={styles.resizeHandleContainer} {...resizePanResponder.panHandlers}>
+            <MaterialCommunityIcons name="drag-vertical" size={20} color="#E91E63" />
+          </View>
+
+          {/* Sol Üst Köşede Sil Butonu */}
           <TouchableOpacity
             onPress={() => onDelete(block.id)}
             style={styles.deleteBtn}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <MaterialCommunityIcons name="close-circle" size={18} color="#E91E63" />
+            <MaterialCommunityIcons name="close-circle" size={20} color="#E91E63" />
           </TouchableOpacity>
         </View>
       ) : (
@@ -108,11 +137,6 @@ const DraggableTextBlock = ({
   );
 };
 
-/**
- * TextCanvas - Serbest Konumlandırılabilir ve Sürüklenebilir Metin Katmanı
- * Kullanıcı "Klavye" modundayken sayfanın herhangi bir yerine dokunarak
- * şeffaf metin kutuları (TextInput) açabilir ve bunları sürükleyebilir.
- */
 export default function TextCanvas({
   isTextMode = false,
   textBlocks = [],
@@ -122,50 +146,50 @@ export default function TextCanvas({
 }) {
   const [editingId, setEditingId] = useState(null);
 
-  // Sayfaya dokunulduğunda yeni metin kutusu oluştur
   const handleCanvasPress = (evt) => {
     if (!isTextMode) return;
-
-    // Eğer zaten bir şey düzenleniyorsa ve dışarı tıklandıysa, düzenlemeyi bitir.
     if (editingId) {
       setEditingId(null);
       return;
     }
 
-    // Dokunulan koordinatlar
     const { locationX, locationY } = evt.nativeEvent;
-
-    // Yeni metin bloğu
     const newId = `text_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
     const newBlock = {
       id: newId,
       x: Math.max(10, Math.round(locationX)),
-      y: Math.max(10, Math.round(locationY - 15)), // İmleci dokunulan yerin biraz üstüne hizala
+      y: Math.max(10, Math.round(locationY - 15)),
       text: '',
       color: activeColor,
       fontSize: activeFontSize,
+      width: 120, // Varsayılan Genişlik (Pazartesi vb. sütunlar için makul bir başlangıç)
     };
 
-    const updated = [...textBlocks, newBlock];
-    onTextBlocksChange(updated);
+    onTextBlocksChange([...textBlocks, newBlock]);
     setEditingId(newId);
   };
 
   const handleTextChange = (id, newText) => {
-    const updated = textBlocks.map((b) =>
-      b.id === id ? { ...b, text: newText } : b
+    onTextBlocksChange(
+      textBlocks.map((b) => (b.id === id ? { ...b, text: newText } : b))
     );
-    onTextBlocksChange(updated);
   };
 
   const handleMoveEnd = (id, newX, newY) => {
-    const updated = textBlocks.map((b) =>
-      b.id === id ? { ...b, x: newX, y: newY } : b
+    onTextBlocksChange(
+      textBlocks.map((b) => (b.id === id ? { ...b, x: newX, y: newY } : b))
     );
-    onTextBlocksChange(updated);
+  };
+
+  const handleResizeEnd = (id, newWidth) => {
+    onTextBlocksChange(
+      textBlocks.map((b) => (b.id === id ? { ...b, width: newWidth } : b))
+    );
   };
 
   const handleBlur = (id) => {
+    // Sadece kutu dışına veya Bitti'ye tıklandığında tetiklenir
+    // Ancak handleCanvasPress içinde state'i null yaptığımız için burası yedek
     setEditingId(null);
     const block = textBlocks.find((b) => b.id === id);
     if (block && !block.text.trim()) {
@@ -174,14 +198,12 @@ export default function TextCanvas({
   };
 
   const handleDeleteBlock = (id) => {
-    const updated = textBlocks.filter((b) => b.id !== id);
-    onTextBlocksChange(updated);
+    onTextBlocksChange(textBlocks.filter((b) => b.id !== id));
     if (editingId === id) setEditingId(null);
   };
 
   return (
     <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
-      {/* Klavye modu açıkken yeni kutu eklemek için tıklama alanı */}
       {isTextMode && (
         <Pressable
           style={StyleSheet.absoluteFillObject}
@@ -189,7 +211,6 @@ export default function TextCanvas({
         />
       )}
 
-      {/* Mevcut Metin Blokları */}
       {textBlocks.map((block) => (
         <DraggableTextBlock
           key={block.id}
@@ -202,6 +223,7 @@ export default function TextCanvas({
           onBlur={handleBlur}
           onDelete={handleDeleteBlock}
           onMoveEnd={handleMoveEnd}
+          onResizeEnd={handleResizeEnd}
         />
       ))}
     </View>
@@ -211,8 +233,7 @@ export default function TextCanvas({
 const styles = StyleSheet.create({
   blockContainer: {
     position: 'absolute',
-    minWidth: 90,
-    maxWidth: '85%',
+    minWidth: 60,
     zIndex: 30,
   },
   blockEditing: {
@@ -222,7 +243,7 @@ const styles = StyleSheet.create({
     borderColor: '#E91E6388',
     backgroundColor: '#FFFFFFEE',
     borderRadius: 8,
-    padding: 4,
+    padding: 0, // Sıfırladık ki iç padding'leri flex ile yönetelim
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -231,22 +252,38 @@ const styles = StyleSheet.create({
   },
   inputWrapper: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 4,
+    alignItems: 'stretch',
+    minHeight: 40,
+    position: 'relative',
   },
   textInput: {
     flex: 1,
-    padding: 2,
+    padding: 8,
     margin: 0,
     fontWeight: '500',
     fontFamily: Platform.OS === 'ios' ? 'Avenir' : 'normal',
+    textAlignVertical: 'top',
+  },
+  resizeHandleContainer: {
+    width: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#E91E6315',
+    borderTopRightRadius: 6,
+    borderBottomRightRadius: 6,
+    borderLeftWidth: 1,
+    borderLeftColor: '#E91E6330',
   },
   deleteBtn: {
-    padding: 2,
-    alignSelf: 'flex-start',
+    position: 'absolute',
+    top: -10,
+    left: -10,
+    backgroundColor: '#FFF',
+    borderRadius: 10,
+    overflow: 'hidden',
   },
   viewBlock: {
-    padding: 2,
+    padding: 8,
     backgroundColor: 'transparent',
   },
   savedText: {

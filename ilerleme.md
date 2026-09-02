@@ -528,3 +528,7 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 ### 🎨 3. Renk ve Font Uyumu
 - Eklenen klavye metinleri, araç çubuğunda renk çarkından seçilen rengi ve ayarlanan puntoyu (boyutu) dinamik olarak alacak şekilde bağlandı.
 - Oluşturulan metinler, koordinatlarıyla birlikte anında (auto-save) kalıcı hafızaya kaydedilir; sayfayı kapatıp açtığınızda tüm metinler bıraktığınız yerde kalır.
+
+### ↔️ 4. Sınırları Belirleme (Responsive Word-Wrap)
+- Metin kutuları artık sabit ve sonsuz bir genişliğe sahip değil. Düzenleme (Editing) modundayken sağ tarafta çıkan **boyutlandırma tutamacı** sayesinde kutunun genişliği parmakla (veya kalemle) istenilen sütuna/görsel sınırına göre ayarlanabiliyor.
+- Kutu genişliği daraltıldığında içerisindeki metin otomatik olarak alt satıra (word-wrap) iniyor, bu sayede "Pazartesi" gibi belirli arka plan sütunlarının içine metni tam oturtmak harika bir deneyime dönüştü!
