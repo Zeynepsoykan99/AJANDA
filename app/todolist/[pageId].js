@@ -15,6 +15,7 @@ import { getPageTemplate, PAGE_CATEGORIES } from '../../constants/pageTemplates'
 import ImageTemplatePage from '../../components/pages/ImageTemplatePage';
 import DrawingCanvas from '../../components/drawing/DrawingCanvas';
 import DrawingToolbar from '../../components/drawing/DrawingToolbar';
+import TextCanvas from '../../components/text/TextCanvas';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 
 /**
@@ -30,10 +31,14 @@ export default function TodoViewScreen() {
   const [isLoading, setIsLoading] = useState(true);
 
   // Çizim Ayarları
-  const [activeMode, setActiveMode] = useState('drawing'); // Varsayılan olarak kalem açık
+  const [activeMode, setActiveMode] = useState('none');
   const [drawingTool, setDrawingTool] = useState('pen');
   const [drawingColor, setDrawingColor] = useState('#C2185B');
   const [drawingWidth, setDrawingWidth] = useState(3);
+
+  // Klavye / Metin Ayarları
+  const [textColor, setTextColor] = useState('#4E342E');
+  const [textFontSize, setTextFontSize] = useState(16);
 
   const saveTimeoutRef = useRef(null);
 
@@ -75,6 +80,20 @@ export default function TodoViewScreen() {
         saveTimeoutRef.current = setTimeout(async () => {
           await StorageService.updatePage(prev.id, { drawings: newDrawings });
         }, 500);
+        return updated;
+      });
+    },
+    []
+  );
+
+  const handleTextBlocksChange = useCallback(
+    (newTextBlocks) => {
+      setPage((prev) => {
+        const updated = { ...prev, textBlocks: newTextBlocks };
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = setTimeout(async () => {
+          await StorageService.updatePage(prev.id, { textBlocks: newTextBlocks });
+        }, 400);
         return updated;
       });
     },
@@ -172,12 +191,20 @@ export default function TodoViewScreen() {
             onToggleDrawingMode={() =>
               setActiveMode((prev) => (prev === 'drawing' ? 'none' : 'drawing'))
             }
+            isTextMode={activeMode === 'text'}
+            onToggleTextMode={() =>
+              setActiveMode((prev) => (prev === 'text' ? 'none' : 'text'))
+            }
             currentTool={drawingTool}
             onChangeTool={setDrawingTool}
             currentColor={drawingColor}
             onChangeColor={setDrawingColor}
             currentWidth={drawingWidth}
             onChangeWidth={setDrawingWidth}
+            textColor={textColor}
+            onChangeTextColor={setTextColor}
+            textFontSize={textFontSize}
+            onChangeTextFontSize={setTextFontSize}
             onUndo={handleUndoDrawing}
             canUndo={(page.drawings || []).length > 0}
           />
@@ -195,6 +222,15 @@ export default function TodoViewScreen() {
           template={template}
           data={page.data}
           onDataChange={handleDataChange}
+        />
+
+        {/* Serbest Klavye / Metin Katmanı */}
+        <TextCanvas
+          isTextMode={activeMode === 'text'}
+          textBlocks={page.textBlocks || []}
+          onTextBlocksChange={handleTextBlocksChange}
+          activeColor={textColor}
+          activeFontSize={textFontSize}
         />
 
         {/* Apple Pencil & Çizim Katmanı - Uçtan uca tam hizalı */}

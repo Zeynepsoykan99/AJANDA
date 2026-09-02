@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,14 +7,111 @@ import {
   StyleSheet,
   Pressable,
   Platform,
-  Keyboard,
+  PanResponder,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
+const DraggableTextBlock = ({
+  block,
+  activeColor,
+  activeFontSize,
+  isEditing,
+  onEdit,
+  onChange,
+  onBlur,
+  onDelete,
+  onMoveEnd,
+}) => {
+  const [pos, setPos] = useState({ x: block.x, y: block.y });
+
+  useEffect(() => {
+    setPos({ x: block.x, y: block.y });
+  }, [block.x, block.y]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => !isEditing,
+      onMoveShouldSetPanResponder: (_, gestureState) =>
+        !isEditing && (Math.abs(gestureState.dx) > 3 || Math.abs(gestureState.dy) > 3),
+      onPanResponderGrant: () => {
+        // Drag başladı
+      },
+      onPanResponderMove: (_, gestureState) => {
+        setPos({
+          x: block.x + gestureState.dx,
+          y: block.y + gestureState.dy,
+        });
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (Math.abs(gestureState.dx) < 3 && Math.abs(gestureState.dy) < 3) {
+          // Tap algılandı
+          onEdit(block.id);
+        } else {
+          // Drag bitti, kaydet
+          onMoveEnd(block.id, block.x + gestureState.dx, block.y + gestureState.dy);
+        }
+      },
+    })
+  ).current;
+
+  return (
+    <View
+      style={[
+        styles.blockContainer,
+        { left: pos.x, top: pos.y },
+        isEditing && styles.blockEditing,
+      ]}
+      {...(!isEditing ? panResponder.panHandlers : {})}
+    >
+      {isEditing ? (
+        <View style={styles.inputWrapper}>
+          <TextInput
+            value={block.text}
+            onChangeText={(txt) => onChange(block.id, txt)}
+            onBlur={() => onBlur(block.id)}
+            autoFocus
+            multiline
+            placeholder="Notunu yaz..."
+            placeholderTextColor={block.color + '55'}
+            style={[
+              styles.textInput,
+              {
+                color: block.color || activeColor,
+                fontSize: block.fontSize || activeFontSize,
+              },
+            ]}
+          />
+          <TouchableOpacity
+            onPress={() => onDelete(block.id)}
+            style={styles.deleteBtn}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <MaterialCommunityIcons name="close-circle" size={18} color="#E91E63" />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.viewBlock}>
+          <Text
+            style={[
+              styles.savedText,
+              {
+                color: block.color || activeColor,
+                fontSize: block.fontSize || activeFontSize,
+              },
+            ]}
+          >
+            {block.text}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+};
+
 /**
- * TextCanvas - Serbest Konumlandırılabilir Metin Katmanı
+ * TextCanvas - Serbest Konumlandırılabilir ve Sürüklenebilir Metin Katmanı
  * Kullanıcı "Klavye" modundayken sayfanın herhangi bir yerine dokunarak
- * şeffaf metin kutuları (TextInput) açabilir ve doğrudan şablonun üzerine yazı yazabilir.
+ * şeffaf metin kutuları (TextInput) açabilir ve bunları sürükleyebilir.
  */
 export default function TextCanvas({
   isTextMode = false,
@@ -24,11 +121,16 @@ export default function TextCanvas({
   activeFontSize = 15,
 }) {
   const [editingId, setEditingId] = useState(null);
-  const inputRefs = useRef({});
 
   // Sayfaya dokunulduğunda yeni metin kutusu oluştur
   const handleCanvasPress = (evt) => {
     if (!isTextMode) return;
+
+    // Eğer zaten bir şey düzenleniyorsa ve dışarı tıklandıysa, düzenlemeyi bitir.
+    if (editingId) {
+      setEditingId(null);
+      return;
+    }
 
     // Dokunulan koordinatlar
     const { locationX, locationY } = evt.nativeEvent;
@@ -49,7 +151,6 @@ export default function TextCanvas({
     setEditingId(newId);
   };
 
-  // Metin içeriğini güncelle
   const handleTextChange = (id, newText) => {
     const updated = textBlocks.map((b) =>
       b.id === id ? { ...b, text: newText } : b
@@ -57,7 +158,13 @@ export default function TextCanvas({
     onTextBlocksChange(updated);
   };
 
-  // Odak kaybedildiğinde boşsa sil
+  const handleMoveEnd = (id, newX, newY) => {
+    const updated = textBlocks.map((b) =>
+      b.id === id ? { ...b, x: newX, y: newY } : b
+    );
+    onTextBlocksChange(updated);
+  };
+
   const handleBlur = (id) => {
     setEditingId(null);
     const block = textBlocks.find((b) => b.id === id);
@@ -66,7 +173,6 @@ export default function TextCanvas({
     }
   };
 
-  // Metin kutusunu sil
   const handleDeleteBlock = (id) => {
     const updated = textBlocks.filter((b) => b.id !== id);
     onTextBlocksChange(updated);
@@ -84,72 +190,20 @@ export default function TextCanvas({
       )}
 
       {/* Mevcut Metin Blokları */}
-      {textBlocks.map((block) => {
-        const isEditing = editingId === block.id;
-
-        return (
-          <View
-            key={block.id}
-            style={[
-              styles.blockContainer,
-              { left: block.x, top: block.y },
-              isEditing && styles.blockEditing,
-            ]}
-          >
-            {isEditing ? (
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  ref={(ref) => {
-                    inputRefs.current[block.id] = ref;
-                  }}
-                  value={block.text}
-                  onChangeText={(txt) => handleTextChange(block.id, txt)}
-                  onBlur={() => handleBlur(block.id)}
-                  autoFocus
-                  multiline
-                  placeholder="Notunu yaz..."
-                  placeholderTextColor={block.color + '55'}
-                  style={[
-                    styles.textInput,
-                    {
-                      color: block.color || activeColor,
-                      fontSize: block.fontSize || activeFontSize,
-                    },
-                  ]}
-                />
-                {/* Sil Butonu */}
-                <TouchableOpacity
-                  onPress={() => handleDeleteBlock(block.id)}
-                  style={styles.deleteBtn}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <MaterialCommunityIcons name="close-circle" size={18} color="#E91E63" />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => {
-                  setEditingId(block.id);
-                }}
-                style={styles.viewBlock}
-              >
-                <Text
-                  style={[
-                    styles.savedText,
-                    {
-                      color: block.color || activeColor,
-                      fontSize: block.fontSize || activeFontSize,
-                    },
-                  ]}
-                >
-                  {block.text}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        );
-      })}
+      {textBlocks.map((block) => (
+        <DraggableTextBlock
+          key={block.id}
+          block={block}
+          activeColor={activeColor}
+          activeFontSize={activeFontSize}
+          isEditing={editingId === block.id}
+          onEdit={setEditingId}
+          onChange={handleTextChange}
+          onBlur={handleBlur}
+          onDelete={handleDeleteBlock}
+          onMoveEnd={handleMoveEnd}
+        />
+      ))}
     </View>
   );
 }

@@ -512,3 +512,19 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 - `app/todolist/[pageId].js` dosyası baştan aşağı yenilendi.
 - Artık To-Do sayfasını açtığınızda görsel, ekranın tamamını kenar boşluksuz (full-bleed) kaplıyor.
 - Üzerine eklenen **şeffaf çizim katmanı** (`DrawingCanvas`) sayesinde Apple Pencil veya parmağınızla doğrudan kendi görselinizin çizgilerine yazı yazıp, kalp veya tik (✅) atabilirsiniz! (Tıpkı Ajandam modülünde olduğu gibi kalem renk, kalınlık ve silgi seçenekleri de üst bara eklendi).
+
+---
+
+## ⌨️ [2026-09-02 17:21] - Klavye (Metin) Modunun Aktivasyonu ve Sürükle-Bırak
+
+### 📝 1. Serbest Metin Katmanı (Klavye Modu)
+- To-Do ekranına klavye modunu yöneten **`TextCanvas`** katmanı entegre edildi.
+- Araç çubuğundan "Klavye" moduna geçildiğinde çizim devre dışı bırakılır; ekrana dokunulan herhangi bir koordinatta doğrudan şeffaf ve otomatik odaklanan bir metin kutusu belirir.
+
+### 🤌 2. Sürükle-Bırak (Drag & Drop) Yeteneği
+- `TextCanvas` bileşenine `PanResponder` mimarisi eklenerek **tıklama (düzenleme)** ile **kaydırma (sürükleme)** işlemleri ayrıştırıldı.
+- Yazdığınız metne sadece dokunarak içeriğini güncelleyebilir, veya üzerine basılı tutup sayfanın herhangi bir noktasına **sürükleyerek** taşıyabilirsiniz.
+
+### 🎨 3. Renk ve Font Uyumu
+- Eklenen klavye metinleri, araç çubuğunda renk çarkından seçilen rengi ve ayarlanan puntoyu (boyutu) dinamik olarak alacak şekilde bağlandı.
+- Oluşturulan metinler, koordinatlarıyla birlikte anında (auto-save) kalıcı hafızaya kaydedilir; sayfayı kapatıp açtığınızda tüm metinler bıraktığınız yerde kalır.
