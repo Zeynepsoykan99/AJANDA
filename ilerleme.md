@@ -494,3 +494,21 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 ### 🧹 3. Veri Kaynağı Optimizasyonu ve Temizlik
 - Yapılacaklar modülüne özel, sadece şablon ve başlık seçtiren hızlandırılmış `components/AddTodoModal.js` oluşturuldu.
 - `app/ajandam/pages.js` ve `AddPageModal.js` içerisinden `todo` kategorisi engellenerek listelerin birbirine karışması önlendi. Eski To-Do listeleriniz `StorageService` üzerinde güvende tutuldu ve otomatik olarak yeni sayfaya aktarıldı.
+
+---
+
+## 🎨 [2026-09-02 17:05] - Yeni Orijinal Görsel Şablonların (To-Do & Ajandam) Entegrasyonu
+
+### 🖼️ 1. Yeni Görsellerin Sisteme Dahil Edilmesi
+- `gorsel/` klasörünüzdeki yeni tasarımlar projenin kalbi olan `assets/templates/` klasörüne kopyalandı.
+- `constants/pageTemplates.js` dosyası güncellenerek:
+  - **Ajandam:** Yeni orijinal haftalık planlayıcı çizimleri `weekly` kategorisine dahil edildi.
+  - **To-Do List:** Eski, sıkıcı kod tabanlı klasik listeler tamamen yok edildi. Yerine, sizin eklediğiniz 5 farklı özel Yapılacaklar Listesi tasarımı tanımlandı.
+
+### 📱 2. Menülerin (UI) "Pürüzsüz Galeri" Formuna Sokulması
+- Yeni şablonların seçildiği `AddTodoModal.js` ekranı tıpkı Ajandam'da olduğu gibi **metinsiz**, sadece görsellerin küçük resimlerinin (thumbnail) göründüğü yan yana dizili, yatay dikdörtgen bir galeri yapısına dönüştürüldü.
+
+### ✍️ 3. Full-Bleed To-Do Ekranı ve Çizim Deneyimi
+- `app/todolist/[pageId].js` dosyası baştan aşağı yenilendi.
+- Artık To-Do sayfasını açtığınızda görsel, ekranın tamamını kenar boşluksuz (full-bleed) kaplıyor.
+- Üzerine eklenen **şeffaf çizim katmanı** (`DrawingCanvas`) sayesinde Apple Pencil veya parmağınızla doğrudan kendi görselinizin çizgilerine yazı yazıp, kalp veya tik (✅) atabilirsiniz! (Tıpkı Ajandam modülünde olduğu gibi kalem renk, kalınlık ve silgi seçenekleri de üst bara eklendi).

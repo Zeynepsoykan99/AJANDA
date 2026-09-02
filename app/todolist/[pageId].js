@@ -12,8 +12,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { StorageService } from '../../services/storageService';
 import { getPageTemplate, PAGE_CATEGORIES } from '../../constants/pageTemplates';
-import TodoPage from '../../components/pages/TodoPage';
-import NotebookContainer from '../../components/stationery/NotebookContainer';
+import ImageTemplatePage from '../../components/pages/ImageTemplatePage';
+import DrawingCanvas from '../../components/drawing/DrawingCanvas';
+import DrawingToolbar from '../../components/drawing/DrawingToolbar';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 
 /**
@@ -27,6 +28,13 @@ export default function TodoViewScreen() {
 
   const [page, setPage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Çizim Ayarları
+  const [activeMode, setActiveMode] = useState('drawing'); // Varsayılan olarak kalem açık
+  const [drawingTool, setDrawingTool] = useState('pen');
+  const [drawingColor, setDrawingColor] = useState('#C2185B');
+  const [drawingWidth, setDrawingWidth] = useState(3);
+
   const saveTimeoutRef = useRef(null);
 
   useEffect(() => {
@@ -49,19 +57,40 @@ export default function TodoViewScreen() {
     (newData) => {
       setPage((prev) => {
         const updated = { ...prev, data: newData };
-
-        if (saveTimeoutRef.current) {
-          clearTimeout(saveTimeoutRef.current);
-        }
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = setTimeout(async () => {
           await StorageService.updatePage(prev.id, { data: newData });
         }, 500);
-
         return updated;
       });
     },
     []
   );
+
+  const handleDrawingsChange = useCallback(
+    (newDrawings) => {
+      setPage((prev) => {
+        const updated = { ...prev, drawings: newDrawings };
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = setTimeout(async () => {
+          await StorageService.updatePage(prev.id, { drawings: newDrawings });
+        }, 500);
+        return updated;
+      });
+    },
+    []
+  );
+
+  const handleUndoDrawing = useCallback(() => {
+    setPage((prev) => {
+      const current = prev.drawings || [];
+      if (current.length === 0) return prev;
+      const updatedDrawings = current.slice(0, current.length - 1);
+      const updated = { ...prev, drawings: updatedDrawings };
+      StorageService.updatePage(prev.id, { drawings: updatedDrawings });
+      return updated;
+    });
+  }, []);
 
   if (isLoading) {
     return (
@@ -137,31 +166,47 @@ export default function TodoViewScreen() {
           </Text>
         </View>
 
-        <View style={styles.headerButton} />
+        <View style={styles.headerRightGroup}>
+          <DrawingToolbar
+            isDrawingMode={activeMode === 'drawing'}
+            onToggleDrawingMode={() =>
+              setActiveMode((prev) => (prev === 'drawing' ? 'none' : 'drawing'))
+            }
+            currentTool={drawingTool}
+            onChangeTool={setDrawingTool}
+            currentColor={drawingColor}
+            onChangeColor={setDrawingColor}
+            currentWidth={drawingWidth}
+            onChangeWidth={setDrawingWidth}
+            onUndo={handleUndoDrawing}
+            canUndo={(page.drawings || []).length > 0}
+          />
+        </View>
       </View>
 
       {/* Liste İçeriği */}
       <View
         style={[
           styles.contentArea,
-          isTablet && {
-            maxWidth: maxContentWidth,
-            alignSelf: 'center',
-            width: '100%',
-            paddingVertical: 10,
-          },
+          styles.fullBleedContentArea,
         ]}
       >
-        <NotebookContainer
-          coverColor={template?.colors?.bg || colors.border}
-          showSpiral={!isTwoPage}
-        >
-          <TodoPage
-            template={template}
-            data={page.data}
-            onDataChange={handleDataChange}
-          />
-        </NotebookContainer>
+        <ImageTemplatePage
+          template={template}
+          data={page.data}
+          onDataChange={handleDataChange}
+        />
+
+        {/* Apple Pencil & Çizim Katmanı - Uçtan uca tam hizalı */}
+        <DrawingCanvas
+          isDrawingMode={activeMode === 'drawing'}
+          tool={drawingTool}
+          color={drawingColor}
+          strokeWidth={drawingWidth}
+          drawings={page.drawings || []}
+          onDrawingsChange={handleDrawingsChange}
+          style={styles.fullBleedCanvas}
+        />
       </View>
     </SafeAreaView>
   );
@@ -205,10 +250,28 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginTop: 1,
   },
+  headerRightGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   contentArea: {
     flex: 1,
     position: 'relative',
     overflow: 'hidden',
+  },
+  fullBleedContentArea: {
+    flex: 1,
+    padding: 0,
+    margin: 0,
+    overflow: 'hidden',
+  },
+  fullBleedCanvas: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
   errorText: {
     fontSize: 16,

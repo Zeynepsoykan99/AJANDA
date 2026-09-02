@@ -9,6 +9,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -98,55 +99,36 @@ export default function AddTodoModal({ visible, onClose, onAdd }) {
           {/* Adım 1: Şablon Seçimi */}
           {step === 1 && (
             <View>
-              <View style={styles.templateList}>
-                {templates.map((tmpl) => (
-                  <TouchableOpacity
-                    key={tmpl.id}
-                    activeOpacity={0.7}
-                    onPress={() => setSelectedTemplateId(tmpl.id)}
-                    style={[
-                      styles.templateCard,
-                      {
-                        backgroundColor: tmpl.colors.bg,
-                        borderColor:
-                          selectedTemplateId === tmpl.id
-                            ? tmpl.colors.accent
-                            : tmpl.colors.bg,
-                        borderWidth: selectedTemplateId === tmpl.id ? 3 : 1.5,
-                      },
-                    ]}
-                  >
-                    <View
+              <View style={styles.imageGridList}>
+                {templates.map((tmpl) => {
+                  const isSelected = selectedTemplateId === tmpl.id;
+                  return (
+                    <TouchableOpacity
+                      key={tmpl.id}
+                      activeOpacity={0.85}
+                      onPress={() => setSelectedTemplateId(tmpl.id)}
                       style={[
-                        styles.templatePreview,
-                        { backgroundColor: tmpl.colors.accent + '15' },
+                        styles.imageTemplateCard,
+                        isSelected && styles.imageTemplateCardSelected,
                       ]}
                     >
-                      <MaterialCommunityIcons
-                        name="checkbox-marked-outline"
-                        size={36}
-                        color={tmpl.colors.accent}
+                      <Image
+                        source={tmpl.image}
+                        style={styles.imageCardThumbnail}
+                        resizeMode="cover"
                       />
-                    </View>
-                    <View style={styles.templateInfo}>
-                      <Text
-                        style={[
-                          styles.templateName,
-                          { color: tmpl.colors.accent },
-                        ]}
-                      >
-                        {tmpl.name}
-                      </Text>
-                    </View>
-                    {selectedTemplateId === tmpl.id && (
-                      <MaterialCommunityIcons
-                        name="check-circle"
-                        size={24}
-                        color={tmpl.colors.accent}
-                      />
-                    )}
-                  </TouchableOpacity>
-                ))}
+                      {isSelected && (
+                        <View style={styles.selectedIndicator}>
+                          <MaterialCommunityIcons
+                            name="check-circle"
+                            size={24}
+                            color="#E91E63"
+                          />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
               {/* İleri butonu */}
@@ -252,30 +234,53 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-  templateList: {
-    gap: 12,
-  },
-  templateCard: {
+  imageGridList: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  imageTemplateCard: {
+    width: '47%',
+    aspectRatio: 0.70,
     borderRadius: 16,
-    gap: 14,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#E8E0E4',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+    position: 'relative',
   },
-  templatePreview: {
-    width: 60,
-    height: 60,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+  imageTemplateCardSelected: {
+    borderColor: '#E91E63',
+    borderWidth: 3.5,
+    shadowColor: '#E91E63',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 8,
+    transform: [{ scale: 1.02 }],
   },
-  templateInfo: {
-    flex: 1,
-    gap: 4,
+  imageCardThumbnail: {
+    width: '100%',
+    height: '100%',
   },
-  templateName: {
-    fontSize: 15,
-    fontWeight: '700',
+  selectedIndicator: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 3,
+    elevation: 4,
   },
   nextButton: {
     flexDirection: 'row',
