@@ -428,3 +428,15 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 ### 💾 4. Vektör Kalıcılığı (State Persistence)
 - Çizimler tamamlandığı anda renk, opaklık, kalınlık ve Bézier veri stringiyle birlikte `page.drawings` listesine eklenir ve `StorageService.updatePage` kullanılarak cihaza kalıcı kaydedilir.
 - Ajanda yeniden açıldığında tüm çizimler milimetrik olarak aynı yerde yüklenir.
+
+---
+
+## 📅 [2026-09-02 15:20] - Çizim Alanı Sınırları ve Renk Paleti Hatalarının Giderilmesi
+
+### 📏 1. Tam Ekran (Full Bleed) Çizim Alanı Onarımı
+- **Sorun:** React Native SVG'nin varsayılan Bounding Box sınırı yüzünden çizim alanı ekranın tamamına yayılamıyordu.
+- **Çözüm:** `DrawingCanvas.js` içerisindeki `<Svg>` bileşenine açıkça `width="100%"` ve `height="100%"` eklendi. Artık sayfanın tam kenarlarına, köşelerine (uçtan uca) sorunsuz çizim yapılabiliyor.
+
+### 🎨 2. Görünmez Renk Paleti (Dropdown) Onarımı
+- **Sorun:** Önceki adımda "sayfa sıçraması" için eklenen `overflow: 'hidden'` kuralı nedeniyle açılır menü (renk paleti) kesiliyor (klipleniyor) ve tıklamaları almıyordu.
+- **Çözüm:** `app/ajandam/[pageId].js` içindeki `headerBar` stilinden `overflow: 'hidden'` kaldırıldı ve `zIndex: 100` eklendi. Renk paleti artık kesilmeden aşağı açılıyor ve altındaki çizim katmanı tıklamaları yutmadığı için renk değişimi sorunsuz çalışıyor.

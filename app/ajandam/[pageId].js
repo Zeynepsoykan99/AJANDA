@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    overflow: 'hidden',
+    zIndex: 100,
   },
   headerButton: {
     width: 38,

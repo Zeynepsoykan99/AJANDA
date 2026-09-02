@@ -151,7 +151,7 @@ export default function DrawingCanvas({
       pointerEvents={isDrawingMode ? 'auto' : 'none'}
       {...(isDrawingMode ? panResponder.panHandlers : {})}
     >
-      <Svg style={StyleSheet.absoluteFill}>
+      <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
         {/* Tamamlanmış Kalıcı Çizgiler */}
         {drawings.map((stroke) => (
           <Path
