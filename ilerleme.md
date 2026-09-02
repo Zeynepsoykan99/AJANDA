@@ -326,6 +326,30 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 ## 📅 [2026-09-02 14:22] - GitHub Push İşlemi
 - Kullanıcı onayıyla "Görsel Planlayıcı Şablonlarına Full-Bleed Tam Sayfa Kaplama ve Milimetrik Çizim Katmanı Hizalaması" değişiklikleri GitHub uzak deposuna (`origin main`) push edildi (`https://github.com/Zeynepsoykan99/AJANDA`).
 
+---
+
+## 📅 [2026-09-02 14:30] - Haftalık Şablon Temizliği & Sade Görsel Seçim Ekranı
+
+### 🧹 1. Eski Şablonların Temizlenmesi (`constants/pageTemplates.js`)
+- Kodla sonradan üretilen tüm eski haftalık plan şablonları (`weekly_daisy_pink_grid`, `weekly_lavender_ribbon`, `weekly_buttercup_sun`, `weekly_cloud_daydream`, `weekly_pink`, `weekly_sky`, `weekly_peach`) tamamen silindi.
+- `PAGE_TEMPLATES.weekly` listesinde YALNIZCA kullanıcının yüklediği iki orijinal görsel şablon bırakıldı:
+  - `weekly_cute_pink_planner` (🍓 Pembe & Çilekli Şablon)
+  - `weekly_floral_grid_planner` (🌼 Papatyalı Grid Şablon)
+
+### 🖼️ 2. Sadeleştirilmiş Dikdörtgen Şablon Galerisi (`components/AddPageModal.js`)
+- Şablon seçim adımı (Adım 2) tamamen sadeleştirildi:
+  - Şablonlar yan yana dizilmiş estetik dikey dikdörtgen kutular (`aspectRatio: 0.70`, `width: '47%'`) haline getirildi.
+  - Kartların içindeki, altındaki ve yanındaki tüm başlıklar, açıklama metinleri, ikonlar, renk paleti daireleri ve "Orijinal" rozetleri tamamen kaldırıldı.
+  - Kullanıcı ekranda SADECE tıklanabilir şablon görsellerini (thumbnail) görür ve doğrudan görsele tıklayarak seçim yapar.
+  - Seçilen görsel, pembe vurgulu aktif çerçeve (`borderColor: '#E91E63'`) ve sağ üst köşesindeki zarif onay ikonu ile belirginleşir.
+
+---
+
+## 📅 [2026-09-02 14:32] - GitHub Push İşlemi
+- Kullanıcı onayıyla "Eski Haftalık Şablonların Temizlenmesi, Yalnızca Orijinal Görsellerin Bırakılması ve Metinsiz Dikdörtgen Seçim Ekranı" değişiklikleri GitHub uzak deposuna (`origin main`) push edildi (`https://github.com/Zeynepsoykan99/AJANDA`).
+
+
+
 
 
 

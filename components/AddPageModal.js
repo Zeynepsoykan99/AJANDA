@@ -182,95 +182,92 @@ export default function AddPageModal({ visible, onClose, onAdd }) {
 
           {/* Adım 2: Şablon Seçimi */}
           {step === 2 && (
-            <View style={styles.templateList}>
-              {templates.map((tmpl) => (
-                <TouchableOpacity
-                  key={tmpl.id}
-                  activeOpacity={0.7}
-                  onPress={() => setSelectedTemplateId(tmpl.id)}
-                  style={[
-                    styles.templateCard,
-                    {
-                      backgroundColor: tmpl.colors.bg,
-                      borderColor:
-                        selectedTemplateId === tmpl.id
-                          ? tmpl.colors.accent
-                          : tmpl.colors.bg,
-                      borderWidth: selectedTemplateId === tmpl.id ? 3 : 1.5,
-                    },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.templatePreview,
-                      { backgroundColor: tmpl.colors.accent + '15' },
-                      tmpl.image && styles.imagePreviewContainer,
-                    ]}
-                  >
-                    {tmpl.image ? (
-                      <Image
-                        source={tmpl.image}
-                        style={styles.templateThumbnail}
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <MaterialCommunityIcons
-                        name={selectedCategory?.icon || 'file-outline'}
-                        size={36}
-                        color={tmpl.colors.accent}
-                      />
-                    )}
-                  </View>
-                  <View style={styles.templateInfo}>
-                    <View style={styles.templateTitleRow}>
-                      <Text
+            <View>
+              {selectedCategory?.id === 'weekly' || templates.every((t) => t.image) ? (
+                /* Sade Seçim: Yan yana dikdörtgen kutular, SADECE görsel thumbnail */
+                <View style={styles.imageGridList}>
+                  {templates.map((tmpl) => {
+                    const isSelected = selectedTemplateId === tmpl.id;
+                    return (
+                      <TouchableOpacity
+                        key={tmpl.id}
+                        activeOpacity={0.85}
+                        onPress={() => setSelectedTemplateId(tmpl.id)}
                         style={[
-                          styles.templateName,
-                          { color: tmpl.colors.accent },
+                          styles.imageTemplateCard,
+                          isSelected && styles.imageTemplateCardSelected,
                         ]}
                       >
-                        {tmpl.name}
-                      </Text>
-                      {tmpl.type === 'image_template' && (
-                        <View style={styles.originalBadge}>
-                          <Text style={styles.originalBadgeText}>Orijinal</Text>
-                        </View>
+                        <Image
+                          source={tmpl.image}
+                          style={styles.imageCardThumbnail}
+                          resizeMode="cover"
+                        />
+                        {isSelected && (
+                          <View style={styles.selectedIndicator}>
+                            <MaterialCommunityIcons
+                              name="check-circle"
+                              size={24}
+                              color="#E91E63"
+                            />
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ) : (
+                <View style={styles.templateList}>
+                  {templates.map((tmpl) => (
+                    <TouchableOpacity
+                      key={tmpl.id}
+                      activeOpacity={0.7}
+                      onPress={() => setSelectedTemplateId(tmpl.id)}
+                      style={[
+                        styles.templateCard,
+                        {
+                          backgroundColor: tmpl.colors.bg,
+                          borderColor:
+                            selectedTemplateId === tmpl.id
+                              ? tmpl.colors.accent
+                              : tmpl.colors.bg,
+                          borderWidth: selectedTemplateId === tmpl.id ? 3 : 1.5,
+                        },
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.templatePreview,
+                          { backgroundColor: tmpl.colors.accent + '15' },
+                        ]}
+                      >
+                        <MaterialCommunityIcons
+                          name={selectedCategory?.icon || 'file-outline'}
+                          size={36}
+                          color={tmpl.colors.accent}
+                        />
+                      </View>
+                      <View style={styles.templateInfo}>
+                        <Text
+                          style={[
+                            styles.templateName,
+                            { color: tmpl.colors.accent },
+                          ]}
+                        >
+                          {tmpl.name}
+                        </Text>
+                      </View>
+                      {selectedTemplateId === tmpl.id && (
+                        <MaterialCommunityIcons
+                          name="check-circle"
+                          size={24}
+                          color={tmpl.colors.accent}
+                        />
                       )}
-                    </View>
-                    {tmpl.description && (
-                      <Text
-                        style={[
-                          styles.templateDesc,
-                          { color: colors.textSecondary },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {tmpl.description}
-                      </Text>
-                    )}
-                    <View style={styles.colorSwatches}>
-                      {Object.values(tmpl.colors)
-                        .slice(0, 4)
-                        .map((color, i) => (
-                          <View
-                            key={i}
-                            style={[
-                              styles.colorSwatch,
-                              { backgroundColor: color },
-                            ]}
-                          />
-                        ))}
-                    </View>
-                  </View>
-                  {selectedTemplateId === tmpl.id && (
-                    <MaterialCommunityIcons
-                      name="check-circle"
-                      size={24}
-                      color={tmpl.colors.accent}
-                    />
-                  )}
-                </TouchableOpacity>
-              ))}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
 
               {/* İleri butonu */}
               <TouchableOpacity
@@ -426,6 +423,55 @@ const styles = StyleSheet.create({
   templateList: {
     gap: 12,
     paddingTop: 8,
+  },
+  // Dikdörtgen Yan Yana Görsel Şablon Grid'i
+  imageGridList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  imageTemplateCard: {
+    width: '47%',
+    aspectRatio: 0.70,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#E8E0E4',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+    position: 'relative',
+  },
+  imageTemplateCardSelected: {
+    borderColor: '#E91E63',
+    borderWidth: 3.5,
+    shadowColor: '#E91E63',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 8,
+    transform: [{ scale: 1.02 }],
+  },
+  imageCardThumbnail: {
+    width: '100%',
+    height: '100%',
+  },
+  selectedIndicator: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 3,
+    elevation: 4,
   },
   templateCard: {
     flexDirection: 'row',
