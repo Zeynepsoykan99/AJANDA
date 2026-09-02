@@ -469,3 +469,12 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 - Özel renk seçim ekranındaki karmaşık kare paneller ve sürgü benzeri halkalar tamamen kaldırılarak yerine `Panel3` bileşeni eklendi.
 - Böylece kullanıcı, doğrudan içi 360 derece kesintisiz renk spektrumuyla dolu olan **tek bir dev dairesel disk** üzerinden hem rengi (hue) hem de doygunluğu (saturation) tek dokunuşla seçebilir duruma geldi.
 - Renk çarkının hemen altına 50x50px boyutlarında şık ve daha büyük bir dairesel Canlı Önizleme (`Preview`) eklendi; parmak diskin üzerinde gezdikçe bu önizleme anlık olarak değişir.
+
+---
+
+## 📅 [2026-09-02 16:23] - Haftalık Planlayıcı Görsellerinde Kırpılma (Scale) Sorununun Giderilmesi
+
+### 📏 1. Aspect Ratio (En-Boy Oranı) Uyumunun Sağlanması
+- **Sorun:** Tam sayfa şablonlardaki (Örn: `planner_flower_cloud.jpg`) `ImageBackground` bileşeni `resizeMode="cover"` olarak ayarlandığı için, tablet/telefon ekranıyla eşleşmeyen kenarlar zorla doldurulmaya çalışılıyor ve "Weekly Planner" yazısı gibi detaylar ekran dışına taşıp kırpılıyordu.
+- **Çözüm:** `ImageTemplatePage.js` dosyasındaki ölçeklendirme ayarı **`resizeMode="contain"`** olarak güncellendi.
+- **Sonuç:** Görsel hiçbir pikseli kaybolmadan, en-boy oranı korunarak ekrana sığabilecek en büyük boyutta yerleştirildi. Altta veya üstte oluşabilecek mikroskobik boşluklar, ana çerçevenin beyaz arka planı (`#FFFFFF`) ile pürüzsüzce kaynaşarak doğal kağıt görünümünü bozmadan entegre edildi.

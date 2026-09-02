@@ -14,7 +14,7 @@ export default function ImageTemplatePage({ template }) {
       <ImageBackground
         source={imageSource}
         style={styles.fullBleedImage}
-        resizeMode="cover"
+        resizeMode="contain"
       />
     </View>
   );
