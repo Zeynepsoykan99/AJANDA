@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
@@ -25,21 +24,32 @@ const STROKE_WIDTHS = [
   { id: 'thick', width: 7, label: 'Kalın' },
 ];
 
+const FONT_SIZES = [
+  { id: 'sm', size: 13, label: 'Küçük' },
+  { id: 'md', size: 16, label: 'Orta' },
+  { id: 'lg', size: 21, label: 'Büyük' },
+];
+
 /**
- * DrawingToolbar - Kırtasiye Kalemliği & Çizim Araç Çubuğu
- * Sayfa üstünde veya sağında zarifçe süzülen; kalem, fosforlu, silgi ve renk seçici dock.
+ * DrawingToolbar - Kalemlik & Klavye Araç Çubuğu
+ * Çizim ve serbest Klavye metin modları arasında geçiş sağlar.
  */
 export default function DrawingToolbar({
   isDrawingMode,
   onToggleDrawingMode,
+  isTextMode,
+  onToggleTextMode,
   currentTool,
   onChangeTool,
   currentColor,
   onChangeColor,
   currentWidth,
   onChangeWidth,
+  textColor,
+  onChangeTextColor,
+  textFontSize,
+  onChangeTextFontSize,
   onUndo,
-  onClear,
   canUndo = false,
   style,
 }) {
@@ -48,7 +58,7 @@ export default function DrawingToolbar({
 
   return (
     <View style={[styles.dockContainer, { backgroundColor: colors.card, borderColor: colors.border }, style]}>
-      {/* 1. Mod Değiştirici: Kalem / Klavye */}
+      {/* 1. Çizim Modu Butonu */}
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={onToggleDrawingMode}
@@ -60,8 +70,8 @@ export default function DrawingToolbar({
         ]}
       >
         <MaterialCommunityIcons
-          name={isDrawingMode ? 'draw-pen' : 'keyboard-outline'}
-          size={18}
+          name="draw-pen"
+          size={16}
           color={isDrawingMode ? '#FFFFFF' : colors.textSecondary}
         />
         <Text
@@ -70,11 +80,37 @@ export default function DrawingToolbar({
             { color: isDrawingMode ? '#FFFFFF' : colors.textSecondary },
           ]}
         >
-          {isDrawingMode ? 'Çizim' : 'Yazı'}
+          Çizim
         </Text>
       </TouchableOpacity>
 
-      {/* Yalnızca Çizim Modu Aktifken Araçlar Gösterilir */}
+      {/* 2. Klavye / Metin Modu Butonu */}
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={onToggleTextMode}
+        style={[
+          styles.modeBtn,
+          isTextMode
+            ? { backgroundColor: colors.accent }
+            : { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 },
+        ]}
+      >
+        <MaterialCommunityIcons
+          name="keyboard-outline"
+          size={16}
+          color={isTextMode ? '#FFFFFF' : colors.textSecondary}
+        />
+        <Text
+          style={[
+            styles.modeBtnText,
+            { color: isTextMode ? '#FFFFFF' : colors.textSecondary },
+          ]}
+        >
+          Klavye
+        </Text>
+      </TouchableOpacity>
+
+      {/* ─── Çizim Araçları (Yalnızca Çizim Modu Aktifken) ─── */}
       {isDrawingMode && (
         <>
           <View style={styles.dockDivider} />
@@ -154,61 +190,108 @@ export default function DrawingToolbar({
         </>
       )}
 
-      {/* Açılır Renk ve Kalınlık Paleti */}
-      {isDrawingMode && isColorPickerOpen && (
+      {/* ─── Klavye / Metin Araçları (Yalnızca Metin Modu Aktifken) ─── */}
+      {isTextMode && (
+        <>
+          <View style={styles.dockDivider} />
+
+          {/* Yazı Boyutu Seçimi */}
+          <View style={styles.fontSizeGroup}>
+            {FONT_SIZES.map((f) => (
+              <TouchableOpacity
+                key={f.id}
+                onPress={() => onChangeTextFontSize(f.size)}
+                style={[
+                  styles.fontSizeBtn,
+                  textFontSize === f.size && { backgroundColor: colors.accent + '25', borderColor: colors.accent },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.fontSizeText,
+                    { color: textFontSize === f.size ? colors.accent : colors.textSecondary },
+                  ]}
+                >
+                  {f.id.toUpperCase()}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.dockDivider} />
+
+          {/* Yazı Rengi Seçici */}
+          <TouchableOpacity
+            onPress={() => setIsColorPickerOpen(!isColorPickerOpen)}
+            style={styles.colorTriggerBtn}
+          >
+            <View
+              style={[
+                styles.activeColorCircle,
+                { backgroundColor: textColor || '#4E342E', borderColor: colors.border },
+              ]}
+            />
+          </TouchableOpacity>
+        </>
+      )}
+
+      {/* Açılır Renk Paleti */}
+      {isColorPickerOpen && (
         <View
           style={[
             styles.palettePopup,
             { backgroundColor: colors.card, borderColor: colors.border },
           ]}
         >
-          {/* Renkler */}
           <View style={styles.colorsRow}>
             {INK_COLORS.map((item) => (
               <TouchableOpacity
                 key={item.id}
                 onPress={() => {
-                  onChangeColor(item.color);
+                  if (isDrawingMode) onChangeColor(item.color);
+                  if (isTextMode) onChangeTextColor(item.color);
                   setIsColorPickerOpen(false);
                 }}
                 style={[
                   styles.swatchBtn,
                   { backgroundColor: item.color },
-                  currentColor === item.color && styles.selectedSwatch,
+                  (isDrawingMode ? currentColor === item.color : textColor === item.color) && styles.selectedSwatch,
                 ]}
               />
             ))}
           </View>
 
-          {/* Kalınlık Seçimi */}
-          <View style={styles.widthsRow}>
-            {STROKE_WIDTHS.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                onPress={() => {
-                  onChangeWidth(item.width);
-                  setIsColorPickerOpen(false);
-                }}
-                style={[
-                  styles.widthBtn,
-                  currentWidth === item.width && {
-                    backgroundColor: colors.accent + '20',
-                    borderColor: colors.accent,
-                  },
-                ]}
-              >
-                <View
+          {/* Çizim modundaysa kalınlık seçimi */}
+          {isDrawingMode && (
+            <View style={styles.widthsRow}>
+              {STROKE_WIDTHS.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  onPress={() => {
+                    onChangeWidth(item.width);
+                    setIsColorPickerOpen(false);
+                  }}
                   style={[
-                    styles.widthIndicator,
-                    { height: item.width, backgroundColor: currentColor },
+                    styles.widthBtn,
+                    currentWidth === item.width && {
+                      backgroundColor: colors.accent + '20',
+                      borderColor: colors.accent,
+                    },
                   ]}
-                />
-                <Text style={[styles.widthText, { color: colors.textSecondary }]}>
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+                >
+                  <View
+                    style={[
+                      styles.widthIndicator,
+                      { height: item.width, backgroundColor: currentColor },
+                    ]}
+                  />
+                  <Text style={[styles.widthText, { color: colors.textSecondary }]}>
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
       )}
     </View>
@@ -219,14 +302,14 @@ const styles = StyleSheet.create({
   dockContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 22,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 20,
     borderWidth: 1,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
     elevation: 4,
     position: 'relative',
     zIndex: 100,
@@ -234,32 +317,49 @@ const styles = StyleSheet.create({
   modeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 14,
     gap: 4,
+    marginHorizontal: 2,
   },
   modeBtnText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
   },
   dockDivider: {
     width: 1,
-    height: 18,
+    height: 16,
     backgroundColor: '#00000015',
-    marginHorizontal: 6,
+    marginHorizontal: 4,
   },
   toolBtn: {
-    padding: 6,
-    borderRadius: 14,
+    padding: 5,
+    borderRadius: 12,
     marginHorizontal: 1,
   },
   activeToolBtn: {
     borderWidth: 1,
     borderColor: '#E91E6340',
   },
+  fontSizeGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  fontSizeBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  fontSizeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
   colorTriggerBtn: {
-    padding: 4,
+    padding: 3,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -271,10 +371,10 @@ const styles = StyleSheet.create({
   },
   palettePopup: {
     position: 'absolute',
-    top: 44,
+    top: 40,
     right: 0,
     borderRadius: 16,
-    padding: 12,
+    padding: 10,
     borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -282,19 +382,19 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
     zIndex: 120,
-    width: 240,
+    width: 220,
   },
   colorsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 6,
     justifyContent: 'center',
-    marginBottom: 10,
+    marginBottom: 6,
   },
   swatchBtn: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     borderWidth: 1.5,
     borderColor: '#00000015',
   },
@@ -311,23 +411,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderTopWidth: 0.5,
     borderTopColor: '#00000010',
-    paddingTop: 8,
+    paddingTop: 6,
   },
   widthBtn: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: 'transparent',
   },
   widthIndicator: {
-    width: 24,
+    width: 20,
     borderRadius: 2,
-    marginBottom: 4,
+    marginBottom: 3,
   },
   widthText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '600',
   },
 });

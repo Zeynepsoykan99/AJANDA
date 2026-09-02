@@ -375,6 +375,40 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 ## 📅 [2026-09-02 14:48] - GitHub Push İşlemi
 - Kullanıcı onayıyla "5 Yeni Haftalık Planlayıcı Görsel Şablonu Entegrasyonu ve Metinsiz Galeri" değişiklikleri GitHub uzak deposuna (`origin main`) push edildi (`https://github.com/Zeynepsoykan99/AJANDA`).
 
+---
+
+## 📅 [2026-09-02 15:05] - Sayfa Atlama/Kayma Sorununun Giderilmesi & Serbest Klavye Metin Kutuları Entegrasyonu
+
+### 🛡️ 1. İstenmeyen Kayma/Atlama Sorununun Kesin Çözümü
+- **Flexbox Taşma Düzeltmesi:**
+  - `app/ajandam/[pageId].js` ve `components/pages/ImageTemplatePage.js` içindeki çakışan `height: '100%'` ve `width: '100%'` özellikleri kaldırıldı.
+  - `contentArea` ve `fullBleedContentArea` stillerine `flex: 1`, `overflow: 'hidden'` ve `position: 'relative'` uygulanarak sayfa ekran sınırları içine kilitlendi.
+- **Üst Bar Yükseklik Sabitlemesi:**
+  - `headerBar` yüksekliği `height: 56`, `minHeight: 56`, `maxHeight: 56` ve `overflow: 'hidden'` olarak sabitlendi.
+  - Başlık ve kategori yazıları `numberOfLines={1}` yapılarak, araç çubuğu açılıp kapandığında başlığın iki satıra katlanması ve altındaki sayfayı aniden 24px aşağı fırlatması engellendi.
+
+### ⌨️ 2. Serbest Klavye Metin Kutuları (`components/text/TextCanvas.js`)
+- **[NEW] `components/text/TextCanvas.js`**:
+  - Sayfa üzerine oturan şeffaf metin katmanı eklendi.
+  - Kullanıcı "Klavye" modundayken sayfanın herhangi bir kutucuğuna dokunduğunda doğrudan dokunulan `(x, y)` koordinatında şeffaf bir `TextInput` belirir ve klavye otomatik açılır.
+  - Düzenleme anında zarif kesikli pembe rehber çerçeve ve silme butonu (`close-circle`) görünür.
+  - Yazma tamamlanıp dışarı dokunulduğunda çerçeve tamamen kaybolur; metin görselin orijinal satırlarına sanki baskı kağıdıymış gibi doğal olarak oturur.
+
+### 🛠️ 3. Araç Çubuğu Güncellemesi (`components/drawing/DrawingToolbar.js`)
+- Araç çubuğuna iki net mod eklendi:
+  - **✍️ Çizim (Apple Pencil):** Jel kalem, fosforlu kalem, silgi, mürekkep paleti ve geri al.
+  - **⌨️ Klavye (Metin):** Yazı boyutu (Küçük 13px, Orta 16px, Büyük 21px) ve metin rengi seçici.
+- İki mod arasında tek dokunuşla akıcı geçiş sağlanır.
+
+### 💾 4. Kalıcı Veri Senkronizasyonu (`StorageService`)
+- Sayfa şemasına `textBlocks` alanı eklendi; kullanıcının yazdığı tüm serbest metinler koordinatları, rengi ve boyutuyla `StorageService.updatePage` üzerinden kalıcı olarak kaydedilir.
+
+---
+
+## 📅 [2026-09-02 15:05] - GitHub Push İşlemi
+- Kullanıcı onayıyla "Sayfa Atlama/Kayma Sorununun Giderilmesi & Serbest Klavye Metin Kutuları Entegrasyonu" değişiklikleri GitHub uzak deposuna (`origin main`) push edildi (`https://github.com/Zeynepsoykan99/AJANDA`).
+
+
 
 
 

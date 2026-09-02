@@ -23,6 +23,7 @@ import NotebookContainer from '../../components/stationery/NotebookContainer';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 import DrawingCanvas from '../../components/drawing/DrawingCanvas';
 import DrawingToolbar from '../../components/drawing/DrawingToolbar';
+import TextCanvas from '../../components/text/TextCanvas';
 
 /**
  * PageViewScreen - Dinamik sayfa görüntüleme ve düzenleme
@@ -38,11 +39,17 @@ export default function PageViewScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isStickerMenuVisible, setIsStickerMenuVisible] = useState(false);
 
-  // Tablet Kalemi & Çizim Durumu
-  const [isDrawingMode, setIsDrawingMode] = useState(false);
+  // Araç Çubuğu Aktif Mod: 'none' | 'drawing' | 'text'
+  const [activeMode, setActiveMode] = useState('none');
+
+  // Çizim Ayarları
   const [drawingTool, setDrawingTool] = useState('pen'); // 'pen' | 'highlighter' | 'eraser'
   const [drawingColor, setDrawingColor] = useState('#C2185B');
   const [drawingWidth, setDrawingWidth] = useState(3);
+
+  // Klavye / Metin Ayarları
+  const [textColor, setTextColor] = useState('#4E342E');
+  const [textFontSize, setTextFontSize] = useState(16);
 
   // Auto-save timer ref
   const saveTimeoutRef = useRef(null);
@@ -95,6 +102,23 @@ export default function PageViewScreen() {
         saveTimeoutRef.current = setTimeout(async () => {
           await StorageService.updatePage(prev.id, { drawings: newDrawings });
         }, 500);
+        return updated;
+      });
+    },
+    []
+  );
+
+  // Serbest metin kutularını güncelle (debounced auto-save)
+  const handleTextBlocksChange = useCallback(
+    (newTextBlocks) => {
+      setPage((prev) => {
+        const updated = { ...prev, textBlocks: newTextBlocks };
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+        }
+        saveTimeoutRef.current = setTimeout(async () => {
+          await StorageService.updatePage(prev.id, { textBlocks: newTextBlocks });
+        }, 400);
         return updated;
       });
     },
@@ -295,14 +319,24 @@ export default function PageViewScreen() {
 
         <View style={styles.headerRightGroup}>
           <DrawingToolbar
-            isDrawingMode={isDrawingMode}
-            onToggleDrawingMode={() => setIsDrawingMode(!isDrawingMode)}
+            isDrawingMode={activeMode === 'drawing'}
+            onToggleDrawingMode={() =>
+              setActiveMode((prev) => (prev === 'drawing' ? 'none' : 'drawing'))
+            }
+            isTextMode={activeMode === 'text'}
+            onToggleTextMode={() =>
+              setActiveMode((prev) => (prev === 'text' ? 'none' : 'text'))
+            }
             currentTool={drawingTool}
             onChangeTool={setDrawingTool}
             currentColor={drawingColor}
             onChangeColor={setDrawingColor}
             currentWidth={drawingWidth}
             onChangeWidth={setDrawingWidth}
+            textColor={textColor}
+            onChangeTextColor={setTextColor}
+            textFontSize={textFontSize}
+            onChangeTextFontSize={setTextFontSize}
             onUndo={handleUndoDrawing}
             canUndo={(page.drawings || []).length > 0}
           />
@@ -347,9 +381,18 @@ export default function PageViewScreen() {
           </NotebookContainer>
         )}
 
+        {/* Serbest Klavye / Metin Katmanı */}
+        <TextCanvas
+          isTextMode={activeMode === 'text'}
+          textBlocks={page.textBlocks || []}
+          onTextBlocksChange={handleTextBlocksChange}
+          activeColor={textColor}
+          activeFontSize={textFontSize}
+        />
+
         {/* Apple Pencil & Çizim Katmanı - Uçtan uca tam hizalı */}
         <DrawingCanvas
-          isDrawingMode={isDrawingMode}
+          isDrawingMode={activeMode === 'drawing'}
           tool={drawingTool}
           color={drawingColor}
           strokeWidth={drawingWidth}
@@ -381,17 +424,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerBar: {
+    height: 56,
+    minHeight: 56,
+    maxHeight: 56,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
+    overflow: 'hidden',
   },
   headerButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -399,31 +445,33 @@ const styles = StyleSheet.create({
   headerRightGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   headerCenter: {
     flex: 1,
     alignItems: 'center',
-    marginHorizontal: 12,
+    marginHorizontal: 8,
+    overflow: 'hidden',
   },
   pageTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
   },
   categoryLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '500',
-    marginTop: 2,
+    marginTop: 1,
   },
   contentArea: {
     flex: 1,
     position: 'relative',
+    overflow: 'hidden',
   },
   fullBleedContentArea: {
+    flex: 1,
     padding: 0,
     margin: 0,
-    width: '100%',
-    height: '100%',
+    overflow: 'hidden',
   },
   fullBleedCanvas: {
     position: 'absolute',
@@ -431,8 +479,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    width: '100%',
-    height: '100%',
   },
   errorText: {
     fontSize: 16,

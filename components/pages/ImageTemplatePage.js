@@ -23,16 +23,14 @@ export default function ImageTemplatePage({ template }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    width: '100%',
-    height: '100%',
     padding: 0,
     margin: 0,
     overflow: 'hidden',
     backgroundColor: '#FFFFFF',
   },
   fullBleedImage: {
+    flex: 1,
     width: '100%',
     height: '100%',
-    flex: 1,
   },
 });
