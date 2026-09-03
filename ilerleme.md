@@ -580,3 +580,9 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 ### 🛠️ 3. Tıklama Çakışması (Nested TouchableOpacity) Çözümü
 - Sayfa kartlarında (`PageThumbnail`) yaşanan tıklanamama (işlevsizlik) sorunu, iç içe geçmiş dokunulabilir alanların ayrıştırılması (kardeş bileşen yapısı) ile giderildi. Artık çöp kutusuna tıklandığında sayfa açılmak yerine hedeflendiği gibi silme onayı ekranı çıkıyor.
 - Tüm `Alert.alert` onay metinleri birebir hedeflenen ("Bu sayfayı silmek istediğinize emin misiniz?") formata dönüştürüldü.
+
+### 🛡️ 4. Silme İkonları Kökten Çözüm (PointerEvents & Web Alert)
+- Silme ikonlarının zaman zaman tıklamaları (touch events) ebeveyne iletmeden yutmasını (stealing) önlemek için ikonlar `<View pointerEvents="none">` içine alındı.
+- Mobildeki dar tıklama alanını genişletmek ve erişilebilirliği artırmak için silme ikonlarına `hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}` eklendi.
+- Uygulamanın **Web (Tarayıcı)** ortamında test edilirken (Expo Web) `Alert.alert` fonksiyonunun sessizce (silent) çalışmamasını engellemek için kod çapraz platform yapısına geçirildi. Web'de standart `window.confirm`, mobilde ise yerel `Alert.alert` çalışacak şekilde güncellendi.
+- State çakışmalarını önlemek için silme (ve `router.back`) işlemi `setTimeout` içine alınarak güvenli senkronizasyon (asenkron izolasyon) sağlandı.

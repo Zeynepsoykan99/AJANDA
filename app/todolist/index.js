@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -61,24 +62,34 @@ export default function TodoListScreen() {
   // To-Do sil
   const handleDeleteTodo = useCallback(
     (page) => {
-      Alert.alert(
-        'Listeyi Sil',
-        'Bu sayfayı silmek istediğinize emin misiniz?',
-        [
-          { text: 'İptal', style: 'cancel' },
-          {
-            text: 'Sil',
-            style: 'destructive',
-            onPress: async () => {
-              const updated = await StorageService.deletePage(page.id);
-              if (updated) {
-                const todos = updated.filter((p) => p.category === 'todo');
-                setTodoPages(todos.sort((a, b) => (a.order || 0) - (b.order || 0)));
-              }
+      const message = 'Bu sayfayı silmek istediğinize emin misiniz?';
+      const executeDelete = async () => {
+        const updated = await StorageService.deletePage(page.id);
+        if (updated) {
+          const todoPages = updated.filter((p) => p.category === 'todo');
+          setTodoPages(todoPages.sort((a, b) => (a.order || 0) - (b.order || 0)));
+        }
+      };
+
+      if (Platform.OS === 'web') {
+        const confirmResult = window.confirm(message);
+        if (confirmResult) {
+          executeDelete();
+        }
+      } else {
+        Alert.alert(
+          'Listeyi Sil',
+          message,
+          [
+            { text: 'İptal', style: 'cancel' },
+            {
+              text: 'Sil',
+              style: 'destructive',
+              onPress: executeDelete,
             },
-          },
-        ]
-      );
+          ]
+        );
+      }
     },
     []
   );

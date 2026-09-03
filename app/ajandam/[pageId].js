@@ -5,7 +5,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -197,21 +199,40 @@ export default function PageViewScreen() {
 
   // Sayfayı tamamen sil
   const handleDeletePage = useCallback(() => {
-    Alert.alert(
-      'Sayfayı Sil',
-      'Bu sayfayı silmek istediğinize emin misiniz?',
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Sil',
-          style: 'destructive',
-          onPress: async () => {
-            await StorageService.deletePage(page.id);
-            router.back();
+    const message = 'Bu sayfayı silmek istediğinize emin misiniz?';
+    
+    const executeDelete = async () => {
+      await StorageService.deletePage(page.id);
+      router.back();
+    };
+
+    if (Platform.OS === 'web') {
+      const confirmResult = window.confirm(message);
+      if (confirmResult) {
+        // executeDelete'in hemen router.back()'e neden olması bazen state çakışması yaratabilir
+        // bu yüzden kısa bir timeout ile yapıyoruz
+        setTimeout(() => {
+          executeDelete();
+        }, 50);
+      }
+    } else {
+      Alert.alert(
+        'Sayfayı Sil',
+        message,
+        [
+          { text: 'İptal', style: 'cancel' },
+          {
+            text: 'Sil',
+            style: 'destructive',
+            onPress: () => {
+              setTimeout(() => {
+                executeDelete();
+              }, 50);
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   }, [page, router]);
 
   if (isLoading) {
@@ -378,6 +399,7 @@ export default function PageViewScreen() {
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={handleDeletePage}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
             style={[
               styles.headerButton,
               {
@@ -386,7 +408,9 @@ export default function PageViewScreen() {
               },
             ]}
           >
-            <MaterialCommunityIcons name="trash-can-outline" size={20} color="#E53935" />
+            <View pointerEvents="none">
+              <MaterialCommunityIcons name="trash-can-outline" size={20} color="#E53935" />
+            </View>
           </TouchableOpacity>
         </View>
       </View>

@@ -114,12 +114,15 @@ export default function PageThumbnail({ page, onPress, onLongPress, onDelete }) 
             activeOpacity={0.7}
             onPress={onDelete}
             style={styles.deleteButton}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
           >
-            <MaterialCommunityIcons
-              name="trash-can-outline"
-              size={20}
-              color="#E53935"
-            />
+            <View pointerEvents="none">
+              <MaterialCommunityIcons
+                name="trash-can-outline"
+                size={20}
+                color="#E53935"
+              />
+            </View>
           </TouchableOpacity>
         )}
         <MaterialCommunityIcons
