@@ -147,6 +147,17 @@ export default function TodoViewScreen() {
     });
   }, []);
 
+  const handleStickerResize = useCallback((stickerId, newScale) => {
+    setPage((prev) => {
+      const updatedStickers = (prev.stickers || []).map((s) =>
+        s.id === stickerId ? { ...s, scale: newScale } : s
+      );
+      const updated = { ...prev, stickers: updatedStickers };
+      StorageService.updatePage(prev.id, { stickers: updatedStickers });
+      return updated;
+    });
+  }, []);
+
   const handleStickerDelete = useCallback((stickerId) => {
     setPage((prev) => {
       const updatedStickers = (prev.stickers || []).filter((s) => s.id !== stickerId);
@@ -358,6 +369,7 @@ export default function TodoViewScreen() {
         <StickerCanvas
           stickers={page.stickers || []}
           onStickerMove={handleStickerMove}
+          onStickerResize={handleStickerResize}
           onStickerDelete={handleStickerDelete}
         />
       </View>
