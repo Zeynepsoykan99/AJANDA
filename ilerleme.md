@@ -723,6 +723,11 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 - **Tema Entegrasyonu (`constants/themes.js`):**
   - `generateCustomTheme` fonksiyonu dinamik renk motoruna bağlandı. Kullanıcı renk çarkından hangi rengi seçerse seçsin; ana ekrandaki "AJANDA" başlığı, alt çizgi, arama çubuğu ve dairesel butonların ikonları/çerçeveleri anında o renkle %100 uyumlu hale geldi.
 
+### 🧼 25. Arama Modalı Web Odaklanma Çerçevesi (Outline) Temizliği & Tematik Odaklanma
+- **Web Outline Sıfırlama:** `components/ui/GlobalSearchModal.js` içerisindeki `TextInput` stiline `Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } })` eklenerek tarayıcının varsayılan kaba, siyah iç dikdörtgen çerçevesi tamamen kaldırıldı.
+- **Tematik Kapsayıcı Vurgusu (Focus Accent):** Arama kutusuna odaklanıldığında (`onFocus`), yuvarlak dış kapsayıcının (`inputContainer`) kenarlığı aktif temanın rengiyle (`colors.accent`) 1.5px parlayacak şekilde dinamik hale getirildi; arama ikonu da odak anında aktif tema rengini alır.
+
+
 
 
 

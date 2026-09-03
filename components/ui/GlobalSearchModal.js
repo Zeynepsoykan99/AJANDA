@@ -43,6 +43,7 @@ export default function GlobalSearchModal({
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [results, setResults] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   // In-memory veri önbelleği (diskten tekrar tekrar okumayı engeller)
   const cachedPagesRef = useRef(null);
@@ -151,11 +152,20 @@ export default function GlobalSearchModal({
         >
           {/* ── Üst Arama Çubuğu ── */}
           <View style={[styles.searchBarRow, { borderBottomColor: colors.border }]}>
-            <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.inputContainer,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: isFocused ? colors.accent : colors.border,
+                  borderWidth: isFocused ? 1.5 : 1,
+                },
+              ]}
+            >
               <MaterialCommunityIcons
                 name="magnify"
                 size={22}
-                color={colors.accent}
+                color={isFocused ? colors.accent : colors.textSecondary}
               />
               <TextInput
                 style={[styles.searchInput, { color: colors.textPrimary }]}
@@ -163,6 +173,8 @@ export default function GlobalSearchModal({
                 placeholderTextColor={colors.textSecondary + '80'}
                 value={query}
                 onChangeText={handleQueryChange}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
                 autoFocus={true}
                 returnKeyType="search"
                 clearButtonMode="while-editing"
@@ -381,6 +393,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     paddingVertical: 0,
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+        outlineWidth: 0,
+      },
+    }),
   },
   cancelButton: {
     paddingVertical: 8,
