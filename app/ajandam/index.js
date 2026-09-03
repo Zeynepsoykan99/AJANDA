@@ -147,11 +147,8 @@ export default function AjandamScreen() {
           <Skeleton 
             width="82%" 
             height={undefined} 
-            style={{ aspectRatio: 0.72, maxWidth: 420, borderRadius: 8, marginBottom: 40, alignSelf: 'center' }} 
+            style={{ aspectRatio: 0.72, maxWidth: 420, borderRadius: 8, alignSelf: 'center' }} 
           />
-          <View style={styles.floatingButtonContainer}>
-            <Skeleton width={140} height={56} borderRadius={28} style={{ alignSelf: 'center' }} />
-          </View>
         </View>
       </SafeAreaView>
     );
@@ -243,18 +240,6 @@ export default function AjandamScreen() {
             />
           </ImageWithSkeleton>
         </InteractiveCover3D>
-
-        {/* Ajandayı Aç Butonu (Kapağın Dışında) */}
-        <View style={styles.floatingButtonContainer}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={handleOpenAgenda}
-            style={[styles.openButton, { backgroundColor: colors.accent }]}
-          >
-            <MaterialCommunityIcons name="book-open-page-variant-outline" size={22} color="#FFFFFF" />
-            <Text style={styles.openButtonText}>İçine Gir</Text>
-          </TouchableOpacity>
-        </View>
       </View>
 
       {/* Kapak Seçim Modalı */}
@@ -314,7 +299,6 @@ const styles = StyleSheet.create({
     width: '82%',
     maxWidth: 420,
     aspectRatio: 0.72, // A4 defter oranı
-    marginBottom: 44, // Butonla arasına mesafe
   },
   fullBleedBackground: {
     width: '100%',
@@ -327,32 +311,5 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-  },
-  floatingButtonContainer: {
-    position: 'absolute',
-    bottom: 30,
-    alignSelf: 'center',
-    width: '100%',
-    paddingHorizontal: 40,
-    maxWidth: 440,
-  },
-  openButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 28,
-    gap: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  openButtonText: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: 0.5,
   },
 });

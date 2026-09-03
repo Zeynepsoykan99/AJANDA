@@ -692,6 +692,12 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
   - Kapağın çevresine 1px yarı saydam parlama çizgisi eklenerek sert cilt kenarlarının ışık yansıması sağlandı.
 - **Minyatür Uyum:** `CoverEditor.js` içerisindeki galeri kartlarına `compact={true}` desteği verilerek orantılı minyatür defter sırtı ve sayfa kalınlığı kazandırıldı.
 
+### 🧹 22. Kapak Ekranı Sadeleştirmesi ("İçine Gir" Butonunun Kaldırılması & Tam Merkezleme)
+- **Gereksiz Öğenin Temizlenmesi:** `app/ajandam/index.js` ekranındaki yüzen "İçine Gir" butonu ve bağlı stiller tamamen kaldırıldı.
+- **Mükemmel Denge & Merkezleme:** Butonla aralık oluşturan `marginBottom: 44` (ve skeleton'daki `marginBottom: 40`) temizlendi. Defter kapağı, çalışma masasının ortasında dikey ve yatay olarak tam dengeli ve estetik bir biçimde merkezlendi.
+- **Doğrudan Dokunmatik Deneyim:** Kapak zaten 3D fiziksel yaylanma tepkisine sahip olduğundan, kapağa dokunulduğu anda gerçekçi tilt/scale tepkisiyle birlikte sayfalar (`/ajandam/pages`) açılır. Çizim/metin modunda kalemin rahat kullanımı için koruma sürdürülmektedir.
+
+
 
 
 
