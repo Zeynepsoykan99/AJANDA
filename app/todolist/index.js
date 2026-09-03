@@ -15,6 +15,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { StorageService } from '../../services/storageService';
 import PageThumbnail from '../../components/PageThumbnail';
 import AddTodoModal from '../../components/AddTodoModal';
+import ListSkeleton from '../../components/ui/ListSkeleton';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 
 /**
@@ -154,24 +155,28 @@ export default function TodoListScreen() {
 
       {/* To-Do Listesi */}
       <View style={[{ flex: 1 }, isTablet && styles.tabletContainer]}>
-        <FlatList
-          data={todoPages}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <PageThumbnail
-              page={item}
-              onPress={() => handleOpenTodo(item)}
-              onLongPress={() => handleDeleteTodo(item)}
-              onDelete={() => handleDeleteTodo(item)}
-            />
-          )}
-          contentContainerStyle={[
-            styles.listContent,
-            todoPages.length === 0 && styles.emptyListContent,
-          ]}
-          ListEmptyComponent={renderEmptyState}
-          showsVerticalScrollIndicator={false}
-        />
+        {isLoading ? (
+          <ListSkeleton count={4} />
+        ) : (
+          <FlatList
+            data={todoPages}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <PageThumbnail
+                page={item}
+                onPress={() => handleOpenTodo(item)}
+                onLongPress={() => handleDeleteTodo(item)}
+                onDelete={() => handleDeleteTodo(item)}
+              />
+            )}
+            contentContainerStyle={[
+              styles.listContent,
+              todoPages.length === 0 && styles.emptyListContent,
+            ]}
+            ListEmptyComponent={renderEmptyState}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
       </View>
 
       {/* FAB - Yeni To-Do Ekle */}

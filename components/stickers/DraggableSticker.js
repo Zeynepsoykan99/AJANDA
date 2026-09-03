@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import ImageWithSkeleton from '../ui/ImageWithSkeleton';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { STICKER_PACKS } from '../../constants/stickerPacks';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -104,7 +105,7 @@ export default function DraggableSticker({ sticker, isSelected, onSelect, onMove
       <GestureDetector gesture={mainGesture}>
         <View style={styles.stickerContainer}>
           {sticker.type === 'image' && imageSource ? (
-            <Image source={imageSource} style={styles.stickerImage} resizeMode="contain" />
+            <ImageWithSkeleton source={imageSource} style={styles.stickerImage} resizeMode="contain" />
           ) : (
             <Text style={styles.stickerEmoji}>{sticker.content}</Text>
           )}

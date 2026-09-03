@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, ImageBackground, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import ImageWithSkeleton from '../ui/ImageWithSkeleton';
 
 /**
  * ImageTemplatePage - Tam Sayfa (Full Bleed) Görsel Şablonu
@@ -11,7 +12,8 @@ export default function ImageTemplatePage({ template }) {
 
   return (
     <View style={styles.container}>
-      <ImageBackground
+      <ImageWithSkeleton
+        isBackground={true}
         source={imageSource}
         style={styles.fullBleedImage}
         resizeMode="contain"

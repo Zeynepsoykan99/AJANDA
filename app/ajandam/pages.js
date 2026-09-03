@@ -15,6 +15,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { StorageService } from '../../services/storageService';
 import PageThumbnail from '../../components/PageThumbnail';
 import AddPageModal from '../../components/AddPageModal';
+import ListSkeleton from '../../components/ui/ListSkeleton';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 
 /**
@@ -154,24 +155,28 @@ export default function PagesScreen() {
 
       {/* Sayfa Listesi */}
       <View style={[{ flex: 1 }, isTablet && styles.tabletContainer]}>
-        <FlatList
-          data={pages}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <PageThumbnail
-              page={item}
-              onPress={() => handleOpenPage(item)}
-              onLongPress={() => handleDeletePage(item)}
-              onDelete={() => handleDeletePage(item)}
-            />
-          )}
-          contentContainerStyle={[
-            styles.listContent,
-            pages.length === 0 && styles.emptyListContent,
-          ]}
-          ListEmptyComponent={renderEmptyState}
-          showsVerticalScrollIndicator={false}
-        />
+        {isLoading ? (
+          <ListSkeleton count={4} />
+        ) : (
+          <FlatList
+            data={pages}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <PageThumbnail
+                page={item}
+                onPress={() => handleOpenPage(item)}
+                onLongPress={() => handleDeletePage(item)}
+                onDelete={() => handleDeletePage(item)}
+              />
+            )}
+            contentContainerStyle={[
+              styles.listContent,
+              pages.length === 0 && styles.emptyListContent,
+            ]}
+            ListEmptyComponent={renderEmptyState}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
       </View>
 
       {/* FAB - Yeni Sayfa Ekle */}

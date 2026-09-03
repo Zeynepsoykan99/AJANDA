@@ -18,6 +18,8 @@ import {
 } from '../../constants/coverTemplates';
 import CoverEditor from '../../components/CoverEditor';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
+import Skeleton from '../../components/ui/Skeleton';
+import ImageWithSkeleton from '../../components/ui/ImageWithSkeleton';
 
 import DrawingCanvas from '../../components/drawing/DrawingCanvas';
 import DrawingToolbar from '../../components/drawing/DrawingToolbar';
@@ -132,7 +134,24 @@ export default function AjandamScreen() {
         style={[styles.safeArea, { backgroundColor: colors.background }]}
         edges={['top', 'bottom']}
       >
-        <ActivityIndicator size="large" color={colors.accent} />
+        <View style={[styles.headerBar, { borderBottomColor: colors.border }]}>
+          <Skeleton width={38} height={38} borderRadius={19} />
+          <Skeleton width={120} height={20} borderRadius={6} />
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            <Skeleton width={38} height={38} borderRadius={19} />
+            <Skeleton width={38} height={38} borderRadius={19} />
+          </View>
+        </View>
+        <View style={[styles.contentArea, { backgroundColor: colors.background }]}>
+          <Skeleton 
+            width="82%" 
+            height={undefined} 
+            style={{ aspectRatio: 0.72, maxWidth: 420, borderRadius: 8, marginBottom: 40, alignSelf: 'center' }} 
+          />
+          <View style={styles.floatingButtonContainer}>
+            <Skeleton width={140} height={56} borderRadius={28} style={{ alignSelf: 'center' }} />
+          </View>
+        </View>
       </SafeAreaView>
     );
   }
@@ -191,7 +210,8 @@ export default function AjandamScreen() {
       {/* Merkezlenmiş Kapak Görseli ve İnteraktif Katmanlar */}
       <View style={[styles.contentArea, { backgroundColor: colors.background }]}>
         <View style={styles.coverContainer}>
-          <ImageBackground
+          <ImageWithSkeleton
+            isBackground={true}
             source={template.imageSource}
             style={styles.fullBleedBackground}
             resizeMode="cover"
@@ -215,7 +235,7 @@ export default function AjandamScreen() {
               onDrawingsChange={handleDrawingsChange}
               style={styles.fullBleedCanvas}
             />
-          </ImageBackground>
+          </ImageWithSkeleton>
         </View>
 
         {/* Ajandayı Aç Butonu (Kapağın Dışında) */}

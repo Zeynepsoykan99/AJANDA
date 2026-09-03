@@ -636,3 +636,8 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 - **Dönüşüm İşlemi:** Performansı artırmak ve proje boyutunu küçültmek amacıyla projede bulunan (`assets/` ve `gorsel/` dizinlerindeki) tüm `.png`, `.jpg` ve `.jpeg` uzantılı görseller yüksek kalitede `.webp` formatına dönüştürüldü. *(Not: Expo derleme sisteminin gereksinimleri sebebiyle `app.json` içindeki ana uygulama ikonları istisna tutulmuştur).*
 - **Kod Referansları:** `constants/pageTemplates.js`, `constants/coverTemplates.js` ve `constants/stickerPacks.js` dosyalarındaki tüm eski görsel referansları `*.webp` olarak güncellendi.
 - **Kalıcı Kural:** Gelecekte eklenecek tüm kapak, sticker ve arkaplan görsellerinin istisnasız WEBP formatında olması gerektiği kuralı sistem hafızasına (`AGENTS.md`) kalıcı olarak işlendi. Eski büyük boyutlu görsel dosyaları projeden tamamen temizlendi.
+
+### ✨ 15. Skeleton Loading (İskelet Yükleme) Sistemi ve UX İyileştirmesi
+- **Teknoloji:** Herhangi bir dış bağımlılık (paket) kullanılmadan, uygulamanın ana animasyon kütüphanesi olan `react-native-reanimated` ile 60 FPS çalışan tamamen özelleştirilmiş bir yer tutucu (Skeleton) sistemi kuruldu.
+- **Bileşenler:** Pürüzsüz "nefes alma" (pulse) efekti yapan temel `<Skeleton>` bileşeni, Ajanda/To-Do sayfaları için `<ListSkeleton>` ve WebP formatlı büyük resimler/sticker'lar yüklenirken geçişi pürüzsüz yapan `<ImageWithSkeleton>` bileşenleri oluşturuldu.
+- **Entegrasyonlar:** Uygulamanın ilk açılışındaki AsyncStorage tema yükleme süreci, Ajandam ve To-Do kapak/sayfa listeleri, sticker render aşamaları ve tam sayfa görsel (ImageTemplate) render aşamalarının tamamındaki boş ekran ve spinner (çark) görünümleri yerine şık iskeletler yerleştirildi.
