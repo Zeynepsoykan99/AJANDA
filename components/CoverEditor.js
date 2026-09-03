@@ -13,6 +13,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { COVER_TEMPLATES } from '../constants/coverTemplates';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
+import InteractiveCover3D from './stationery/InteractiveCover3D';
 
 /**
  * CoverEditor - Görsel Kapak Seçim Galerisi
@@ -75,9 +76,8 @@ export default function CoverEditor({ visible, onClose, coverData, onSave }) {
           <View style={styles.templateSection}>
             <View style={styles.gridContainer}>
               {COVER_TEMPLATES.map((template) => (
-                <TouchableOpacity
+                <InteractiveCover3D
                   key={template.id}
-                  activeOpacity={0.8}
                   onPress={() => setSelectedTemplateId(template.id)}
                   style={[
                     styles.templateCard,
@@ -86,6 +86,8 @@ export default function CoverEditor({ visible, onClose, coverData, onSave }) {
                       borderWidth: 3,
                     },
                   ]}
+                  borderRadius={14}
+                  maxTilt={8}
                 >
                   <Image
                     source={template.imageSource}
@@ -106,7 +108,7 @@ export default function CoverEditor({ visible, onClose, coverData, onSave }) {
                       />
                     </View>
                   )}
-                </TouchableOpacity>
+                </InteractiveCover3D>
               ))}
             </View>
           </View>
@@ -170,15 +172,8 @@ const styles = StyleSheet.create({
     width: '45%',
     aspectRatio: 0.72, // Defter/A4 oranına yakın
     borderRadius: 14,
-    overflow: 'hidden',
     borderWidth: 2,
     borderColor: 'transparent',
-    // Gölge
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
   templateImage: {
     width: '100%',

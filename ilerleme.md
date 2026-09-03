@@ -670,5 +670,16 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
   - Snap anında kullanıcıya hafif bir haptic titreşim (`impactLight`) geri bildirimi verilir.
   - Hizalanma süresince ekranda merkez çizgilerini gösteren zarif kılavuz çizgileri (guide lines) belirir ve öğe bırakıldığında otomatik kaybolur.
 
+### 📖 20. 3 Boyutlu Fiziksel Kapak Etkileşimi (3D Tilt, Dynamic Shadow & Spring)
+- **Bileşen (`components/stationery/InteractiveCover3D.js`):**
+  - `react-native-reanimated` tabanlı, tamamen UI/Native thread üzerinde 60 FPS çalışan 3D defter kapağı etkileşim bileşeni geliştirildi.
+  - `perspective: 1000` kamera derinliği altında, kullanıcının kapağın neresine dokunduğuna göre parmak yönünde fiziksel eğilme (`rotateX`, `rotateY`, `scale: 0.965`) sağlandı.
+  - Dinamik temas gölgesi (contact shadow) entegre edildi: Basıldığında gölge defterin altına sıkışıp koyulaşır (`shadowHeight: 5`, `shadowRadius: 8`, `shadowOpacity: 0.38`), parmak çekildiğinde orijinal yumuşak masa gölgesine yaylanır (`shadowHeight: 14`, `shadowRadius: 18`, `shadowOpacity: 0.22`).
+  - Parmak çekildiğinde `withSpring` (`damping: 14`, `stiffness: 180`, `mass: 0.8`) ile doğal, organik bir defter yaylanması uygulandı.
+- **Entegrasyonlar:**
+  - **Ana Kapak Ekranı (`app/ajandam/index.js`):** Masanın ortasında duran A4 oranlı ana ajanda kapağına 3D fiziksel etkileşim eklendi. Çizim veya metin modundayken kalemin hassasiyeti bozulmasın diye tilt otomatik devre dışı bırakılır (`disabled={activeMode !== 'none'}`).
+  - **Kapak Seçim Galerisi (`components/CoverEditor.js`):** Şablon galerisindeki mini kapak kartlarına da 3D basılma & yaylanma fiziği kazandırıldı.
+
+
 
 

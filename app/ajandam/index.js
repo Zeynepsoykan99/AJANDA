@@ -20,6 +20,7 @@ import CoverEditor from '../../components/CoverEditor';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 import Skeleton from '../../components/ui/Skeleton';
 import ImageWithSkeleton from '../../components/ui/ImageWithSkeleton';
+import InteractiveCover3D from '../../components/stationery/InteractiveCover3D';
 
 import DrawingCanvas from '../../components/drawing/DrawingCanvas';
 import DrawingToolbar from '../../components/drawing/DrawingToolbar';
@@ -209,7 +210,13 @@ export default function AjandamScreen() {
 
       {/* Merkezlenmiş Kapak Görseli ve İnteraktif Katmanlar */}
       <View style={[styles.contentArea, { backgroundColor: colors.background }]}>
-        <View style={styles.coverContainer}>
+        <InteractiveCover3D
+          style={styles.coverContainer}
+          disabled={activeMode !== 'none'}
+          onPress={handleOpenAgenda}
+          borderRadius={8}
+          maxTilt={6}
+        >
           <ImageWithSkeleton
             isBackground={true}
             source={template.imageSource}
@@ -236,7 +243,7 @@ export default function AjandamScreen() {
               style={styles.fullBleedCanvas}
             />
           </ImageWithSkeleton>
-        </View>
+        </InteractiveCover3D>
 
         {/* Ajandayı Aç Butonu (Kapağın Dışında) */}
         <View style={styles.floatingButtonContainer}>
@@ -309,15 +316,7 @@ const styles = StyleSheet.create({
     maxWidth: 420,
     aspectRatio: 0.72, // A4 defter oranı
     borderRadius: 8,
-    overflow: 'hidden',
-    // Gölge (defter hissiyatı için)
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 10,
-    backgroundColor: '#FFFFFF',
-    marginBottom: 40, // Butonla arasına mesafe koyduk
+    marginBottom: 40, // Butonla arasına mesafe
   },
   fullBleedBackground: {
     width: '100%',
