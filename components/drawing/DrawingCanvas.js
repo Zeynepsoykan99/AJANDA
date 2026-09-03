@@ -18,6 +18,7 @@ export default function DrawingCanvas({
 }) {
   const [currentPath, setCurrentPath] = useState('');
   const pointsRef = useRef([]);
+  const strokeStartTimeRef = useRef(0);
 
   // Stale Closure problemini çözmek için en güncel propları bir ref'te tutuyoruz
   const stateRef = useRef({
@@ -94,7 +95,8 @@ export default function DrawingCanvas({
           return;
         }
 
-        pointsRef.current = [{ x: locationX, y: locationY }];
+        strokeStartTimeRef.current = Date.now();
+        pointsRef.current = [{ x: locationX, y: locationY, timestamp: 0 }];
         setCurrentPath(`M ${locationX} ${locationY}`);
       },
       
@@ -107,7 +109,8 @@ export default function DrawingCanvas({
           return;
         }
 
-        pointsRef.current.push({ x: locationX, y: locationY });
+        const elapsed = Date.now() - strokeStartTimeRef.current;
+        pointsRef.current.push({ x: locationX, y: locationY, timestamp: elapsed });
         const newPath = pointsToSvgPath(pointsRef.current);
         setCurrentPath(newPath);
       },

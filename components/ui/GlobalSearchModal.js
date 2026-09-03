@@ -340,12 +340,22 @@ export default function GlobalSearchModal({
                             </View>
                           )}
 
-                          {/* Tarih */}
-                          {dateStr ? (
-                            <Text style={[styles.dateText, { color: colors.textSecondary + '70' }]}>
-                              {dateStr}
-                            </Text>
-                          ) : null}
+                          {/* Tarih ve El Yazısı Rozeti */}
+                          <View style={styles.footerRow}>
+                            {dateStr ? (
+                              <Text style={[styles.dateText, { color: colors.textSecondary + '70' }]}>
+                                {dateStr}
+                              </Text>
+                            ) : null}
+                            {item.isHandwritingMatch && (
+                              <View style={[styles.handwritingBadge, { backgroundColor: colors.accent + '18' }]}>
+                                <MaterialCommunityIcons name="draw-pen" size={12} color={colors.accent} />
+                                <Text style={[styles.handwritingBadgeText, { color: colors.accent }]}>
+                                  El Yazısından Bulundu
+                                </Text>
+                              </View>
+                            )}
+                          </View>
                         </View>
 
                         {/* Sağ Yönlendirme İkonu */}
@@ -528,6 +538,25 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: 11,
-    marginTop: 2,
+    marginTop: 0,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+  },
+  handwritingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
+    gap: 4,
+  },
+  handwritingBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

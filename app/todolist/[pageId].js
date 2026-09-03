@@ -21,6 +21,7 @@ import TextCanvas from '../../components/text/TextCanvas';
 import StickerCanvas from '../../components/stickers/StickerCanvas';
 import StickerMenu from '../../components/stickers/StickerMenu';
 import UndoToast from '../../components/ui/UndoToast';
+import { recognizeHandwriting } from '../../services/handwritingService';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 
 /**
@@ -37,6 +38,8 @@ export default function TodoViewScreen() {
   const [isStickerMenuVisible, setIsStickerMenuVisible] = useState(false);
   const [undoToast, setUndoToast] = useState({ visible: false, message: '' });
   const pendingStickerDeleteRef = useRef(null);
+  const saveTimeoutRef = useRef(null);
+  const recognitionTimeoutRef = useRef(null);
 
   // Çizim Ayarları
   const [activeMode, setActiveMode] = useState('none');
@@ -47,8 +50,6 @@ export default function TodoViewScreen() {
   // Klavye / Metin Ayarları
   const [textColor, setTextColor] = useState('#4E342E');
   const [textFontSize, setTextFontSize] = useState(16);
-
-  const saveTimeoutRef = useRef(null);
 
   useEffect(() => {
     (async () => {
@@ -88,6 +89,35 @@ export default function TodoViewScreen() {
         saveTimeoutRef.current = setTimeout(async () => {
           await StorageService.updatePage(prev.id, { drawings: newDrawings });
         }, 500);
+
+        // El Yazısı Tanıma (Debounced 1000ms)
+        if (recognitionTimeoutRef.current) {
+          clearTimeout(recognitionTimeoutRef.current);
+        }
+        if (!newDrawings || newDrawings.length === 0) {
+          StorageService.updatePage(prev.id, { recognizedText: '', recognizedWords: [] });
+        } else {
+          recognitionTimeoutRef.current = setTimeout(async () => {
+            const result = await recognizeHandwriting(newDrawings, { language: 'tr' });
+            if (result.success && !result.aborted && !result.stale) {
+              setPage((current) => {
+                if (current && current.id === prev.id) {
+                  return {
+                    ...current,
+                    recognizedText: result.text,
+                    recognizedWords: result.words,
+                  };
+                }
+                return current;
+              });
+              await StorageService.updatePage(prev.id, {
+                recognizedText: result.text,
+                recognizedWords: result.words,
+              });
+            }
+          }, 1000);
+        }
+
         return updated;
       });
     },
@@ -115,6 +145,24 @@ export default function TodoViewScreen() {
       const updatedDrawings = current.slice(0, current.length - 1);
       const updated = { ...prev, drawings: updatedDrawings };
       StorageService.updatePage(prev.id, { drawings: updatedDrawings });
+
+      if (recognitionTimeoutRef.current) {
+        clearTimeout(recognitionTimeoutRef.current);
+      }
+      if (updatedDrawings.length === 0) {
+        StorageService.updatePage(prev.id, { recognizedText: '', recognizedWords: [] });
+      } else {
+        recognitionTimeoutRef.current = setTimeout(async () => {
+          const result = await recognizeHandwriting(updatedDrawings, { language: 'tr' });
+          if (result.success && !result.aborted && !result.stale) {
+            StorageService.updatePage(prev.id, {
+              recognizedText: result.text,
+              recognizedWords: result.words,
+            });
+          }
+        }, 1000);
+      }
+
       return updated;
     });
   }, []);

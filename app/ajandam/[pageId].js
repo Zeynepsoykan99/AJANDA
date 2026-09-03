@@ -27,6 +27,7 @@ import DrawingCanvas from '../../components/drawing/DrawingCanvas';
 import DrawingToolbar from '../../components/drawing/DrawingToolbar';
 import TextCanvas from '../../components/text/TextCanvas';
 import UndoToast from '../../components/ui/UndoToast';
+import { recognizeHandwriting } from '../../services/handwritingService';
 
 /**
  * PageViewScreen - Dinamik sayfa görüntüleme ve düzenleme
@@ -58,6 +59,7 @@ export default function PageViewScreen() {
 
   // Auto-save timer ref
   const saveTimeoutRef = useRef(null);
+  const recognitionTimeoutRef = useRef(null);
 
   // Sayfa yükle
   useEffect(() => {
@@ -96,7 +98,7 @@ export default function PageViewScreen() {
     []
   );
 
-  // Çizimleri güncelle (debounced auto-save)
+  // Çizimleri güncelle (debounced auto-save & digital ink recognition)
   const handleDrawingsChange = useCallback(
     (newDrawings) => {
       setPage((prev) => {
@@ -107,6 +109,35 @@ export default function PageViewScreen() {
         saveTimeoutRef.current = setTimeout(async () => {
           await StorageService.updatePage(prev.id, { drawings: newDrawings });
         }, 500);
+
+        // El Yazısı Tanıma (Debounced 1000ms - Çizim akışını asla yavaşlatmaz)
+        if (recognitionTimeoutRef.current) {
+          clearTimeout(recognitionTimeoutRef.current);
+        }
+        if (!newDrawings || newDrawings.length === 0) {
+          StorageService.updatePage(prev.id, { recognizedText: '', recognizedWords: [] });
+        } else {
+          recognitionTimeoutRef.current = setTimeout(async () => {
+            const result = await recognizeHandwriting(newDrawings, { language: 'tr' });
+            if (result.success && !result.aborted && !result.stale) {
+              setPage((current) => {
+                if (current && current.id === prev.id) {
+                  return {
+                    ...current,
+                    recognizedText: result.text,
+                    recognizedWords: result.words,
+                  };
+                }
+                return current;
+              });
+              await StorageService.updatePage(prev.id, {
+                recognizedText: result.text,
+                recognizedWords: result.words,
+              });
+            }
+          }, 1000);
+        }
+
         return updated;
       });
     },
@@ -138,6 +169,25 @@ export default function PageViewScreen() {
       const updatedDrawings = current.slice(0, current.length - 1);
       const updated = { ...prev, drawings: updatedDrawings };
       StorageService.updatePage(prev.id, { drawings: updatedDrawings });
+
+      // Geri alınınca tanımayı yeniden çalıştır
+      if (recognitionTimeoutRef.current) {
+        clearTimeout(recognitionTimeoutRef.current);
+      }
+      if (updatedDrawings.length === 0) {
+        StorageService.updatePage(prev.id, { recognizedText: '', recognizedWords: [] });
+      } else {
+        recognitionTimeoutRef.current = setTimeout(async () => {
+          const result = await recognizeHandwriting(updatedDrawings, { language: 'tr' });
+          if (result.success && !result.aborted && !result.stale) {
+            StorageService.updatePage(prev.id, {
+              recognizedText: result.text,
+              recognizedWords: result.words,
+            });
+          }
+        }, 1000);
+      }
+
       return updated;
     });
   }, []);

@@ -732,6 +732,21 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 - **Arayüz Senkronizasyonu:** `components/AddPageModal.js` şablon seçiminde artık kullanıcıya yalnızca hazır görsel tasarım şablonları olan **Aylık Ajanda** ve **Haftalık Ajanda** sunulmaktadır.
 - **Geriye Dönük Uyumluluk:** Daha önce oluşturulmuş olabilecek sayfaların görüntülenmesinde herhangi bir hata oluşmaması için sayfa detay ve küçük resim bileşenlerindeki render güvenliği korundu.
 
+### ✍️ 27. El Yazısı Arama & Dijital Mürekkep Tanıma (Handwriting Search / Digital Ink Recognition)
+- **Vektörel Dijital Mürekkep Motoru (`services/handwritingService.js`):**
+  - Çizim noktalarını (`points: [{ x, y, timestamp }]`) zaman serili geometrik vektör formatına dönüştüren motor geliştirildi.
+  - `Google Digital Ink Engine` (`itc=tr-t-i0-handwrit`) ile Türkçe el yazısı tanıma entegrasyonu sağlandı.
+  - İleride kelime vurgulama/bölgeye kaydırma özellikleri için kelimelerin uzamsal sınırlayıcı kutuları (`recognizedWords: [{ word, bounds }]`) indekslendi.
+- **Çizim Katmanı Zenginleştirmesi (`components/drawing/DrawingCanvas.js`):**
+  - Kalem hareketlerinin milisaniye bazlı zaman damgaları (`timestamp: Date.now() - strokeStartTime`) çizgi verisine kaydedilmeye başlandı. Orijinal SVG çizimleri ve pürüzsüz Bézier eğrileri %100 korundu.
+- **Lifecycle & Debounce & Race Condition Güvencesi:**
+  - `app/ajandam/[pageId].js`, `app/todolist/[pageId].js` ve `app/ajandam/index.js` (Kapak) ekranlarında çizim yapılırken asla gecikme olmaması için **1000ms debounce** uygulandı.
+  - Kullanıcı yeni bir çizgi çektiğinde önceki istek `AbortController` ile anında iptal edilerek sonuçların çakışması (race condition) önlendi. Çevrimdışı durumlarda çizimlerin korunması garanti altına alındı.
+- **Global Arama Entegrasyonu (`services/searchService.js` & `components/ui/GlobalSearchModal.js`):**
+  - Arama sorguları sayfa başlığı ve klavye metinlerinin yanı sıra `page.recognizedText` ve `cover.recognizedText` alanlarını da tarayacak şekilde genişletildi.
+  - El yazısından bulunan sonuçlarda `✍️ El Yazısından Bulundu` rozeti ve eşleşen metin pasajı (snippet) eklendi; tıklandığında doğrudan ilgili sayfaya gidilmesi sağlandı.
+
+
 
 
 

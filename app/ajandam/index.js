@@ -25,6 +25,7 @@ import InteractiveCover3D from '../../components/stationery/InteractiveCover3D';
 import DrawingCanvas from '../../components/drawing/DrawingCanvas';
 import DrawingToolbar from '../../components/drawing/DrawingToolbar';
 import TextCanvas from '../../components/text/TextCanvas';
+import { recognizeHandwriting } from '../../services/handwritingService';
 
 /**
  * AjandamScreen - Ajanda Kapağı Ekranı (Full-Bleed ve Çizilebilir)
@@ -53,6 +54,7 @@ export default function AjandamScreen() {
   const [textFontSize, setTextFontSize] = useState(24); // Kapakta font biraz daha büyük olabilir
 
   const saveTimeoutRef = useRef(null);
+  const recognitionTimeoutRef = useRef(null);
 
   // Kapak verilerini yükle
   useEffect(() => {
@@ -88,7 +90,7 @@ export default function AjandamScreen() {
     await StorageService.setCover(newCoverData);
   }, []);
 
-  // Çizimleri güncelle (debounced auto-save)
+  // Çizimleri güncelle (debounced auto-save & digital ink recognition)
   const handleDrawingsChange = useCallback((newDrawings) => {
     setCoverData((prev) => {
       const updated = { ...prev, drawings: newDrawings };
@@ -96,6 +98,34 @@ export default function AjandamScreen() {
       saveTimeoutRef.current = setTimeout(async () => {
         await StorageService.setCover(updated);
       }, 500);
+
+      // Kapak El Yazısı Tanıma
+      if (recognitionTimeoutRef.current) clearTimeout(recognitionTimeoutRef.current);
+      if (!newDrawings || newDrawings.length === 0) {
+        StorageService.getCover().then((cov) => {
+          if (cov) StorageService.setCover({ ...cov, recognizedText: '', recognizedWords: [] });
+        });
+      } else {
+        recognitionTimeoutRef.current = setTimeout(async () => {
+          const result = await recognizeHandwriting(newDrawings, { language: 'tr' });
+          if (result.success && !result.aborted && !result.stale) {
+            setCoverData((current) => ({
+              ...current,
+              recognizedText: result.text,
+              recognizedWords: result.words,
+            }));
+            const currentCover = await StorageService.getCover();
+            if (currentCover) {
+              await StorageService.setCover({
+                ...currentCover,
+                recognizedText: result.text,
+                recognizedWords: result.words,
+              });
+            }
+          }
+        }, 1000);
+      }
+
       return updated;
     });
   }, []);
@@ -120,6 +150,23 @@ export default function AjandamScreen() {
       const updatedDrawings = current.slice(0, current.length - 1);
       const updated = { ...prev, drawings: updatedDrawings };
       StorageService.setCover(updated);
+
+      if (recognitionTimeoutRef.current) clearTimeout(recognitionTimeoutRef.current);
+      if (updatedDrawings.length === 0) {
+        StorageService.setCover({ ...updated, recognizedText: '', recognizedWords: [] });
+      } else {
+        recognitionTimeoutRef.current = setTimeout(async () => {
+          const result = await recognizeHandwriting(updatedDrawings, { language: 'tr' });
+          if (result.success && !result.aborted && !result.stale) {
+            StorageService.setCover({
+              ...updated,
+              recognizedText: result.text,
+              recognizedWords: result.words,
+            });
+          }
+        }, 1000);
+      }
+
       return updated;
     });
   }, []);

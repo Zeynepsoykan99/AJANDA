@@ -4,7 +4,7 @@
  * Türkçe karakter duyarlılığıyla tarar ve eşleşen metin pasajlarını çıkarır.
  */
 
-import { StorageService } from './storageService';
+import { StorageService } from './storageService.js';
 
 /**
  * Türkçe büyük/küçük harf dönüşümünü kusursuz yapan yardımcı fonksiyon
@@ -87,7 +87,18 @@ export const searchAllData = async (
       }
     }
 
+    // Kapak El Yazısı (Handwriting)
+    if (cover.recognizedText && normalizeTurkish(cover.recognizedText).includes(query)) {
+      coverMatches.push({
+        type: 'handwriting',
+        snippet: extractSnippet(cover.recognizedText, rawQuery),
+        field: 'Kapak El Yazısı',
+        isHandwriting: true,
+      });
+    }
+
     if (coverMatches.length > 0) {
+      const hasHandwriting = coverMatches.some((m) => m.isHandwriting);
       results.push({
         id: 'cover',
         title: 'Ajanda Kapağı',
@@ -99,6 +110,7 @@ export const searchAllData = async (
         matches: coverMatches,
         primarySnippet: coverMatches[0].snippet,
         field: coverMatches[0].field,
+        isHandwritingMatch: hasHandwriting,
       });
     }
   }
@@ -196,6 +208,16 @@ export const searchAllData = async (
       }
     }
 
+    // D. El Yazısı Notları (Digital Ink Recognized Text)
+    if (page.recognizedText && normalizeTurkish(page.recognizedText).includes(query)) {
+      pageMatches.push({
+        type: 'handwriting',
+        snippet: extractSnippet(page.recognizedText, rawQuery),
+        field: 'El Yazısı',
+        isHandwriting: true,
+      });
+    }
+
     // Eşleşme bulunduysa sonuca ekle
     if (pageMatches.length > 0) {
       const isTodo = page.category === 'todo';
@@ -215,6 +237,8 @@ export const searchAllData = async (
         ? 'Haftalık Plan'
         : 'Ajanda Sayfası';
 
+      const hasHandwriting = pageMatches.some((m) => m.isHandwriting);
+
       results.push({
         id: page.id,
         title: page.title || 'İsimsiz Sayfa',
@@ -227,6 +251,7 @@ export const searchAllData = async (
         primarySnippet: pageMatches[0].snippet,
         field: pageMatches[0].field,
         hasTitleMatch: pageMatches.some((m) => m.isTitleMatch),
+        isHandwritingMatch: hasHandwriting,
       });
     }
   }
