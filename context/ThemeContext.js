@@ -31,7 +31,7 @@ export function ThemeProvider({ children }) {
 
   // Tema değiştirme fonksiyonu
   const setTheme = useCallback(async (newThemeId) => {
-    if (THEMES[newThemeId]) {
+    if (THEMES[newThemeId] || (typeof newThemeId === 'string' && newThemeId.startsWith('custom:'))) {
       setThemeId(newThemeId);
       try {
         await StorageService.setTheme(newThemeId);

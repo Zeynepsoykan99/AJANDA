@@ -6,10 +6,12 @@ import {
   TouchableOpacity,
   Modal,
   ScrollView,
+  Dimensions,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import ColorPicker, { Panel3, Preview } from 'reanimated-color-picker';
 import { useTheme } from '../context/ThemeContext';
-import { getAllThemes } from '../constants/themes';
+import { getAllThemes, generateCustomTheme } from '../constants/themes';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
 
 /**
@@ -20,6 +22,14 @@ export default function ThemePickerModal({ visible, onClose }) {
   const { theme, setTheme, colors } = useTheme();
   const { isTablet } = useResponsiveLayout();
   const allThemes = getAllThemes();
+  
+  const [showColorPicker, setShowColorPicker] = React.useState(false);
+
+  // Anlık renk değişimi (Önizleme / Fluid değişim)
+  const onSelectColor = ({ hex }) => {
+    // anlık değişimi sağla
+    setTheme(`custom:${hex}`);
+  };
 
   return (
     <Modal
@@ -107,6 +117,53 @@ export default function ThemePickerModal({ visible, onClose }) {
                 </TouchableOpacity>
               );
             })}
+
+            {/* Özel Renk Seçici Butonu / Paneli */}
+            <View style={styles.customSection}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setShowColorPicker(!showColorPicker)}
+                style={[
+                  styles.themeOption,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: theme.id.startsWith('custom:') ? colors.accent : colors.border,
+                    marginTop: 12,
+                  },
+                ]}
+              >
+                <View style={styles.themeInfo}>
+                  <View style={[styles.colorPreview, { backgroundColor: theme.id.startsWith('custom:') ? colors.background : colors.border }]} />
+                  <Text style={[styles.themeName, { color: colors.textPrimary }]}>
+                    ✨ Kendi Rengini Seç
+                  </Text>
+                </View>
+                <MaterialCommunityIcons
+                  name={showColorPicker ? "chevron-up" : "chevron-down"}
+                  size={24}
+                  color={colors.textSecondary}
+                />
+              </TouchableOpacity>
+
+              {showColorPicker && (
+                <View style={[styles.pickerContainer, { backgroundColor: colors.backgroundLight, borderColor: colors.border }]}>
+                  <ColorPicker
+                    style={{ width: '100%', justifyContent: 'center' }}
+                    value={theme.id.startsWith('custom:') ? theme.colors.background : '#FF5733'}
+                    onComplete={onSelectColor}
+                    onChange={onSelectColor}
+                    boundedThumb
+                  >
+                    <Preview style={styles.pickerPreview} hideInitialColor />
+                    <Panel3 style={styles.pickerPanel} centerChannel="saturation" />
+                  </ColorPicker>
+                  <Text style={[styles.pickerHint, { color: colors.textSecondary }]}>
+                    İstediğin rengi seç, uygulama anında uyum sağlasın.
+                  </Text>
+                </View>
+              )}
+            </View>
+
           </ScrollView>
         </View>
       </TouchableOpacity>
@@ -195,5 +252,37 @@ const styles = StyleSheet.create({
   themeName: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  customSection: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+    paddingTop: 8,
+    marginTop: 8,
+  },
+  pickerContainer: {
+    marginTop: 12,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  pickerPreview: {
+    height: 40,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+  },
+  pickerPanel: {
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    marginBottom: 16,
+  },
+  pickerHint: {
+    fontSize: 12,
+    textAlign: 'center',
+    fontWeight: '500',
+    marginTop: 8,
   },
 });

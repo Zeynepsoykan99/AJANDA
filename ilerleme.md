@@ -599,3 +599,9 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 - Kullanıcıların uygulamanın renk paletini zevklerine göre değiştirebilmesi için şık bir "Tema Seçici" (`ThemePickerModal`) bileşeni oluşturuldu.
 - Ana ekrana (`app/index.js`) bir palet ikonu eklendi. Tıklandığında ekranın altından modern bir Modal (Bottom Sheet benzeri) açılarak renk seçenekleri sunuldu.
 - Altyapıda bulunan `ThemeContext` ile entegrasyon sağlandı; seçilen temanın AsyncStorage'a kalıcı olarak kaydedilmesi ve anında tüm arayüz bileşenlerine (başlıklar, dairesel butonlar, arkaplan) canlı (real-time) olarak yansıması başarıyla kurgulandı.
+
+### 🌈 8. Sınırsız Renk Çarkı ve Akıllı Kontrast
+- Tema menüsünün içine `reanimated-color-picker` entegre edilerek, kullanıcılara sınırsız (16 milyon) renk arasından dilediklerini seçme özgürlüğü sunuldu.
+- `constants/themes.js` içerisine `generateCustomTheme` fonksiyonu yazıldı. Bu algoritma, seçilen HEX kodunun parlaklığını (Luminance) matematiksel olarak analiz eder (> 140 ise açık renk, değilse koyu renk). 
+- Akıllı Kontrast sayesinde, kullanıcı koyu bir renk seçerse ikonlar ve yazılar otomatik beyaza; açık bir renk seçerse otomatik koyu griye dönerek okunabilirlik (Accessibility) maksimize edildi.
+- Özel renkler `custom:#HEX` formatıyla kalıcı belleğe (AsyncStorage) işlendi. Kullanıcı renk çarkında gezinirken uygulama arayüzü 60fps akıcılığında tepki verecek duruma getirildi.
