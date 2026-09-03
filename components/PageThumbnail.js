@@ -50,10 +50,7 @@ export default function PageThumbnail({ page, onPress, onLongPress, onDelete }) 
   });
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.7}
-      onPress={onPress}
-      onLongPress={onLongPress}
+    <View
       style={[
         styles.card,
         {
@@ -62,47 +59,55 @@ export default function PageThumbnail({ page, onPress, onLongPress, onDelete }) 
         },
       ]}
     >
-      {/* Sol: İkon */}
-      <View
-        style={[
-          styles.iconContainer,
-          { backgroundColor: templateColors.accent + '15' },
-        ]}
+      {/* Sol ve Orta Kısım Tıklanabilir Alan */}
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={onPress}
+        onLongPress={onLongPress}
+        style={styles.cardTouchable}
       >
-        <MaterialCommunityIcons
-          name={category?.icon || 'file-outline'}
-          size={28}
-          color={templateColors.accent}
-        />
-      </View>
-
-      {/* Orta: Bilgiler */}
-      <View style={styles.infoContainer}>
-        <Text
-          style={[styles.pageTitle, { color: templateColors.accent }]}
-          numberOfLines={1}
+        {/* Sol: İkon */}
+        <View
+          style={[
+            styles.iconContainer,
+            { backgroundColor: templateColors.accent + '15' },
+          ]}
         >
-          {page.title}
-        </Text>
-        <View style={styles.metaRow}>
+          <MaterialCommunityIcons
+            name={category?.icon || 'file-outline'}
+            size={28}
+            color={templateColors.accent}
+          />
+        </View>
+
+        {/* Orta: Bilgiler */}
+        <View style={styles.infoContainer}>
           <Text
-            style={[
-              styles.categoryBadge,
-              {
-                color: templateColors.accent,
-                backgroundColor: templateColors.accent + '15',
-              },
-            ]}
+            style={[styles.pageTitle, { color: templateColors.accent }]}
+            numberOfLines={1}
           >
-            {category?.emoji} {category?.name}
+            {page.title}
+          </Text>
+          <View style={styles.metaRow}>
+            <Text
+              style={[
+                styles.categoryBadge,
+                {
+                  color: templateColors.accent,
+                  backgroundColor: templateColors.accent + '15',
+                },
+              ]}
+            >
+              {category?.emoji} {category?.name}
+            </Text>
+          </View>
+          <Text style={[styles.summary, { color: templateColors.accent + '99' }]}>
+            {getSummary()} · {createdDate}
           </Text>
         </View>
-        <Text style={[styles.summary, { color: templateColors.accent + '99' }]}>
-          {getSummary()} · {createdDate}
-        </Text>
-      </View>
+      </TouchableOpacity>
 
-      {/* Sağ: İkonlar */}
+      {/* Sağ: İkonlar (Silme Butonu Bağımsız) */}
       <View style={styles.rightActions}>
         {onDelete && (
           <TouchableOpacity
@@ -123,7 +128,7 @@ export default function PageThumbnail({ page, onPress, onLongPress, onDelete }) 
           color={templateColors.accent + '60'}
         />
       </View>
-    </TouchableOpacity>
+    </View>
   );
 }
 
@@ -141,6 +146,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+  },
+  cardTouchable: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   iconContainer: {
     width: 52,

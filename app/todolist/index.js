@@ -63,7 +63,7 @@ export default function TodoListScreen() {
     (page) => {
       Alert.alert(
         'Listeyi Sil',
-        `"${page.title}" listesini silmek istediğinize emin misiniz?`,
+        'Bu sayfayı silmek istediğinize emin misiniz?',
         [
           { text: 'İptal', style: 'cancel' },
           {

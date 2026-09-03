@@ -199,7 +199,7 @@ export default function PageViewScreen() {
   const handleDeletePage = useCallback(() => {
     Alert.alert(
       'Sayfayı Sil',
-      `"${page.title}" sayfasını silmek istediğinize emin misiniz?`,
+      'Bu sayfayı silmek istediğinize emin misiniz?',
       [
         { text: 'İptal', style: 'cancel' },
         {

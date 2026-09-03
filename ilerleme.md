@@ -576,3 +576,7 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 ### 🛑 2. Açık Sayfadan Çıkmadan Silme (Toolbar)
 - Kullanıcı bir sayfanın içine girdiğinde (`app/ajandam/[pageId].js` veya `app/todolist/[pageId].js`), üst araç çubuğundaki (header) butonların yanına kırmızı renkli bir çöp kutusu ikonu eklendi.
 - Kullanıcı içerideyken "Sil" işlemini onaylarsa, uygulamanın çökmesini önlemek ve UX akışını korumak için, veri tabanındaki silme işleminin ardından otomatik olarak `router.back()` fonksiyonu çağrılarak güvenli bir şekilde bir önceki liste ekranına dönülmesi sağlandı.
+
+### 🛠️ 3. Tıklama Çakışması (Nested TouchableOpacity) Çözümü
+- Sayfa kartlarında (`PageThumbnail`) yaşanan tıklanamama (işlevsizlik) sorunu, iç içe geçmiş dokunulabilir alanların ayrıştırılması (kardeş bileşen yapısı) ile giderildi. Artık çöp kutusuna tıklandığında sayfa açılmak yerine hedeflendiği gibi silme onayı ekranı çıkıyor.
+- Tüm `Alert.alert` onay metinleri birebir hedeflenen ("Bu sayfayı silmek istediğinize emin misiniz?") formata dönüştürüldü.
