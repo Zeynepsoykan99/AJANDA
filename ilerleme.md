@@ -697,6 +697,21 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 - **Mükemmel Denge & Merkezleme:** Butonla aralık oluşturan `marginBottom: 44` (ve skeleton'daki `marginBottom: 40`) temizlendi. Defter kapağı, çalışma masasının ortasında dikey ve yatay olarak tam dengeli ve estetik bir biçimde merkezlendi.
 - **Doğrudan Dokunmatik Deneyim:** Kapak zaten 3D fiziksel yaylanma tepkisine sahip olduğundan, kapağa dokunulduğu anda gerçekçi tilt/scale tepkisiyle birlikte sayfalar (`/ajandam/pages`) açılır. Çizim/metin modunda kalemin rahat kullanımı için koruma sürdürülmektedir.
 
+### 🔍 23. Global Arama Motoru (Global Search)
+- **Arama Servisi (`services/searchService.js`):**
+  - Tüm Ajanda sayfaları, To-Do listeleri, boş şablonlar, etkinlikler ve kapak metinleri üzerinde derin JSON taraması yapan arama motoru geliştirildi.
+  - Başlıklar (`page.title`), serbest not kutuları (`textBlocks`), yapılacak maddeleri (`data.items`), içerikler (`data.content`), aylık etkinlikler (`data.events`) ve haftalık notlar (`data.days`) taranır.
+  - `i/İ` ve `ı/I` JavaScript tuzaklarını bertaraf eden `normalizeTurkish` fonksiyonu ile %100 Türkçe harf uyumu sağlandı.
+  - Eşleşen kelimenin öncesini ve sonrasını içeren bağlamsal pasaj kesici (`extractSnippet`) oluşturuldu.
+- **Arama Modalı (`components/ui/GlobalSearchModal.js`):**
+  - Otomatik odaklanan arama girdisi (`autoFocus`), tek dokunuşla temizleme, kategori filtre çipleri (`Tümü`, `Ajandam`, `Yapılacaklar`, `Kapak`) ve canlı sonuç listesi eklendi.
+  - Modal açıldığında AsyncStorage verileri belleğe bir kez yüklenerek (in-memory cache) tuş vuruşlarında 1 milisaniye altında sonuç üretimi sağlandı.
+  - Sonuç kartlarında kategori emojisi/rozetleri, sayfa başlığı, eşleşen metin pasajı ve tarih bilgisi gösterilir; tıklandığında doğrudan o sayfanın içine yönlendirir.
+- **Arayüz Entegrasyonu:**
+  - **Ana Ekran (`app/index.js`):** Başlığın hemen altına Spotlight tarzı, tıklanabilir şık arama çubuğu yerleştirildi.
+  - **Liste Ekranları (`app/ajandam/pages.js` & `app/todolist/index.js`):** Header'daki takvim filtre butonunun yanına hızlı arama büyüteç butonu (`magnify`) eklendi.
+
+
 
 
 

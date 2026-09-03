@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import CircleMenuButton from '../components/CircleMenuButton';
 import ThemePickerModal from '../components/ThemePickerModal';
+import GlobalSearchModal from '../components/ui/GlobalSearchModal';
 import { useTheme } from '../context/ThemeContext';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
 
@@ -13,6 +14,7 @@ export default function HomeScreen() {
   const { colors } = useTheme();
   const { isTablet } = useResponsiveLayout();
   const [isThemeModalVisible, setIsThemeModalVisible] = React.useState(false);
+  const [isSearchModalVisible, setIsSearchModalVisible] = React.useState(false);
 
   const menuItems = [
     { id: 'gunlugum', label: 'günlüğüm', route: '/gunlugum', icon: 'book-heart-outline' },
@@ -45,6 +47,28 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Hızlı Arama Çubuğu (Spotlight Search Bar) */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => setIsSearchModalVisible(true)}
+          style={[
+            styles.searchBar,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+            isTablet && styles.tabletSearchBar,
+          ]}
+        >
+          <MaterialCommunityIcons name="magnify" size={22} color={colors.accent} />
+          <Text style={[styles.searchBarPlaceholder, { color: colors.textSecondary + '99' }]}>
+            Sayfa, not veya yapılacaklarda ara...
+          </Text>
+          <View style={[styles.searchBadge, { backgroundColor: colors.accent + '15' }]}>
+            <MaterialCommunityIcons name="arrow-right" size={14} color={colors.accent} />
+          </View>
+        </TouchableOpacity>
+
         {/* Dairesel Butonlar Listesi */}
         <View style={[styles.menuContainer, isTablet && styles.tabletMenuContainer]}>
           {menuItems.map((item) => (
@@ -63,6 +87,12 @@ export default function HomeScreen() {
       <ThemePickerModal
         visible={isThemeModalVisible}
         onClose={() => setIsThemeModalVisible(false)}
+      />
+
+      {/* Global Arama Modalı */}
+      <GlobalSearchModal
+        visible={isSearchModalVisible}
+        onClose={() => setIsSearchModalVisible(false)}
       />
     </SafeAreaView>
   );
@@ -113,6 +143,40 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+  },
+  searchBar: {
+    width: '100%',
+    maxWidth: 400,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 24,
+    borderWidth: 1,
+    marginBottom: 28,
+    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  tabletSearchBar: {
+    maxWidth: 520,
+    paddingVertical: 14,
+    marginBottom: 36,
+  },
+  searchBarPlaceholder: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  searchBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   menuContainer: {
     width: '100%',

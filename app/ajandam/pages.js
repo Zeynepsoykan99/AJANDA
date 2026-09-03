@@ -17,6 +17,7 @@ import AddPageModal from '../../components/AddPageModal';
 import ListSkeleton from '../../components/ui/ListSkeleton';
 import DatePickerModal from '../../components/ui/DatePickerModal';
 import UndoToast from '../../components/ui/UndoToast';
+import GlobalSearchModal from '../../components/ui/GlobalSearchModal';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 
 /**
@@ -33,6 +34,7 @@ export default function PagesScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [filterDate, setFilterDate] = useState(null);
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  const [isSearchModalVisible, setIsSearchModalVisible] = useState(false);
   const [undoToast, setUndoToast] = useState({ visible: false, message: '' });
 
   // Geri al (Undo) için bekleyen silme referansı
@@ -216,23 +218,43 @@ export default function PagesScreen() {
           Sayfalarım
         </Text>
 
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => setIsDatePickerVisible(true)}
-          style={[
-            styles.backButton,
-            {
-              backgroundColor: filterDate ? colors.accent + '20' : colors.card,
-              borderColor: filterDate ? colors.accent : colors.border,
-            },
-          ]}
-        >
-          <MaterialCommunityIcons
-            name="calendar-search"
-            size={20}
-            color={filterDate ? colors.accent : colors.textSecondary}
-          />
-        </TouchableOpacity>
+        <View style={styles.headerRightGroup}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => setIsSearchModalVisible(true)}
+            style={[
+              styles.backButton,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <MaterialCommunityIcons
+              name="magnify"
+              size={20}
+              color={colors.textSecondary}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => setIsDatePickerVisible(true)}
+            style={[
+              styles.backButton,
+              {
+                backgroundColor: filterDate ? colors.accent + '20' : colors.card,
+                borderColor: filterDate ? colors.accent : colors.border,
+              },
+            ]}
+          >
+            <MaterialCommunityIcons
+              name="calendar-search"
+              size={20}
+              color={filterDate ? colors.accent : colors.textSecondary}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Filtre Aktif Çipi */}
@@ -312,6 +334,13 @@ export default function PagesScreen() {
         onDismiss={handleDismissUndo}
         duration={4500}
       />
+
+      {/* Global Arama Modalı */}
+      <GlobalSearchModal
+        visible={isSearchModalVisible}
+        onClose={() => setIsSearchModalVisible(false)}
+        initialCategory="ajandam"
+      />
     </SafeAreaView>
   );
 }
@@ -326,6 +355,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
+  },
+  headerRightGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   backButton: {
     width: 42,
