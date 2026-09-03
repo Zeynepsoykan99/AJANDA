@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import CircleMenuButton from '../components/CircleMenuButton';
+import ThemePickerModal from '../components/ThemePickerModal';
 import { useTheme } from '../context/ThemeContext';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
 
@@ -10,6 +12,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { isTablet } = useResponsiveLayout();
+  const [isThemeModalVisible, setIsThemeModalVisible] = React.useState(false);
 
   const menuItems = [
     { id: 'gunlugum', label: 'günlüğüm', route: '/gunlugum', icon: 'book-heart-outline' },
@@ -32,6 +35,14 @@ export default function HomeScreen() {
         <View style={styles.headerContainer}>
           <Text style={[styles.appTitle, { color: colors.textPrimary }]}>AJANDA</Text>
           <View style={[styles.titleUnderline, { backgroundColor: colors.border }]} />
+          
+          <TouchableOpacity
+            style={[styles.settingsButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={() => setIsThemeModalVisible(true)}
+            activeOpacity={0.7}
+          >
+            <MaterialCommunityIcons name="palette-outline" size={24} color={colors.textSecondary} />
+          </TouchableOpacity>
         </View>
 
         {/* Dairesel Butonlar Listesi */}
@@ -47,6 +58,12 @@ export default function HomeScreen() {
           ))}
         </View>
       </ScrollView>
+
+      {/* Tema Seçici Modal */}
+      <ThemePickerModal
+        visible={isThemeModalVisible}
+        onClose={() => setIsThemeModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -65,6 +82,8 @@ const styles = StyleSheet.create({
   headerContainer: {
     alignItems: 'center',
     marginBottom: 28,
+    position: 'relative',
+    width: '100%',
   },
   appTitle: {
     fontSize: 26,
@@ -77,6 +96,23 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 2,
     marginTop: 6,
+  },
+  settingsButton: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    // Gölge
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   menuContainer: {
     width: '100%',

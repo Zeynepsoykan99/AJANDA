@@ -594,3 +594,8 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 - React Navigation/Expo Router mimarisinin ekranları hafızada tutması (ve `useEffect`'in sadece ilk açılışta çalışması) sebebiyle detay sayfasından silinen öğelerin listeye geri dönüldüğünde hala ekranda görünme sorunu giderildi.
 - `app/ajandam/pages.js` ve `app/todolist/index.js` dosyalarındaki veri yükleme mantığı `useEffect` yerine Expo Router'ın **`useFocusEffect`** hook'u içine alındı.
 - Bu sayede kullanıcı liste ekranına her döndüğünde veriler AsyncStorage'dan anında güncellenerek silinen (veya ismi değişen) sayfalar arayüze gerçek zamanlı yansıtıldı.
+
+### 🎨 7. Tema ve Renk Özelleştirme (Customization)
+- Kullanıcıların uygulamanın renk paletini zevklerine göre değiştirebilmesi için şık bir "Tema Seçici" (`ThemePickerModal`) bileşeni oluşturuldu.
+- Ana ekrana (`app/index.js`) bir palet ikonu eklendi. Tıklandığında ekranın altından modern bir Modal (Bottom Sheet benzeri) açılarak renk seçenekleri sunuldu.
+- Altyapıda bulunan `ThemeContext` ile entegrasyon sağlandı; seçilen temanın AsyncStorage'a kalıcı olarak kaydedilmesi ve anında tüm arayüz bileşenlerine (başlıklar, dairesel butonlar, arkaplan) canlı (real-time) olarak yansıması başarıyla kurgulandı.
