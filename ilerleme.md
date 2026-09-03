@@ -616,3 +616,8 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 - `constants/pageTemplates.js` dosyası güncellenerek, eski CSS tabanlı aylık tasarımlar kaldırıldı ve yerine `image_template` tipindeki bu 6 yepyeni tasarım tanımlandı.
 - Yeni eklenen sayfalar, şablon seçici ekranda (`AddPageModal`) artık büyük, şık ve metinsiz galeri (thumbnail) kartları olarak sergileniyor.
 - `app/ajandam/[pageId].js` sayfası güncellendi. "Aylık Ajanda" menüsünden eklenen bu görsellerin içine tıpkı haftalık ajandada olduğu gibi **Apple Pencil (Serbest Çizim Katmanı)** ve **Metin Katmanı (TextCanvas)** desteği tam fonksiyonel ve milimetrik olarak kazandırıldı.
+
+### 🐛 11. Özel Tema Kalıcılığı ve Flash Efekti Düzeltmesi
+- **Sorun:** Kullanıcı renk çarkından özel renk seçip uygulamayı kapattığında renk "pembe" temaya sıfırlanıyordu. Ayrıca uygulama ilk açılırken kısa süreliğine ekranda pembe bir renk yanıp sönüyordu (Flash efekti).
+- **Çözüm:** `context/ThemeContext.js` içerisindeki açılış okuması (bootstrap) güncellendi. Sistem artık sadece sabit temaları değil, `custom:#HEX` etiketiyle gelen özel renkleri de geçerli (valid) kabul edip hafızaya yüklüyor.
+- `app/_layout.js` dosyası güncellendi. Arayüzün çizilmesi (render), `isLoaded` durumu `true` olana kadar (yani veritabanından son tema rengi okunana kadar) bekletildi. Böylece uygulama doğrudan kullanıcının seçtiği renk ile başlatılarak "pembe flash" efekti tarihe karıştı.

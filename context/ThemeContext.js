@@ -18,7 +18,7 @@ export function ThemeProvider({ children }) {
     (async () => {
       try {
         const savedThemeId = await StorageService.getTheme();
-        if (savedThemeId && THEMES[savedThemeId]) {
+        if (savedThemeId && (THEMES[savedThemeId] || (typeof savedThemeId === 'string' && savedThemeId.startsWith('custom:')))) {
           setThemeId(savedThemeId);
         }
       } catch (error) {

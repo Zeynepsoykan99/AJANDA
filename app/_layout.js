@@ -18,7 +18,12 @@ export default function RootLayout() {
 }
 
 function ThemedApp() {
-  const { colors } = useTheme();
+  const { colors, isLoaded } = useTheme();
+
+  // Tema yüklenene kadar boş (veya splash) ekran göster, flash'ı engelle
+  if (!isLoaded) {
+    return null;
+  }
 
   return (
     <>
