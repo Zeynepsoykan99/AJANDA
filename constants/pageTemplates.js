@@ -26,13 +26,6 @@ export const PAGE_CATEGORIES = [
     emoji: '🗓️',
     description: 'Haftalık plan',
   },
-  {
-    id: 'blank',
-    name: 'Boş Sayfa',
-    icon: 'file-document-outline',
-    emoji: '📝',
-    description: 'Serbest not alanı',
-  },
 ];
 
 export const TEMPLATE_IMAGES = {

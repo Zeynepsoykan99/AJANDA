@@ -727,6 +727,12 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 - **Web Outline Sıfırlama:** `components/ui/GlobalSearchModal.js` içerisindeki `TextInput` stiline `Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } })` eklenerek tarayıcının varsayılan kaba, siyah iç dikdörtgen çerçevesi tamamen kaldırıldı.
 - **Tematik Kapsayıcı Vurgusu (Focus Accent):** Arama kutusuna odaklanıldığında (`onFocus`), yuvarlak dış kapsayıcının (`inputContainer`) kenarlığı aktif temanın rengiyle (`colors.accent`) 1.5px parlayacak şekilde dinamik hale getirildi; arama ikonu da odak anında aktif tema rengini alır.
 
+### 📄 26. Ajandam Şablon Galerisinden "Boş Sayfa"nın Kaldırılması
+- **Şablon Listesi Temizliği (`constants/pageTemplates.js`):** `PAGE_CATEGORIES` dizisinden `blank` (Boş Sayfa) objesi tamamen kaldırıldı.
+- **Arayüz Senkronizasyonu:** `components/AddPageModal.js` şablon seçiminde artık kullanıcıya yalnızca hazır görsel tasarım şablonları olan **Aylık Ajanda** ve **Haftalık Ajanda** sunulmaktadır.
+- **Geriye Dönük Uyumluluk:** Daha önce oluşturulmuş olabilecek sayfaların görüntülenmesinde herhangi bir hata oluşmaması için sayfa detay ve küçük resim bileşenlerindeki render güvenliği korundu.
+
+
 
 
 
