@@ -533,3 +533,20 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 ### ↔️ 4. Sınırları Belirleme (Responsive Word-Wrap)
 - Metin kutuları artık sabit ve sonsuz bir genişliğe sahip değil. Düzenleme (Editing) modundayken sağ tarafta çıkan **boyutlandırma tutamacı** sayesinde kutunun genişliği parmakla (veya kalemle) istenilen sütuna/görsel sınırına göre ayarlanabiliyor.
 - Kutu genişliği daraltıldığında içerisindeki metin otomatik olarak alt satıra (word-wrap) iniyor, bu sayede "Pazartesi" gibi belirli arka plan sütunlarının içine metni tam oturtmak harika bir deneyime dönüştü!
+
+---
+
+## 📅 [2026-09-03 10:35] - Kapak Tasarımlarının Görselleştirilmesi ve Tam Ekran (Full-Bleed) Entegrasyonu
+
+### 🎨 1. Görsel Şablonlara Geçiş
+- Daha önce StyleSheet ve View'lar (Dikişli çizgiler, Pattern döngüleri vs.) ile kod tabanlı üretilen **eski kapak sistemi tamamen silindi** (`CoverDisplay.js` kaldırıldı).
+- Yerine `gorsel/` dizininden alınan birbirinden farklı 6 adet yüksek çözünürlüklü kapak görseli (`kapak1.png` vb.) `assets/covers/` klasörüne taşındı ve şablon olarak (`constants/coverTemplates.js`) sisteme tanıtıldı.
+
+### 🖼️ 2. Temiz ve Metinsiz Galeri Modeli
+- Kapak Seçim ekranı (`CoverEditor.js`) tamamen yenilendi. Kullanıcıdan isim ve not isteyen metin giriş (TextInput) alanları silindi.
+- Yeni galeri, tıpkı To-Do sayfasında olduğu gibi metinsiz, tertemiz, yan yana dizilmiş dikey dikdörtgen kapak görsellerinden (thumbnail) oluşacak şekilde yeniden kodlandı.
+
+### ✍️ 3. Kapak Üzerine Çizim ve Yazı Katmanı
+- Ajandam ana kapağı (`app/ajandam/index.js`) küçük bir çerçevenin içinden çıkartılarak **tam ekran (full-bleed)** ImageBackground yapısına kavuşturuldu.
+- Bu tam ekran kapağın üzerine `DrawingCanvas` (Apple Pencil / Çizim) ve `TextCanvas` (Klavye Metin / Sürükle Bırak) katmanları ve araç çubuğu eklendi.
+- Artık kullanıcı kapağın tam olarak neresine istiyorsa oraya kendi el yazısıyla (veya klavyeyle) "2026", "Hedeflerim" yazabilecek. Çizdiği her şey `StorageService.setCover()` üzerinden o kapak profiline kalıcı olarak kaydedilecek!

@@ -5,25 +5,18 @@ import {
   StyleSheet,
   Modal,
   TouchableOpacity,
-  TextInput,
   ScrollView,
-  KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { COVER_TEMPLATES } from '../constants/coverTemplates';
-import CoverDisplay from './CoverDisplay';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
 
 /**
- * CoverEditor - Kapak düzenleme modal bileşeni
- * Kullanıcı kapak şablonunu değiştirebilir ve isim/not yazabilir.
- *
- * @param {boolean} visible - Modal görünürlük durumu
- * @param {function} onClose - Kapatma fonksiyonu
- * @param {object} coverData - Mevcut kapak verileri { templateId, userName, userNote }
- * @param {function} onSave - Kaydetme fonksiyonu (coverData) => void
+ * CoverEditor - Görsel Kapak Seçim Galerisi
+ * Metin girişleri kaldırılmıştır; kullanıcı sadece temiz bir galeriden şablon seçer.
  */
 export default function CoverEditor({ visible, onClose, coverData, onSave }) {
   const { colors } = useTheme();
@@ -32,18 +25,12 @@ export default function CoverEditor({ visible, onClose, coverData, onSave }) {
   const [selectedTemplateId, setSelectedTemplateId] = useState(
     coverData?.templateId || COVER_TEMPLATES[0].id
   );
-  const [userName, setUserName] = useState(coverData?.userName || '');
-  const [userNote, setUserNote] = useState(coverData?.userNote || '');
-
-  const selectedTemplate = COVER_TEMPLATES.find(
-    (t) => t.id === selectedTemplateId
-  );
 
   const handleSave = () => {
+    // coverData içerisindeki olası çizim/metin datalarını ezmemek için destructuring ile birleştiriyoruz
     onSave({
+      ...coverData,
       templateId: selectedTemplateId,
-      userName: userName.trim(),
-      userNote: userNote.trim(),
     });
     onClose();
   };
@@ -55,10 +42,7 @@ export default function CoverEditor({ visible, onClose, coverData, onSave }) {
       transparent={false}
       onRequestClose={onClose}
     >
-      <KeyboardAvoidingView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Üst Bar */}
         <View style={[styles.header, isTablet && styles.tabletContainer]}>
           <TouchableOpacity onPress={onClose} style={styles.headerButton}>
@@ -69,7 +53,7 @@ export default function CoverEditor({ visible, onClose, coverData, onSave }) {
             />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-            Kapağı Düzenle
+            Kapak Seç
           </Text>
           <TouchableOpacity
             onPress={handleSave}
@@ -87,137 +71,47 @@ export default function CoverEditor({ visible, onClose, coverData, onSave }) {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {/* Kapak Önizleme */}
-          <View style={styles.previewContainer}>
-            <CoverDisplay
-              template={selectedTemplate}
-              userName={userName || 'Ajandom'}
-              userNote={userNote}
-            />
-          </View>
-
-          {/* İsim Girişi */}
-          <View style={styles.inputSection}>
-            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>
-              <MaterialCommunityIcons
-                name="account-heart-outline"
-                size={16}
-                color={colors.textSecondary}
-              />{' '}
-              İsminiz
-            </Text>
-            <TextInput
-              style={[
-                styles.textInput,
-                {
-                  borderColor: colors.border,
-                  color: colors.textDeep,
-                  backgroundColor: colors.card,
-                },
-              ]}
-              value={userName}
-              onChangeText={setUserName}
-              placeholder="Ajandom"
-              placeholderTextColor={colors.border}
-              maxLength={30}
-            />
-          </View>
-
-          {/* Not Girişi */}
-          <View style={styles.inputSection}>
-            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>
-              <MaterialCommunityIcons
-                name="note-text-outline"
-                size={16}
-                color={colors.textSecondary}
-              />{' '}
-              Küçük Notunuz
-            </Text>
-            <TextInput
-              style={[
-                styles.textInput,
-                styles.multilineInput,
-                {
-                  borderColor: colors.border,
-                  color: colors.textDeep,
-                  backgroundColor: colors.card,
-                },
-              ]}
-              value={userNote}
-              onChangeText={setUserNote}
-              placeholder="İlham veren bir söz yazın..."
-              placeholderTextColor={colors.border}
-              multiline
-              numberOfLines={3}
-              maxLength={100}
-            />
-          </View>
-
-          {/* Şablon Galerisi */}
+          {/* Şablon Galerisi (Izgara Yapısı) */}
           <View style={styles.templateSection}>
-            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>
-              <MaterialCommunityIcons
-                name="palette-outline"
-                size={16}
-                color={colors.textSecondary}
-              />{' '}
-              Kapak Şablonu
-            </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.templateGallery}
-            >
+            <View style={styles.gridContainer}>
               {COVER_TEMPLATES.map((template) => (
                 <TouchableOpacity
                   key={template.id}
-                  activeOpacity={0.7}
+                  activeOpacity={0.8}
                   onPress={() => setSelectedTemplateId(template.id)}
                   style={[
                     styles.templateCard,
-                    {
-                      backgroundColor: template.backgroundColor,
-                      borderColor:
-                        selectedTemplateId === template.id
-                          ? template.accentColor
-                          : template.borderColor,
-                      borderWidth:
-                        selectedTemplateId === template.id ? 3 : 1.5,
+                    selectedTemplateId === template.id && {
+                      borderColor: colors.accent,
+                      borderWidth: 3,
                     },
                   ]}
                 >
-                  <Text style={styles.templateEmoji}>
-                    {template.decorationEmoji}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.templateName,
-                      { color: template.accentColor },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {template.name}
-                  </Text>
+                  <Image
+                    source={template.imageSource}
+                    style={styles.templateImage}
+                    resizeMode="cover"
+                  />
                   {selectedTemplateId === template.id && (
                     <View
                       style={[
                         styles.selectedBadge,
-                        { backgroundColor: template.accentColor },
+                        { backgroundColor: colors.accent },
                       ]}
                     >
                       <MaterialCommunityIcons
                         name="check"
-                        size={12}
+                        size={16}
                         color="#FFFFFF"
                       />
                     </View>
                   )}
                 </TouchableOpacity>
               ))}
-            </ScrollView>
+            </View>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
@@ -255,6 +149,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   scrollContent: {
+    paddingTop: 20,
     paddingBottom: 40,
   },
   tabletContainer: {
@@ -262,70 +157,43 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-  previewContainer: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  inputSection: {
-    paddingHorizontal: 24,
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  textInput: {
-    borderWidth: 1.5,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-  },
-  multilineInput: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
   templateSection: {
-    paddingLeft: 24,
-    marginBottom: 20,
+    paddingHorizontal: 16,
   },
-  templateGallery: {
-    paddingRight: 24,
-    gap: 12,
-    paddingVertical: 8,
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 16,
   },
   templateCard: {
-    width: 90,
-    height: 110,
+    width: '45%',
+    aspectRatio: 0.72, // Defter/A4 oranına yakın
     borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 8,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
     // Gölge
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
   },
-  templateEmoji: {
-    fontSize: 28,
-    marginBottom: 6,
-  },
-  templateName: {
-    fontSize: 10,
-    fontWeight: '600',
-    textAlign: 'center',
+  templateImage: {
+    width: '100%',
+    height: '100%',
   },
   selectedBadge: {
     position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    top: 8,
+    right: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
 });

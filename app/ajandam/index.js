@@ -1,23 +1,32 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  ImageBackground,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { StorageService } from '../../services/storageService';
 import {
-  COVER_TEMPLATES,
   DEFAULT_COVER_TEMPLATE_ID,
   getCoverTemplateById,
 } from '../../constants/coverTemplates';
-import CoverDisplay from '../../components/CoverDisplay';
 import CoverEditor from '../../components/CoverEditor';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 
+import DrawingCanvas from '../../components/drawing/DrawingCanvas';
+import DrawingToolbar from '../../components/drawing/DrawingToolbar';
+import TextCanvas from '../../components/text/TextCanvas';
+
 /**
- * AjandamScreen - Ajanda Kapağı Ekranı
- * Kullanıcıyı kişiselleştirilebilir bir kapak karşılar.
- * Kapağı düzenleyebilir ve ajandayı açabilir.
+ * AjandamScreen - Ajanda Kapağı Ekranı (Full-Bleed ve Çizilebilir)
+ * Kullanıcıyı tam sayfa bir kapak karşılar.
+ * Kapağın üzerine çizim yapabilir, metin ekleyebilir ve kapağı değiştirebilir.
  */
 export default function AjandamScreen() {
   const router = useRouter();
@@ -28,6 +37,20 @@ export default function AjandamScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditorVisible, setIsEditorVisible] = useState(false);
 
+  // Araç Çubuğu Aktif Mod: 'none' | 'drawing' | 'text'
+  const [activeMode, setActiveMode] = useState('none');
+
+  // Çizim Ayarları
+  const [drawingTool, setDrawingTool] = useState('pen');
+  const [drawingColor, setDrawingColor] = useState('#C2185B');
+  const [drawingWidth, setDrawingWidth] = useState(3);
+
+  // Klavye / Metin Ayarları
+  const [textColor, setTextColor] = useState('#4E342E');
+  const [textFontSize, setTextFontSize] = useState(24); // Kapakta font biraz daha büyük olabilir
+
+  const saveTimeoutRef = useRef(null);
+
   // Kapak verilerini yükle
   useEffect(() => {
     (async () => {
@@ -37,19 +60,18 @@ export default function AjandamScreen() {
           setCoverData(saved);
         } else {
           // Varsayılan kapak
-          const defaultCover = {
+          setCoverData({
             templateId: DEFAULT_COVER_TEMPLATE_ID,
-            userName: '',
-            userNote: '',
-          };
-          setCoverData(defaultCover);
+            drawings: [],
+            textBlocks: [],
+          });
         }
       } catch (error) {
         console.warn('Kapak yüklenirken hata:', error);
         setCoverData({
           templateId: DEFAULT_COVER_TEMPLATE_ID,
-          userName: '',
-          userNote: '',
+          drawings: [],
+          textBlocks: [],
         });
       } finally {
         setIsLoading(false);
@@ -57,10 +79,46 @@ export default function AjandamScreen() {
     })();
   }, []);
 
-  // Kapak kaydet
+  // Kapak şablonunu kaydet
   const handleSaveCover = useCallback(async (newCoverData) => {
     setCoverData(newCoverData);
     await StorageService.setCover(newCoverData);
+  }, []);
+
+  // Çizimleri güncelle (debounced auto-save)
+  const handleDrawingsChange = useCallback((newDrawings) => {
+    setCoverData((prev) => {
+      const updated = { ...prev, drawings: newDrawings };
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(async () => {
+        await StorageService.setCover(updated);
+      }, 500);
+      return updated;
+    });
+  }, []);
+
+  // Serbest metin kutularını güncelle (debounced auto-save)
+  const handleTextBlocksChange = useCallback((newTextBlocks) => {
+    setCoverData((prev) => {
+      const updated = { ...prev, textBlocks: newTextBlocks };
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(async () => {
+        await StorageService.setCover(updated);
+      }, 400);
+      return updated;
+    });
+  }, []);
+
+  // Son çizgiyi geri al
+  const handleUndoDrawing = useCallback(() => {
+    setCoverData((prev) => {
+      const current = prev.drawings || [];
+      if (current.length === 0) return prev;
+      const updatedDrawings = current.slice(0, current.length - 1);
+      const updated = { ...prev, drawings: updatedDrawings };
+      StorageService.setCover(updated);
+      return updated;
+    });
   }, []);
 
   // Ajandayı aç
@@ -86,78 +144,92 @@ export default function AjandamScreen() {
       style={[styles.safeArea, { backgroundColor: colors.background }]}
       edges={['top', 'bottom']}
     >
-      {/* Üst Bar */}
-      <View style={styles.headerBar}>
+      {/* Üst Bar / Araç Çubuğu */}
+      <View style={[styles.headerBar, { borderBottomColor: colors.border }]}>
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => router.back()}
-          style={[
-            styles.backButton,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-              shadowColor: colors.textPrimary,
-            },
-          ]}
+          style={[styles.headerButton, { backgroundColor: colors.card, borderColor: colors.border }]}
         >
-          <MaterialCommunityIcons
-            name="arrow-left"
-            size={20}
-            color={colors.textSecondary}
-          />
+          <MaterialCommunityIcons name="arrow-left" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
 
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => setIsEditorVisible(true)}
-          style={[
-            styles.editButton,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-              shadowColor: colors.textPrimary,
-            },
-          ]}
-        >
-          <MaterialCommunityIcons
-            name="pencil-outline"
-            size={20}
-            color={colors.textSecondary}
+        <View style={styles.headerCenter}>
+          <Text style={[styles.pageTitle, { color: colors.textPrimary }]}>Ajanda Kapağı</Text>
+        </View>
+
+        <View style={styles.headerRightGroup}>
+          <DrawingToolbar
+            isDrawingMode={activeMode === 'drawing'}
+            onToggleDrawingMode={() => setActiveMode((prev) => (prev === 'drawing' ? 'none' : 'drawing'))}
+            isTextMode={activeMode === 'text'}
+            onToggleTextMode={() => setActiveMode((prev) => (prev === 'text' ? 'none' : 'text'))}
+            currentTool={drawingTool}
+            onChangeTool={setDrawingTool}
+            currentColor={drawingColor}
+            onChangeColor={setDrawingColor}
+            currentWidth={drawingWidth}
+            onChangeWidth={setDrawingWidth}
+            textColor={textColor}
+            onChangeTextColor={setTextColor}
+            textFontSize={textFontSize}
+            onChangeTextFontSize={setTextFontSize}
+            onUndo={handleUndoDrawing}
+            canUndo={(coverData?.drawings || []).length > 0}
           />
-        </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => setIsEditorVisible(true)}
+            style={[styles.headerButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+          >
+            <MaterialCommunityIcons name="image-edit-outline" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Kapak */}
-      <View style={styles.coverWrapper}>
-        <CoverDisplay
-          template={template}
-          userName={coverData?.userName}
-          userNote={coverData?.userNote}
-        />
-      </View>
-
-      {/* Ajandayı Aç Butonu */}
-      <View
-        style={[
-          styles.openButtonContainer,
-          isTablet && { maxWidth: 440, alignSelf: 'center' },
-        ]}
-      >
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={handleOpenAgenda}
-          style={[styles.openButton, { backgroundColor: colors.accent }]}
+      {/* Tam Ekran Kapak Görseli ve İnteraktif Katmanlar */}
+      <View style={styles.contentArea}>
+        <ImageBackground
+          source={template.imageSource}
+          style={styles.fullBleedBackground}
+          resizeMode="cover"
         >
-          <MaterialCommunityIcons
-            name="book-open-page-variant-outline"
-            size={22}
-            color="#FFFFFF"
+          {/* Metin Katmanı */}
+          <TextCanvas
+            isTextMode={activeMode === 'text'}
+            textBlocks={coverData?.textBlocks || []}
+            onTextBlocksChange={handleTextBlocksChange}
+            activeColor={textColor}
+            activeFontSize={textFontSize}
           />
-          <Text style={styles.openButtonText}>Ajandamı Aç</Text>
-        </TouchableOpacity>
+
+          {/* Çizim Katmanı */}
+          <DrawingCanvas
+            isDrawingMode={activeMode === 'drawing'}
+            tool={drawingTool}
+            color={drawingColor}
+            strokeWidth={drawingWidth}
+            drawings={coverData?.drawings || []}
+            onDrawingsChange={handleDrawingsChange}
+            style={styles.fullBleedCanvas}
+          />
+        </ImageBackground>
+
+        {/* Ajandayı Aç Butonu */}
+        <View style={styles.floatingButtonContainer}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={handleOpenAgenda}
+            style={[styles.openButton, { backgroundColor: colors.accent }]}
+          >
+            <MaterialCommunityIcons name="book-open-page-variant-outline" size={22} color="#FFFFFF" />
+            <Text style={styles.openButtonText}>İçine Gir</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Kapak Düzenleme Modal */}
+      {/* Kapak Seçim Modalı */}
       <CoverEditor
         visible={isEditorVisible}
         onClose={() => setIsEditorVisible(false)}
@@ -171,55 +243,62 @@ export default function AjandamScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   headerBar: {
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    zIndex: 100,
+  },
+  headerButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerRightGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 8,
+  },
+  pageTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  contentArea: {
+    flex: 1,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  fullBleedBackground: {
+    width: '100%',
+    height: '100%',
+    flex: 1,
+  },
+  fullBleedCanvas: {
     position: 'absolute',
-    top: 50,
+    top: 0,
+    bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    zIndex: 10,
   },
-  backButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  editButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  coverWrapper: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  floatingButtonContainer: {
+    position: 'absolute',
+    bottom: 30,
+    alignSelf: 'center',
     width: '100%',
-    paddingTop: 60,
-  },
-  openButtonContainer: {
-    paddingBottom: 36,
     paddingHorizontal: 40,
-    width: '100%',
+    maxWidth: 440,
   },
   openButton: {
     flexDirection: 'row',
@@ -228,12 +307,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 28,
     gap: 10,
-    // Gölge
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 6,
   },
   openButtonText: {
     color: '#FFFFFF',
