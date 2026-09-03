@@ -610,3 +610,9 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 - `app/ajandam/pages.js` ve `app/todolist/index.js` ekranlarında, sağ üst köşede gereksiz yere görünen boş (kenarlıklı) daire arayüzden tamamen temizlendi.
 - Başlığın ekranın ortasında kalmasını sağlayan (flex-box) denge yapısını bozmamak için, eski görünür daire yerine genişliği geri tuşuyla birebir aynı (`42px`) olan görünmez (şeffaf) bir `headerRightPlaceholder` bileşeni eklendi.
 - Arayüz kusursuz bir simetriye kavuşturuldu.
+
+### 📅 10. Aylık Ajanda (Görsel Tabanlı Dijital Kırtasiye) Entegrasyonu
+- `gorsel/` klasörüne eklenen yeni aylık planlayıcı görselleri (`aylık1`, `aylık2` vb.) proje içi `assets/templates/` dizinine entegre edildi.
+- `constants/pageTemplates.js` dosyası güncellenerek, eski CSS tabanlı aylık tasarımlar kaldırıldı ve yerine `image_template` tipindeki bu 6 yepyeni tasarım tanımlandı.
+- Yeni eklenen sayfalar, şablon seçici ekranda (`AddPageModal`) artık büyük, şık ve metinsiz galeri (thumbnail) kartları olarak sergileniyor.
+- `app/ajandam/[pageId].js` sayfası güncellendi. "Aylık Ajanda" menüsünden eklenen bu görsellerin içine tıpkı haftalık ajandada olduğu gibi **Apple Pencil (Serbest Çizim Katmanı)** ve **Metin Katmanı (TextCanvas)** desteği tam fonksiyonel ve milimetrik olarak kazandırıldı.

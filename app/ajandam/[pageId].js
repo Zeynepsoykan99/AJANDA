@@ -278,6 +278,15 @@ export default function PageViewScreen() {
           />
         );
       case 'monthly':
+        if (template?.type === 'image_template') {
+          return (
+            <ImageTemplatePage
+              template={template}
+              data={page.data}
+              onDataChange={handleDataChange}
+            />
+          );
+        }
         return (
           <MonthlyPage
             template={template}
