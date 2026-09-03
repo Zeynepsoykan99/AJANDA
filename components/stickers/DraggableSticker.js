@@ -8,32 +8,104 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   runOnJS,
-  withTiming,
 } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 
-export default function DraggableSticker({ sticker, isSelected, onSelect, onMove, onResize, onDelete }) {
+const triggerHaptic = () => {
+  try {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  } catch (e) {}
+};
+
+export default function DraggableSticker({
+  sticker,
+  isSelected,
+  onSelect,
+  onMove,
+  onResize,
+  onDelete,
+  canvasWidth = 0,
+  canvasHeight = 0,
+  onSnapChange,
+}) {
   const translateX = useSharedValue(sticker.x || 0);
   const translateY = useSharedValue(sticker.y || 0);
   const scale = useSharedValue(sticker.scale || 1);
-  
+
   const savedTranslateX = useSharedValue(sticker.x || 0);
   const savedTranslateY = useSharedValue(sticker.y || 0);
   const savedScale = useSharedValue(sticker.scale || 1);
   const isActive = useSharedValue(false);
 
-  // Sürükleme gesture'ı
+  const isSnappedV = useSharedValue(false);
+  const isSnappedH = useSharedValue(false);
+
+  // Sürükleme gesture'ı + Akıllı Hizalama (Snapping)
   const panGesture = Gesture.Pan()
     .onStart(() => {
       savedTranslateX.value = translateX.value;
       savedTranslateY.value = translateY.value;
       isActive.value = true;
+      isSnappedV.value = false;
+      isSnappedH.value = false;
     })
     .onUpdate((event) => {
-      translateX.value = savedTranslateX.value + event.translationX;
-      translateY.value = savedTranslateY.value + event.translationY;
+      let nextX = savedTranslateX.value + event.translationX;
+      let nextY = savedTranslateY.value + event.translationY;
+
+      // Akıllı Hizalama (Smart Snapping & Haptics)
+      if (canvasWidth > 0 && canvasHeight > 0) {
+        const itemW = 80 * scale.value;
+        const itemH = 80 * scale.value;
+        const centerX = nextX + itemW / 2;
+        const centerY = nextY + itemH / 2;
+        const midX = canvasWidth / 2;
+        const midY = canvasHeight / 2;
+        const threshold = 14;
+
+        // Dikey eksen (yatay merkez) snap
+        if (Math.abs(centerX - midX) < threshold) {
+          nextX = midX - itemW / 2;
+          if (!isSnappedV.value) {
+            isSnappedV.value = true;
+            runOnJS(triggerHaptic)();
+            if (onSnapChange) runOnJS(onSnapChange)({ v: true });
+          }
+        } else {
+          if (isSnappedV.value) {
+            isSnappedV.value = false;
+            if (onSnapChange) runOnJS(onSnapChange)({ v: false });
+          }
+        }
+
+        // Yatay eksen (dikey merkez) snap
+        if (Math.abs(centerY - midY) < threshold) {
+          nextY = midY - itemH / 2;
+          if (!isSnappedH.value) {
+            isSnappedH.value = true;
+            runOnJS(triggerHaptic)();
+            if (onSnapChange) runOnJS(onSnapChange)({ h: true });
+          }
+        } else {
+          if (isSnappedH.value) {
+            isSnappedH.value = false;
+            if (onSnapChange) runOnJS(onSnapChange)({ h: false });
+          }
+        }
+      }
+
+      translateX.value = nextX;
+      translateY.value = nextY;
     })
     .onEnd(() => {
       isActive.value = false;
+      if (isSnappedV.value || isSnappedH.value) {
+        isSnappedV.value = false;
+        isSnappedH.value = false;
+      }
+      if (onSnapChange) {
+        runOnJS(onSnapChange)({ v: false, h: false });
+      }
       if (onMove) {
         runOnJS(onMove)(sticker.id, translateX.value, translateY.value);
       }
@@ -56,11 +128,10 @@ export default function DraggableSticker({ sticker, isSelected, onSelect, onMove
       savedScale.value = scale.value;
     })
     .onUpdate((event) => {
-      // Çapraz sürükleme: sağa ve aşağı hareket scale artırır
       const delta = (event.translationX + event.translationY) / 2;
-      const factor = 1 + (delta / 80); // 80 referans genişlik
+      const factor = 1 + (delta / 80);
       const newScale = savedScale.value * factor;
-      scale.value = Math.max(0.3, Math.min(newScale, 5)); // Min 0.3x, Max 5x
+      scale.value = Math.max(0.3, Math.min(newScale, 5));
     })
     .onEnd(() => {
       if (onResize) {
@@ -115,14 +186,14 @@ export default function DraggableSticker({ sticker, isSelected, onSelect, onMove
       {/* Kontroller (Sadece seçiliyse görünür) */}
       {isSelected && (
         <>
-          {/* Silme Butonu (Sol Üst veya Sağ Üst) */}
+          {/* Silme Butonu */}
           <GestureDetector gesture={deleteTapGesture}>
             <View style={styles.deleteButton}>
               <MaterialCommunityIcons name="close" size={16} color="#FFF" />
             </View>
           </GestureDetector>
 
-          {/* Boyutlandırma Butonu (Sağ Alt) */}
+          {/* Boyutlandırma Butonu */}
           <GestureDetector gesture={resizePanGesture}>
             <View style={styles.resizeButton}>
               <MaterialCommunityIcons name="resize-bottom-right" size={16} color="#FFF" />

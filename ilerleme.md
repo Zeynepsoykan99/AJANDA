@@ -658,4 +658,17 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 - **Boş Durum Yönetimi:** Seçilen tarihte sayfa/liste yoksa, özel bir "Bu tarihte oluşturulmuş sayfa/liste yok" mesajı ve "Filtreyi Temizle" butonu gösterilir.
 - **Filtreleme Mantığı:** `createdAt` ISO string'i gün bazlı (`getFullYear/getMonth/getDate`) karşılaştırılır; saat/dakika farkları dikkate alınmaz. `useMemo` ile performans optimize edilmiştir.
 
+### 🧲 19. Geri Al (Undo / Soft Delete) & Akıllı Hizalama (Smart Snapping)
+- **Geri Al (Undo) Mekanizması:**
+  - `components/ui/UndoToast.js` adında Reanimated tabanlı, yumuşak slide-up animasyonlu, 4.5 saniye sonra otomatik kapanan alt bildirim (Toast) bileşeni geliştirildi.
+  - Ajandam (`pages.js`), To-Do (`todolist/index.js`) ve sayfa içi sticker silme (`ajandam/[pageId].js`, `todolist/[pageId].js`) işlemlerinde kalıcı silme geciktirilerek "Soft Delete" yapısına geçildi.
+  - Kullanıcı "GERİ AL" butonuna bastığında öğe anında eski konumuna/listesine geri yüklenir. Süre dolarsa veya arka arkaya yeni silme gelirse kalıcı silme arka planda tamamlanır.
+- **Akıllı Hizalama (Smart Snapping & Haptics):**
+  - `expo-haptics` paketi kuruldu.
+  - `utils/snapping.js` yardımcı modülü oluşturuldu.
+  - Sticker (`DraggableSticker.js`, Reanimated gesture) ve serbest metin kutuları (`TextCanvas.js`, PanResponder) sürüklenirken, sayfanın yatay veya dikey merkezine 14px yaklaştığında mıknatıs gibi yapışma (snapping) sağlandı.
+  - Snap anında kullanıcıya hafif bir haptic titreşim (`impactLight`) geri bildirimi verilir.
+  - Hizalanma süresince ekranda merkez çizgilerini gösteren zarif kılavuz çizgileri (guide lines) belirir ve öğe bırakıldığında otomatik kaybolur.
+
+
 

@@ -20,6 +20,7 @@ import DrawingToolbar from '../../components/drawing/DrawingToolbar';
 import TextCanvas from '../../components/text/TextCanvas';
 import StickerCanvas from '../../components/stickers/StickerCanvas';
 import StickerMenu from '../../components/stickers/StickerMenu';
+import UndoToast from '../../components/ui/UndoToast';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 
 /**
@@ -34,6 +35,8 @@ export default function TodoViewScreen() {
   const [page, setPage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isStickerMenuVisible, setIsStickerMenuVisible] = useState(false);
+  const [undoToast, setUndoToast] = useState({ visible: false, message: '' });
+  const pendingStickerDeleteRef = useRef(null);
 
   // Çizim Ayarları
   const [activeMode, setActiveMode] = useState('none');
@@ -158,13 +161,66 @@ export default function TodoViewScreen() {
     });
   }, []);
 
+  // Sticker sil (Soft Delete + Geri Al)
   const handleStickerDelete = useCallback((stickerId) => {
     setPage((prev) => {
+      const deletedSticker = (prev.stickers || []).find((s) => s.id === stickerId);
+      if (!deletedSticker) return prev;
+
+      if (pendingStickerDeleteRef.current) {
+        clearTimeout(pendingStickerDeleteRef.current.timer);
+        pendingStickerDeleteRef.current = null;
+      }
+
       const updatedStickers = (prev.stickers || []).filter((s) => s.id !== stickerId);
-      const updated = { ...prev, stickers: updatedStickers };
-      StorageService.updatePage(prev.id, { stickers: updatedStickers });
-      return updated;
+
+      const timer = setTimeout(() => {
+        if (pendingStickerDeleteRef.current?.sticker?.id === stickerId) {
+          StorageService.updatePage(prev.id, { stickers: updatedStickers });
+          pendingStickerDeleteRef.current = null;
+          setUndoToast({ visible: false, message: '' });
+        }
+      }, 4500);
+
+      pendingStickerDeleteRef.current = { sticker: deletedSticker, timer, pageId: prev.id };
+      setUndoToast({ visible: true, message: 'Çıkartma silindi' });
+
+      return { ...prev, stickers: updatedStickers };
     });
+  }, []);
+
+  const handleUndoStickerDelete = useCallback(() => {
+    if (pendingStickerDeleteRef.current) {
+      clearTimeout(pendingStickerDeleteRef.current.timer);
+      const restored = pendingStickerDeleteRef.current.sticker;
+      pendingStickerDeleteRef.current = null;
+      setPage((prev) => {
+        const updatedStickers = [...(prev.stickers || []), restored];
+        return { ...prev, stickers: updatedStickers };
+      });
+      setUndoToast({ visible: false, message: '' });
+    }
+  }, []);
+
+  const handleDismissStickerUndo = useCallback(() => {
+    if (pendingStickerDeleteRef.current) {
+      clearTimeout(pendingStickerDeleteRef.current.timer);
+      const { pageId: pid } = pendingStickerDeleteRef.current;
+      pendingStickerDeleteRef.current = null;
+      setPage((prev) => {
+        StorageService.updatePage(pid, { stickers: prev.stickers || [] });
+        return prev;
+      });
+      setUndoToast({ visible: false, message: '' });
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (pendingStickerDeleteRef.current) {
+        clearTimeout(pendingStickerDeleteRef.current.timer);
+      }
+    };
   }, []);
 
   // Sayfayı tamamen sil
@@ -379,6 +435,15 @@ export default function TodoViewScreen() {
         visible={isStickerMenuVisible}
         onClose={() => setIsStickerMenuVisible(false)}
         onSelectSticker={handleAddSticker}
+      />
+
+      {/* Geri Al (Undo) Bildirimi */}
+      <UndoToast
+        visible={undoToast.visible}
+        message={undoToast.message}
+        onUndo={handleUndoStickerDelete}
+        onDismiss={handleDismissStickerUndo}
+        duration={4500}
       />
     </SafeAreaView>
   );

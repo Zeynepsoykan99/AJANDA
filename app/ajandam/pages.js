@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  Alert,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,6 +16,7 @@ import PageThumbnail from '../../components/PageThumbnail';
 import AddPageModal from '../../components/AddPageModal';
 import ListSkeleton from '../../components/ui/ListSkeleton';
 import DatePickerModal from '../../components/ui/DatePickerModal';
+import UndoToast from '../../components/ui/UndoToast';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 
 /**
@@ -33,6 +33,10 @@ export default function PagesScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [filterDate, setFilterDate] = useState(null);
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  const [undoToast, setUndoToast] = useState({ visible: false, message: '' });
+
+  // Geri al (Undo) için bekleyen silme referansı
+  const pendingDeleteRef = useRef(null);
 
   // Gün bazlı tarih karşılaştırma
   const isSameDay = (dateStr, targetDate) => {
@@ -87,40 +91,67 @@ export default function PagesScreen() {
     []
   );
 
-  // Sayfa sil
-  const handleDeletePage = useCallback(
-    (page) => {
-      const message = 'Bu sayfayı silmek istediğinize emin misiniz?';
-      const executeDelete = async () => {
-        const updated = await StorageService.deletePage(page.id);
-        if (updated) {
-          const ajandaPages = updated.filter((p) => p.category !== 'todo');
-          setPages(ajandaPages.sort((a, b) => (b.order || 0) - (a.order || 0)));
-        }
-      };
+  // Sayfa sil (Soft Delete + Geri Al)
+  const handleDeletePage = useCallback((pageToDelete) => {
+    // Önceki bekleyen silme varsa hemen kalıcılaştır
+    if (pendingDeleteRef.current) {
+      clearTimeout(pendingDeleteRef.current.timer);
+      StorageService.deletePage(pendingDeleteRef.current.item.id);
+      pendingDeleteRef.current = null;
+    }
 
-      if (Platform.OS === 'web') {
-        const confirmResult = window.confirm(message);
-        if (confirmResult) {
-          executeDelete();
-        }
-      } else {
-        Alert.alert(
-          'Sayfayı Sil',
-          message,
-          [
-            { text: 'İptal', style: 'cancel' },
-            {
-              text: 'Sil',
-              style: 'destructive',
-              onPress: executeDelete,
-            },
-          ]
-        );
+    // Ekrandan anında kaldır (soft delete)
+    setPages((prev) => prev.filter((p) => p.id !== pageToDelete.id));
+
+    // 4.5 saniye sonra kalıcı silme zamanlayıcısı
+    const timer = setTimeout(async () => {
+      if (pendingDeleteRef.current?.item?.id === pageToDelete.id) {
+        await StorageService.deletePage(pageToDelete.id);
+        pendingDeleteRef.current = null;
+        setUndoToast({ visible: false, message: '' });
       }
-    },
-    []
-  );
+    }, 4500);
+
+    pendingDeleteRef.current = { item: pageToDelete, timer };
+    setUndoToast({
+      visible: true,
+      message: `"${pageToDelete.title || 'Sayfa'}" silindi`,
+    });
+  }, []);
+
+  // Geri al işlemi
+  const handleUndoDelete = useCallback(() => {
+    if (pendingDeleteRef.current) {
+      clearTimeout(pendingDeleteRef.current.timer);
+      const restored = pendingDeleteRef.current.item;
+      pendingDeleteRef.current = null;
+      setPages((prev) =>
+        [...prev, restored].sort((a, b) => (b.order || 0) - (a.order || 0))
+      );
+      setUndoToast({ visible: false, message: '' });
+    }
+  }, []);
+
+  // Toast süresi dolunca veya kapanınca kalıcı sil
+  const handleDismissUndo = useCallback(async () => {
+    if (pendingDeleteRef.current) {
+      clearTimeout(pendingDeleteRef.current.timer);
+      const itemToDelete = pendingDeleteRef.current.item;
+      pendingDeleteRef.current = null;
+      await StorageService.deletePage(itemToDelete.id);
+      setUndoToast({ visible: false, message: '' });
+    }
+  }, []);
+
+  // Ekrandan ayrılırken bekleyen silmeyi kalıcılaştır
+  useEffect(() => {
+    return () => {
+      if (pendingDeleteRef.current) {
+        clearTimeout(pendingDeleteRef.current.timer);
+        StorageService.deletePage(pendingDeleteRef.current.item.id);
+      }
+    };
+  }, []);
 
   // Sayfayı aç
   const handleOpenPage = useCallback(
@@ -271,6 +302,15 @@ export default function PagesScreen() {
         onSelectDate={setFilterDate}
         selectedDate={filterDate}
         onClearFilter={() => setFilterDate(null)}
+      />
+
+      {/* Geri Al (Undo) Bildirimi */}
+      <UndoToast
+        visible={undoToast.visible}
+        message={undoToast.message}
+        onUndo={handleUndoDelete}
+        onDismiss={handleDismissUndo}
+        duration={4500}
       />
     </SafeAreaView>
   );

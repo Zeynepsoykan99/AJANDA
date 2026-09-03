@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,13 @@ import {
   PanResponder,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+
+const triggerHaptic = () => {
+  try {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  } catch (e) {}
+};
 
 const DraggableTextBlock = ({
   block,
@@ -22,35 +29,88 @@ const DraggableTextBlock = ({
   onDelete,
   onMoveEnd,
   onResizeEnd,
+  canvasWidth = 0,
+  canvasHeight = 0,
+  onSnapChange,
 }) => {
   const [pos, setPos] = useState({ x: block.x, y: block.y });
   const [boxWidth, setBoxWidth] = useState(block.width || 120);
+  const currentPosRef = useRef({ x: block.x, y: block.y });
+  const isSnappedVRef = useRef(false);
+  const isSnappedHRef = useRef(false);
 
   useEffect(() => {
     setPos({ x: block.x, y: block.y });
+    currentPosRef.current = { x: block.x, y: block.y };
   }, [block.x, block.y]);
 
   useEffect(() => {
     if (block.width) setBoxWidth(block.width);
   }, [block.width]);
 
-  // Sürükle (Taşı) PanResponder
+  // Sürükle (Taşı) PanResponder + Akıllı Hizalama (Snapping)
   const dragPanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => !isEditing,
       onMoveShouldSetPanResponder: (_, gestureState) =>
         !isEditing && (Math.abs(gestureState.dx) > 3 || Math.abs(gestureState.dy) > 3),
       onPanResponderMove: (_, gestureState) => {
-        setPos({
-          x: block.x + gestureState.dx,
-          y: block.y + gestureState.dy,
-        });
+        let rawX = block.x + gestureState.dx;
+        let rawY = block.y + gestureState.dy;
+
+        // Akıllı Hizalama (Snapping)
+        if (canvasWidth > 0 && canvasHeight > 0) {
+          const itemW = boxWidth;
+          const itemH = 40;
+          const centerX = rawX + itemW / 2;
+          const centerY = rawY + itemH / 2;
+          const midX = canvasWidth / 2;
+          const midY = canvasHeight / 2;
+          const threshold = 14;
+
+          // Dikey eksen (yatay merkez) snap
+          if (Math.abs(centerX - midX) < threshold) {
+            rawX = midX - itemW / 2;
+            if (!isSnappedVRef.current) {
+              isSnappedVRef.current = true;
+              triggerHaptic();
+              if (onSnapChange) onSnapChange({ v: true });
+            }
+          } else {
+            if (isSnappedVRef.current) {
+              isSnappedVRef.current = false;
+              if (onSnapChange) onSnapChange({ v: false });
+            }
+          }
+
+          // Yatay eksen (dikey merkez) snap
+          if (Math.abs(centerY - midY) < threshold) {
+            rawY = midY - itemH / 2;
+            if (!isSnappedHRef.current) {
+              isSnappedHRef.current = true;
+              triggerHaptic();
+              if (onSnapChange) onSnapChange({ h: true });
+            }
+          } else {
+            if (isSnappedHRef.current) {
+              isSnappedHRef.current = false;
+              if (onSnapChange) onSnapChange({ h: false });
+            }
+          }
+        }
+
+        currentPosRef.current = { x: rawX, y: rawY };
+        setPos({ x: rawX, y: rawY });
       },
       onPanResponderRelease: (_, gestureState) => {
+        isSnappedVRef.current = false;
+        isSnappedHRef.current = false;
+        if (onSnapChange) onSnapChange({ v: false, h: false });
+
         if (Math.abs(gestureState.dx) < 3 && Math.abs(gestureState.dy) < 3) {
           onEdit(block.id);
         } else {
-          onMoveEnd(block.id, block.x + gestureState.dx, block.y + gestureState.dy);
+          onMoveEnd(block.id, currentPosRef.current.x, currentPosRef.current.y);
         }
       },
     })
@@ -145,6 +205,12 @@ export default function TextCanvas({
   activeFontSize = 15,
 }) {
   const [editingId, setEditingId] = useState(null);
+  const [canvasLayout, setCanvasLayout] = useState({ width: 0, height: 0 });
+  const [guideLines, setGuideLines] = useState({ v: false, h: false });
+
+  const handleSnapChange = useCallback((snap) => {
+    setGuideLines((prev) => ({ ...prev, ...snap }));
+  }, []);
 
   const handleCanvasPress = (evt) => {
     if (!isTextMode) return;
@@ -162,7 +228,7 @@ export default function TextCanvas({
       text: '',
       color: activeColor,
       fontSize: activeFontSize,
-      width: 120, // Varsayılan Genişlik (Pazartesi vb. sütunlar için makul bir başlangıç)
+      width: 120,
     };
 
     onTextBlocksChange([...textBlocks, newBlock]);
@@ -188,8 +254,6 @@ export default function TextCanvas({
   };
 
   const handleBlur = (id) => {
-    // Sadece kutu dışına veya Bitti'ye tıklandığında tetiklenir
-    // Ancak handleCanvasPress içinde state'i null yaptığımız için burası yedek
     setEditingId(null);
     const block = textBlocks.find((b) => b.id === id);
     if (block && !block.text.trim()) {
@@ -203,7 +267,28 @@ export default function TextCanvas({
   };
 
   return (
-    <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
+    <View
+      style={StyleSheet.absoluteFillObject}
+      pointerEvents="box-none"
+      onLayout={(e) => {
+        const { width, height } = e.nativeEvent.layout;
+        setCanvasLayout({ width, height });
+      }}
+    >
+      {/* Akıllı Hizalama Kılavuz Çizgileri */}
+      {guideLines.v && canvasLayout.width > 0 && (
+        <View
+          style={[styles.guideLineVertical, { left: canvasLayout.width / 2 }]}
+          pointerEvents="none"
+        />
+      )}
+      {guideLines.h && canvasLayout.height > 0 && (
+        <View
+          style={[styles.guideLineHorizontal, { top: canvasLayout.height / 2 }]}
+          pointerEvents="none"
+        />
+      )}
+
       {isTextMode && (
         <Pressable
           style={StyleSheet.absoluteFillObject}
@@ -224,6 +309,9 @@ export default function TextCanvas({
           onDelete={handleDeleteBlock}
           onMoveEnd={handleMoveEnd}
           onResizeEnd={handleResizeEnd}
+          canvasWidth={canvasLayout.width}
+          canvasHeight={canvasLayout.height}
+          onSnapChange={handleSnapChange}
         />
       ))}
     </View>
@@ -243,7 +331,7 @@ const styles = StyleSheet.create({
     borderColor: '#E91E6388',
     backgroundColor: '#FFFFFFEE',
     borderRadius: 8,
-    padding: 0, // Sıfırladık ki iç padding'leri flex ile yönetelim
+    padding: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -289,5 +377,23 @@ const styles = StyleSheet.create({
   savedText: {
     fontWeight: '600',
     fontFamily: Platform.OS === 'ios' ? 'Avenir' : 'normal',
+  },
+  guideLineVertical: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 1.5,
+    backgroundColor: '#E91E63',
+    zIndex: 20,
+    opacity: 0.6,
+  },
+  guideLineHorizontal: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 1.5,
+    backgroundColor: '#E91E63',
+    zIndex: 20,
+    opacity: 0.6,
   },
 });
