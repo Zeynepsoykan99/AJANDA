@@ -621,3 +621,8 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 - **Sorun:** Kullanıcı renk çarkından özel renk seçip uygulamayı kapattığında renk "pembe" temaya sıfırlanıyordu. Ayrıca uygulama ilk açılırken kısa süreliğine ekranda pembe bir renk yanıp sönüyordu (Flash efekti).
 - **Çözüm:** `context/ThemeContext.js` içerisindeki açılış okuması (bootstrap) güncellendi. Sistem artık sadece sabit temaları değil, `custom:#HEX` etiketiyle gelen özel renkleri de geçerli (valid) kabul edip hafızaya yüklüyor.
 - `app/_layout.js` dosyası güncellendi. Arayüzün çizilmesi (render), `isLoaded` durumu `true` olana kadar (yani veritabanından son tema rengi okunana kadar) bekletildi. Böylece uygulama doğrudan kullanıcının seçtiği renk ile başlatılarak "pembe flash" efekti tarihe karıştı.
+
+### 🎀 12. Sticker Altyapısının Genişletilmesi ve To-Do Ekranına Entegrasyonu
+- **Görsel Sticker Desteği:** `components/stickers/StickerMenu.js` ve `DraggableSticker.js` güncellenerek sisteme emoji dışındaki yüksek çözünürlüklü resim (image) formatındaki stickerları (çıkartmaları) render etme yeteneği eklendi.
+- **Yeni Kategori:** `gorsel/` klasöründeki yeni çıkartmalar `assets/stickers/` dizinine taşındı ve `constants/stickerPacks.js` içerisine "Özel Görseller" (🖼️) adında yeni bir kategori ile bağlandı.
+- **To-Do Entegrasyonu:** `app/todolist/[pageId].js` güncellendi. Üst menüye (Kalem ikonunun yanına) `🎀` sticker butonu eklendi. `StickerCanvas` katmanı ve `StickerMenu` bileşenleri sayfaya milimetrik olarak oturtuldu. Tıpkı çizim ve metinlerde olduğu gibi stickerların (X, Y) konumları `AsyncStorage`'a bağlandı; kullanıcı çıkıp girse dahi stickerlar yerini koruyacak şekilde kalıcılık sağlandı.

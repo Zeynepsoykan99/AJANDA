@@ -93,4 +93,16 @@ export const STICKER_PACKS = [
       { id: 'm8', type: 'emoji', content: '🤩' },
     ],
   },
+  {
+    id: 'custom_images',
+    name: 'Özel Görseller',
+    icon: '🖼️',
+    stickers: [
+      { id: 'i1', type: 'image', source: require('../assets/stickers/sticker1.jpg') },
+      { id: 'i2', type: 'image', source: require('../assets/stickers/sticker2.jpg') },
+      { id: 'i3', type: 'image', source: require('../assets/stickers/sticker3.jpg') },
+      { id: 'i4', type: 'image', source: require('../assets/stickers/sticker4.png') },
+      { id: 'i5', type: 'image', source: require('../assets/stickers/sticker5.jpg') },
+    ],
+  },
 ];

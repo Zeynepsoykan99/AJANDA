@@ -1,5 +1,6 @@
 import React from 'react';
-import { Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet, Image } from 'react-native';
+import { STICKER_PACKS } from '../../constants/stickerPacks';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -66,10 +67,25 @@ export default function DraggableSticker({ sticker, onMove, onDelete }) {
     zIndex: isActive.value ? 100 : 10,
   }));
 
+  let imageSource = null;
+  if (sticker.type === 'image') {
+    for (const pack of STICKER_PACKS) {
+      const found = pack.stickers.find(s => s.id === sticker.stickerId);
+      if (found) {
+        imageSource = found.source;
+        break;
+      }
+    }
+  }
+
   return (
     <GestureDetector gesture={composedGesture}>
       <Animated.View style={[styles.stickerContainer, animatedStyle]}>
-        <Text style={styles.stickerEmoji}>{sticker.content}</Text>
+        {sticker.type === 'image' && imageSource ? (
+          <Image source={imageSource} style={styles.stickerImage} resizeMode="contain" />
+        ) : (
+          <Text style={styles.stickerEmoji}>{sticker.content}</Text>
+        )}
       </Animated.View>
     </GestureDetector>
   );
@@ -82,5 +98,9 @@ const styles = StyleSheet.create({
   },
   stickerEmoji: {
     fontSize: 36,
+  },
+  stickerImage: {
+    width: 80,
+    height: 80,
   },
 });

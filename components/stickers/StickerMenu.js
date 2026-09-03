@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
   FlatList,
+  Image,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
@@ -126,7 +127,11 @@ export default function StickerMenu({ visible, onClose, onSelectSticker }) {
                 { backgroundColor: colors.background },
               ]}
             >
-              <Text style={styles.stickerEmoji}>{sticker.content}</Text>
+              {sticker.type === 'image' ? (
+                <Image source={sticker.source} style={styles.stickerImage} resizeMode="contain" />
+              ) : (
+                <Text style={styles.stickerEmoji}>{sticker.content}</Text>
+              )}
             </TouchableOpacity>
           ))}
         </View>
@@ -213,5 +218,9 @@ const styles = StyleSheet.create({
   },
   stickerEmoji: {
     fontSize: 30,
+  },
+  stickerImage: {
+    width: 48,
+    height: 48,
   },
 });

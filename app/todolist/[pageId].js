@@ -18,6 +18,8 @@ import ImageTemplatePage from '../../components/pages/ImageTemplatePage';
 import DrawingCanvas from '../../components/drawing/DrawingCanvas';
 import DrawingToolbar from '../../components/drawing/DrawingToolbar';
 import TextCanvas from '../../components/text/TextCanvas';
+import StickerCanvas from '../../components/stickers/StickerCanvas';
+import StickerMenu from '../../components/stickers/StickerMenu';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 
 /**
@@ -31,6 +33,7 @@ export default function TodoViewScreen() {
 
   const [page, setPage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isStickerMenuVisible, setIsStickerMenuVisible] = useState(false);
 
   // Çizim Ayarları
   const [activeMode, setActiveMode] = useState('none');
@@ -109,6 +112,46 @@ export default function TodoViewScreen() {
       const updatedDrawings = current.slice(0, current.length - 1);
       const updated = { ...prev, drawings: updatedDrawings };
       StorageService.updatePage(prev.id, { drawings: updatedDrawings });
+      return updated;
+    });
+  }, []);
+
+  const handleAddSticker = useCallback((sticker) => {
+    setPage((prev) => {
+      const newSticker = {
+        id: `stk_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        stickerId: sticker.id,
+        type: sticker.type,
+        content: sticker.content,
+        x: 150,
+        y: 300,
+        scale: 1.0,
+        rotation: 0,
+      };
+      const updatedStickers = [...(prev.stickers || []), newSticker];
+      const updated = { ...prev, stickers: updatedStickers };
+      StorageService.updatePage(prev.id, { stickers: updatedStickers });
+      return updated;
+    });
+    setIsStickerMenuVisible(false);
+  }, []);
+
+  const handleStickerMove = useCallback((stickerId, newX, newY) => {
+    setPage((prev) => {
+      const updatedStickers = (prev.stickers || []).map((s) =>
+        s.id === stickerId ? { ...s, x: newX, y: newY } : s
+      );
+      const updated = { ...prev, stickers: updatedStickers };
+      StorageService.updatePage(prev.id, { stickers: updatedStickers });
+      return updated;
+    });
+  }, []);
+
+  const handleStickerDelete = useCallback((stickerId) => {
+    setPage((prev) => {
+      const updatedStickers = (prev.stickers || []).filter((s) => s.id !== stickerId);
+      const updated = { ...prev, stickers: updatedStickers };
+      StorageService.updatePage(prev.id, { stickers: updatedStickers });
       return updated;
     });
   }, []);
@@ -248,6 +291,19 @@ export default function TodoViewScreen() {
           />
           <TouchableOpacity
             activeOpacity={0.7}
+            onPress={() => setIsStickerMenuVisible(true)}
+            style={[
+              styles.headerButton,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <Text style={{ fontSize: 18 }}>🎀</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.7}
             onPress={handleDeletePage}
             hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
             style={[
@@ -297,7 +353,21 @@ export default function TodoViewScreen() {
           onDrawingsChange={handleDrawingsChange}
           style={styles.fullBleedCanvas}
         />
+
+        {/* Sticker Katmanı */}
+        <StickerCanvas
+          stickers={page.stickers || []}
+          onStickerMove={handleStickerMove}
+          onStickerDelete={handleStickerDelete}
+        />
       </View>
+
+      {/* Sticker Menüsü */}
+      <StickerMenu
+        visible={isStickerMenuVisible}
+        onClose={() => setIsStickerMenuVisible(false)}
+        onSelectSticker={handleAddSticker}
+      />
     </SafeAreaView>
   );
 }
