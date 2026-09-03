@@ -90,45 +90,6 @@ export default function AddPageModal({ visible, onClose, onAdd }) {
         style={[styles.container, { backgroundColor: colors.background }]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Üst Bar */}
-        <View style={[styles.header, isTablet && styles.tabletModalContainer]}>
-          <TouchableOpacity
-            onPress={step > 1 ? () => setStep(step - 1) : resetAndClose}
-            style={styles.headerBtn}
-          >
-            <MaterialCommunityIcons
-              name={step > 1 ? 'arrow-left' : 'close'}
-              size={24}
-              color={colors.textSecondary}
-            />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-            {step === 1
-              ? 'Sayfa Türü Seç'
-              : step === 2
-              ? 'Şablon Seç'
-              : 'Son Dokunuşlar'}
-          </Text>
-          <View style={styles.headerBtn} />
-        </View>
-
-        {/* Adım göstergesi */}
-        <View style={[styles.stepIndicator, isTablet && styles.tabletModalContainer]}>
-          {[1, 2, 3].map((s) => (
-            <View
-              key={s}
-              style={[
-                styles.stepDot,
-                {
-                  backgroundColor:
-                    s <= step ? colors.accent : colors.border,
-                  width: s === step ? 24 : 8,
-                },
-              ]}
-            />
-          ))}
-        </View>
-
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
@@ -136,6 +97,44 @@ export default function AddPageModal({ visible, onClose, onAdd }) {
           ]}
           showsVerticalScrollIndicator={false}
         >
+          {/* Üst Bar */}
+          <View style={[styles.header]}>
+            <TouchableOpacity
+              onPress={step > 1 ? () => setStep(step - 1) : resetAndClose}
+              style={styles.headerBtn}
+            >
+              <MaterialCommunityIcons
+                name={step > 1 ? 'arrow-left' : 'close'}
+                size={24}
+                color={colors.textSecondary}
+              />
+            </TouchableOpacity>
+            <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+              {step === 1
+                ? 'Sayfa Türü Seç'
+                : step === 2
+                ? 'Şablon Seç'
+                : 'Son Dokunuşlar'}
+            </Text>
+            <View style={styles.headerBtn} />
+          </View>
+
+          {/* Adım göstergesi */}
+          <View style={[styles.stepIndicator]}>
+            {[1, 2, 3].map((s) => (
+              <View
+                key={s}
+                style={[
+                  styles.stepDot,
+                  {
+                    backgroundColor:
+                      s <= step ? colors.accent : colors.border,
+                    width: s === step ? 24 : 8,
+                  },
+                ]}
+              />
+            ))}
+          </View>
           {/* Adım 1: Kategori Seçimi */}
           {step === 1 && (
             <View style={styles.categoriesGrid}>
@@ -353,7 +352,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
     paddingTop: 50,
     paddingBottom: 8,
   },

@@ -71,24 +71,6 @@ export default function AddTodoModal({ visible, onClose, onAdd }) {
         style={[styles.container, { backgroundColor: colors.background }]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Üst Bar */}
-        <View style={[styles.header, isTablet && styles.tabletModalContainer]}>
-          <TouchableOpacity
-            onPress={step > 1 ? () => setStep(step - 1) : resetAndClose}
-            style={styles.headerBtn}
-          >
-            <MaterialCommunityIcons
-              name={step > 1 ? 'arrow-left' : 'close'}
-              size={24}
-              color={colors.textSecondary}
-            />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-            {step === 1 ? 'Şablon Seç' : 'Liste Başlığı'}
-          </Text>
-          <View style={styles.headerBtn} />
-        </View>
-
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
@@ -96,6 +78,23 @@ export default function AddTodoModal({ visible, onClose, onAdd }) {
           ]}
           showsVerticalScrollIndicator={false}
         >
+          {/* Üst Bar */}
+          <View style={[styles.header]}>
+            <TouchableOpacity
+              onPress={step > 1 ? () => setStep(step - 1) : resetAndClose}
+              style={styles.headerBtn}
+            >
+              <MaterialCommunityIcons
+                name={step > 1 ? 'arrow-left' : 'close'}
+                size={24}
+                color={colors.textSecondary}
+              />
+            </TouchableOpacity>
+            <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+              {step === 1 ? 'Şablon Seç' : 'Liste Başlığı'}
+            </Text>
+            <View style={styles.headerBtn} />
+          </View>
           {/* Adım 1: Şablon Seçimi */}
           {step === 1 && (
             <View>
@@ -210,7 +209,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
     paddingTop: 50,
     paddingBottom: 8,
   },

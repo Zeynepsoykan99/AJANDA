@@ -641,3 +641,7 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 - **Teknoloji:** Herhangi bir dış bağımlılık (paket) kullanılmadan, uygulamanın ana animasyon kütüphanesi olan `react-native-reanimated` ile 60 FPS çalışan tamamen özelleştirilmiş bir yer tutucu (Skeleton) sistemi kuruldu.
 - **Bileşenler:** Pürüzsüz "nefes alma" (pulse) efekti yapan temel `<Skeleton>` bileşeni, Ajanda/To-Do sayfaları için `<ListSkeleton>` ve WebP formatlı büyük resimler/sticker'lar yüklenirken geçişi pürüzsüz yapan `<ImageWithSkeleton>` bileşenleri oluşturuldu.
 - **Entegrasyonlar:** Uygulamanın ilk açılışındaki AsyncStorage tema yükleme süreci, Ajandam ve To-Do kapak/sayfa listeleri, sticker render aşamaları ve tam sayfa görsel (ImageTemplate) render aşamalarının tamamındaki boş ekran ve spinner (çark) görünümleri yerine şık iskeletler yerleştirildi.
+
+### 📜 16. Şablon Galerisi (Doğal Kaydırma / Natural Scroll) Güncellemesi
+- **Sorun:** Sayfa veya To-Do listesi ekleme modallarında (`AddPageModal.js` ve `AddTodoModal.js`), kullanıcı devasa şablon listesini aşağı kaydırdığında bile "Şablon Seç" başlığı ekranın en üstünde sabit (sticky) kalarak gereksiz yer kaplıyordu.
+- **Çözüm:** Başlık (`header`) ve adım göstergeleri (`stepIndicator`) doğrudan `ScrollView` içerisine taşındı. Böylece performanslı "Doğal Kaydırma" (Natural Scroll) sağlandı. Kullanıcı galeriyi incelemek için aşağı kaydırdığında başlıklar kayarak ekrandan çıkar ve şablonlar için maksimum alan (full screen) yaratılır.
