@@ -9,7 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { StorageService } from '../../services/storageService';
@@ -30,10 +30,12 @@ export default function TodoListScreen() {
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // To-Do Sayfalarını yükle
-  useEffect(() => {
-    loadTodoPages();
-  }, []);
+  // Verileri yükle (Ekran her odaklandığında çalışır)
+  useFocusEffect(
+    useCallback(() => {
+      loadTodoPages();
+    }, [])
+  );
 
   const loadTodoPages = async () => {
     try {

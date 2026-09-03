@@ -589,3 +589,8 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ### 🚑 5. Çökme (Syntax Error) Hotfix'i
 - Bir önceki Web platform adaptasyonunda `app/ajandam/[pageId].js` dosyasına eklenen mükerrer `ActivityIndicator` satırı (Duplicate Declaration) silinerek Metro Bundler'ı kilitleyen ölümcül hata (fatal syntax error) giderildi. Uygulama tekrar stabil hale getirildi.
+
+### 🔄 6. Silme Sonrası Liste Senkronizasyonu (State Güncellemesi)
+- React Navigation/Expo Router mimarisinin ekranları hafızada tutması (ve `useEffect`'in sadece ilk açılışta çalışması) sebebiyle detay sayfasından silinen öğelerin listeye geri dönüldüğünde hala ekranda görünme sorunu giderildi.
+- `app/ajandam/pages.js` ve `app/todolist/index.js` dosyalarındaki veri yükleme mantığı `useEffect` yerine Expo Router'ın **`useFocusEffect`** hook'u içine alındı.
+- Bu sayede kullanıcı liste ekranına her döndüğünde veriler AsyncStorage'dan anında güncellenerek silinen (veya ismi değişen) sayfalar arayüze gerçek zamanlı yansıtıldı.

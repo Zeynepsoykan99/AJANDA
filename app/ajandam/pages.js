@@ -9,7 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { StorageService } from '../../services/storageService';
@@ -30,10 +30,12 @@ export default function PagesScreen() {
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Sayfaları yükle
-  useEffect(() => {
-    loadPages();
-  }, []);
+  // Sayfaları yükle (Ekran her odaklandığında çalışır)
+  useFocusEffect(
+    useCallback(() => {
+      loadPages();
+    }, [])
+  );
 
   const loadPages = async () => {
     try {
