@@ -149,7 +149,7 @@ export default function PagesScreen() {
           Sayfalarım
         </Text>
 
-        <View style={styles.backButton} />
+        <View style={styles.headerRightPlaceholder} />
       </View>
 
       {/* Sayfa Listesi */}
@@ -211,6 +211,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerRightPlaceholder: {
+    width: 42,
   },
   pageTitle: {
     fontSize: 20,

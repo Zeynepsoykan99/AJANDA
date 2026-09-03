@@ -605,3 +605,8 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 - `constants/themes.js` içerisine `generateCustomTheme` fonksiyonu yazıldı. Bu algoritma, seçilen HEX kodunun parlaklığını (Luminance) matematiksel olarak analiz eder (> 140 ise açık renk, değilse koyu renk). 
 - Akıllı Kontrast sayesinde, kullanıcı koyu bir renk seçerse ikonlar ve yazılar otomatik beyaza; açık bir renk seçerse otomatik koyu griye dönerek okunabilirlik (Accessibility) maksimize edildi.
 - Özel renkler `custom:#HEX` formatıyla kalıcı belleğe (AsyncStorage) işlendi. Kullanıcı renk çarkında gezinirken uygulama arayüzü 60fps akıcılığında tepki verecek duruma getirildi.
+
+### 🧹 9. UI Temizliği (Header Yer Tutucu Düzeltmesi)
+- `app/ajandam/pages.js` ve `app/todolist/index.js` ekranlarında, sağ üst köşede gereksiz yere görünen boş (kenarlıklı) daire arayüzden tamamen temizlendi.
+- Başlığın ekranın ortasında kalmasını sağlayan (flex-box) denge yapısını bozmamak için, eski görünür daire yerine genişliği geri tuşuyla birebir aynı (`42px`) olan görünmez (şeffaf) bir `headerRightPlaceholder` bileşeni eklendi.
+- Arayüz kusursuz bir simetriye kavuşturuldu.

@@ -149,7 +149,7 @@ export default function TodoListScreen() {
           Yapılacaklar
         </Text>
 
-        <View style={styles.backButton} />
+        <View style={styles.headerRightPlaceholder} />
       </View>
 
       {/* To-Do Listesi */}
@@ -211,6 +211,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerRightPlaceholder: {
+    width: 42,
   },
   pageTitle: {
     fontSize: 20,
