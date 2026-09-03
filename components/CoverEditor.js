@@ -86,7 +86,7 @@ export default function CoverEditor({ visible, onClose, coverData, onSave }) {
                       borderWidth: 3,
                     },
                   ]}
-                  borderRadius={14}
+                  compact={true}
                   maxTilt={8}
                 >
                   <Image
@@ -171,7 +171,6 @@ const styles = StyleSheet.create({
   templateCard: {
     width: '45%',
     aspectRatio: 0.72, // Defter/A4 oranına yakın
-    borderRadius: 14,
     borderWidth: 2,
     borderColor: 'transparent',
   },

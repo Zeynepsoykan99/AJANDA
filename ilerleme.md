@@ -680,6 +680,19 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
   - **Ana Kapak Ekranı (`app/ajandam/index.js`):** Masanın ortasında duran A4 oranlı ana ajanda kapağına 3D fiziksel etkileşim eklendi. Çizim veya metin modundayken kalemin hassasiyeti bozulmasın diye tilt otomatik devre dışı bırakılır (`disabled={activeMode !== 'none'}`).
   - **Kapak Seçim Galerisi (`components/CoverEditor.js`):** Şablon galerisindeki mini kapak kartlarına da 3D basılma & yaylanma fiziği kazandırıldı.
 
+### 📚 21. Gerçekçi Fiziksel Defter Tasarımı (Hardcover Spine, Hinge Crease & Page Thickness)
+- **Defter Sırtı (Book Spine) & Açılma Oluğu:**
+  - Kapağın sol kenarına sırt kavisini veren 8px gölge ve silindirik ışık bandı (`spineHighlight`) eklendi.
+  - Sol kenardan 20px içeride, kapağın açılma hattına 1px koyu çöküntü ve 1px açık kabartma çizgisi (`spineCrease`) yerleştirilerek preslenmiş cilt kanalı illüzyonu yaratıldı.
+- **Asimetrik Kırtasiye Köşeleri:**
+  - Sol cilt kenarı düz ve tok (`3px`), açılan sağ yaprak kenarları ise zarif ve oval (`18px`) olarak tasarlandı.
+- **Sayfa Kalınlığı (Page Edges / Book Block):**
+  - Ön kapağın sağından ve altından 6px taşan, sıcak krem/fildişi tonunda (`#FAF7EE`), ince kenarlık ve sayfa kat çizgileri (`pageRibbing`) içeren gerçekçi bir kağıt bloğu katmanı eklendi (sanki altında yüzlerce sayfa varmış gibi).
+- **Yüzey Pahı (Cover Bevel):**
+  - Kapağın çevresine 1px yarı saydam parlama çizgisi eklenerek sert cilt kenarlarının ışık yansıması sağlandı.
+- **Minyatür Uyum:** `CoverEditor.js` içerisindeki galeri kartlarına `compact={true}` desteği verilerek orantılı minyatür defter sırtı ve sayfa kalınlığı kazandırıldı.
+
+
 
 
 

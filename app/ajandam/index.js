@@ -214,7 +214,6 @@ export default function AjandamScreen() {
           style={styles.coverContainer}
           disabled={activeMode !== 'none'}
           onPress={handleOpenAgenda}
-          borderRadius={8}
           maxTilt={6}
         >
           <ImageWithSkeleton
@@ -315,8 +314,7 @@ const styles = StyleSheet.create({
     width: '82%',
     maxWidth: 420,
     aspectRatio: 0.72, // A4 defter oranı
-    borderRadius: 8,
-    marginBottom: 40, // Butonla arasına mesafe
+    marginBottom: 44, // Butonla arasına mesafe
   },
   fullBleedBackground: {
     width: '100%',
