@@ -645,3 +645,9 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 ### 📜 16. Şablon Galerisi (Doğal Kaydırma / Natural Scroll) Güncellemesi
 - **Sorun:** Sayfa veya To-Do listesi ekleme modallarında (`AddPageModal.js` ve `AddTodoModal.js`), kullanıcı devasa şablon listesini aşağı kaydırdığında bile "Şablon Seç" başlığı ekranın en üstünde sabit (sticky) kalarak gereksiz yer kaplıyordu.
 - **Çözüm:** Başlık (`header`) ve adım göstergeleri (`stepIndicator`) doğrudan `ScrollView` içerisine taşındı. Böylece performanslı "Doğal Kaydırma" (Natural Scroll) sağlandı. Kullanıcı galeriyi incelemek için aşağı kaydırdığında başlıklar kayarak ekrandan çıkar ve şablonlar için maksimum alan (full screen) yaratılır.
+
+### 🔃 17. En Yeni En Üstte Sıralama & Tarih Gösterimi İyileştirmesi
+- **Sıralama:** Ajandam (`pages.js`) ve To-Do (`todolist/index.js`) listeleme ekranlarındaki 6 ayrı `.sort()` çağrısı ascending (eski → yeni) yerine **descending (yeni → eski)** olarak güncellendi. Artık yeni oluşturulan her sayfa/liste otomatik olarak en üstte görünür.
+- **Tarih Formatı:** `PageThumbnail.js` bileşenindeki oluşturulma tarihi formatı `"3 Eyl"` yerine `"3 Eyl 2026"` olarak zenginleştirildi (yıl bilgisi eklendi).
+- **Eski Veri Güvenliği:** `createdAt` alanı olmayan veya geçersiz tarih içeren eski veriler için null-safe fallback eklendi; uygulama çökmesi önlendi ve tarih yoksa `·` ayırıcı da gösterilmiyor.
+

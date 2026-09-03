@@ -42,7 +42,7 @@ export default function PagesScreen() {
     try {
       const savedPages = await StorageService.getPages();
       const ajandaPages = savedPages.filter(p => p.category !== 'todo');
-      setPages(ajandaPages.sort((a, b) => (a.order || 0) - (b.order || 0)));
+      setPages(ajandaPages.sort((a, b) => (b.order || 0) - (a.order || 0)));
     } catch (error) {
       console.warn('Sayfalar yüklenirken hata:', error);
     } finally {
@@ -56,7 +56,7 @@ export default function PagesScreen() {
       const updatedPages = await StorageService.addPage(newPage);
       if (updatedPages) {
         const ajandaPages = updatedPages.filter(p => p.category !== 'todo');
-        setPages(ajandaPages.sort((a, b) => (a.order || 0) - (b.order || 0)));
+        setPages(ajandaPages.sort((a, b) => (b.order || 0) - (a.order || 0)));
       }
     },
     []
@@ -70,7 +70,7 @@ export default function PagesScreen() {
         const updated = await StorageService.deletePage(page.id);
         if (updated) {
           const ajandaPages = updated.filter((p) => p.category !== 'todo');
-          setPages(ajandaPages.sort((a, b) => (a.order || 0) - (b.order || 0)));
+          setPages(ajandaPages.sort((a, b) => (b.order || 0) - (a.order || 0)));
         }
       };
 

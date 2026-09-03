@@ -44,10 +44,14 @@ export default function PageThumbnail({ page, onPress, onLongPress, onDelete }) 
     }
   };
 
-  const createdDate = new Date(page.createdAt).toLocaleDateString('tr-TR', {
-    day: 'numeric',
-    month: 'short',
-  });
+  const rawDate = page.createdAt ? new Date(page.createdAt) : null;
+  const createdDate = rawDate && !isNaN(rawDate)
+    ? rawDate.toLocaleDateString('tr-TR', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    : '';
 
   return (
     <View
@@ -102,7 +106,7 @@ export default function PageThumbnail({ page, onPress, onLongPress, onDelete }) 
             </Text>
           </View>
           <Text style={[styles.summary, { color: templateColors.accent + '99' }]}>
-            {getSummary()} · {createdDate}
+            {getSummary()}{createdDate ? ` · ${createdDate}` : ''}
           </Text>
         </View>
       </TouchableOpacity>

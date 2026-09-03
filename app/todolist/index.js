@@ -42,7 +42,7 @@ export default function TodoListScreen() {
     try {
       const allPages = await StorageService.getPages();
       const todos = allPages.filter((page) => page.category === 'todo');
-      setTodoPages(todos.sort((a, b) => (a.order || 0) - (b.order || 0)));
+      setTodoPages(todos.sort((a, b) => (b.order || 0) - (a.order || 0)));
     } catch (error) {
       console.warn('To-Do sayfaları yüklenirken hata:', error);
     } finally {
@@ -56,7 +56,7 @@ export default function TodoListScreen() {
       const updatedPages = await StorageService.addPage(newPage);
       if (updatedPages) {
         const todos = updatedPages.filter((page) => page.category === 'todo');
-        setTodoPages(todos.sort((a, b) => (a.order || 0) - (b.order || 0)));
+        setTodoPages(todos.sort((a, b) => (b.order || 0) - (a.order || 0)));
       }
     },
     []
@@ -70,7 +70,7 @@ export default function TodoListScreen() {
         const updated = await StorageService.deletePage(page.id);
         if (updated) {
           const todoPages = updated.filter((p) => p.category === 'todo');
-          setTodoPages(todoPages.sort((a, b) => (a.order || 0) - (b.order || 0)));
+          setTodoPages(todoPages.sort((a, b) => (b.order || 0) - (a.order || 0)));
         }
       };
 
