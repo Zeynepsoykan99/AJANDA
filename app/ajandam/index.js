@@ -188,35 +188,37 @@ export default function AjandamScreen() {
         </View>
       </View>
 
-      {/* Tam Ekran Kapak Görseli ve İnteraktif Katmanlar */}
-      <View style={styles.contentArea}>
-        <ImageBackground
-          source={template.imageSource}
-          style={styles.fullBleedBackground}
-          resizeMode="cover"
-        >
-          {/* Metin Katmanı */}
-          <TextCanvas
-            isTextMode={activeMode === 'text'}
-            textBlocks={coverData?.textBlocks || []}
-            onTextBlocksChange={handleTextBlocksChange}
-            activeColor={textColor}
-            activeFontSize={textFontSize}
-          />
+      {/* Merkezlenmiş Kapak Görseli ve İnteraktif Katmanlar */}
+      <View style={[styles.contentArea, { backgroundColor: colors.background }]}>
+        <View style={styles.coverContainer}>
+          <ImageBackground
+            source={template.imageSource}
+            style={styles.fullBleedBackground}
+            resizeMode="cover"
+          >
+            {/* Metin Katmanı */}
+            <TextCanvas
+              isTextMode={activeMode === 'text'}
+              textBlocks={coverData?.textBlocks || []}
+              onTextBlocksChange={handleTextBlocksChange}
+              activeColor={textColor}
+              activeFontSize={textFontSize}
+            />
 
-          {/* Çizim Katmanı */}
-          <DrawingCanvas
-            isDrawingMode={activeMode === 'drawing'}
-            tool={drawingTool}
-            color={drawingColor}
-            strokeWidth={drawingWidth}
-            drawings={coverData?.drawings || []}
-            onDrawingsChange={handleDrawingsChange}
-            style={styles.fullBleedCanvas}
-          />
-        </ImageBackground>
+            {/* Çizim Katmanı */}
+            <DrawingCanvas
+              isDrawingMode={activeMode === 'drawing'}
+              tool={drawingTool}
+              color={drawingColor}
+              strokeWidth={drawingWidth}
+              drawings={coverData?.drawings || []}
+              onDrawingsChange={handleDrawingsChange}
+              style={styles.fullBleedCanvas}
+            />
+          </ImageBackground>
+        </View>
 
-        {/* Ajandayı Aç Butonu */}
+        {/* Ajandayı Aç Butonu (Kapağın Dışında) */}
         <View style={styles.floatingButtonContainer}>
           <TouchableOpacity
             activeOpacity={0.8}
@@ -279,6 +281,23 @@ const styles = StyleSheet.create({
     flex: 1,
     position: 'relative',
     overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  coverContainer: {
+    width: '82%',
+    maxWidth: 420,
+    aspectRatio: 0.72, // A4 defter oranı
+    borderRadius: 8,
+    overflow: 'hidden',
+    // Gölge (defter hissiyatı için)
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 10,
+    backgroundColor: '#FFFFFF',
+    marginBottom: 40, // Butonla arasına mesafe koyduk
   },
   fullBleedBackground: {
     width: '100%',

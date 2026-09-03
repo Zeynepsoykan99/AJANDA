@@ -550,3 +550,17 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 - Ajandam ana kapağı (`app/ajandam/index.js`) küçük bir çerçevenin içinden çıkartılarak **tam ekran (full-bleed)** ImageBackground yapısına kavuşturuldu.
 - Bu tam ekran kapağın üzerine `DrawingCanvas` (Apple Pencil / Çizim) ve `TextCanvas` (Klavye Metin / Sürükle Bırak) katmanları ve araç çubuğu eklendi.
 - Artık kullanıcı kapağın tam olarak neresine istiyorsa oraya kendi el yazısıyla (veya klavyeyle) "2026", "Hedeflerim" yazabilecek. Çizdiği her şey `StorageService.setCover()` üzerinden o kapak profiline kalıcı olarak kaydedilecek!
+
+---
+
+## 📅 [2026-09-03 10:50] - Kapak Görselinde "Dijital Kırtasiye" Formatına Geri Dönüş
+
+### 📐 1. Full-Bleed İptali ve Ortalanmış Kapak
+- Kapak sayfasındaki (`app/ajandam/index.js`) tam ekran (full-bleed) kaplama mantığı iptal edildi.
+- Kapak görseli, gerçek bir defter oranına (`aspectRatio: 0.72`) ve makul bir genişliğe (`width: 82%, maxWidth: 420px`) sahip olan yeni bir `coverContainer` içerisine alındı.
+- Bu çerçevenin dışındaki kalan margin boşluklarına, temanın soft arka plan rengi (`colors.background`) uygulandı. Ayrıca kapağın havada (masada) duruyormuş gibi görünmesi için sert ve 3 boyutlu bir gölge (`shadowRadius: 16, elevation: 10`) eklendi.
+
+### 🎯 2. Çizim/Metin Senkronizasyonu
+- Çizim (`DrawingCanvas`) ve metin (`TextCanvas`) katmanları, ekranın tamamından koparılıp doğrudan bu yeni küçük `coverContainer` içerisine hapsedildi (`width: 100%, height: 100%`).
+- Bu sayede kullanıcı, sadece ve sadece **kapağın sınırları içerisine** (milimetrik bir doğrulukla) çizim yapabilir hale geldi. Çizgiler veya metinler hiçbir koşulda kapağın dışına veya ekranın geri kalanına taşmaz.
+- "İçine Gir" (Ajandayı Aç) butonu da kapağın tasarımını örtmemesi için kapağın dışına, alt bölüme konumlandırıldı.
