@@ -711,6 +711,19 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
   - **Ana Ekran (`app/index.js`):** Başlığın hemen altına Spotlight tarzı, tıklanabilir şık arama çubuğu yerleştirildi.
   - **Liste Ekranları (`app/ajandam/pages.js` & `app/todolist/index.js`):** Header'daki takvim filtre butonunun yanına hızlı arama büyüteç butonu (`magnify`) eklendi.
 
+### 🎨 24. Renk Çarkı Dinamik Renk & Kontrast Uyumlandırma (Harmonic Color Engine)
+- **Renk Dönüşüm Modülü (`utils/colorUtils.js`):**
+  - Sıfır dış bağımlılıkla saf JavaScript kullanılarak HEX, RGB ve HSL renk uzayları arasında çift yönlü matematiksel dönüşüm motoru geliştirildi.
+  - W3C algılanan parlaklık (Luminance) algoritması entegre edildi.
+  - `generateHarmonicPalette` fonksiyonu ile seçilen herhangi bir rengin ton açısı (`Hue`) sabit tutularak estetik harmoni kurallarına göre diğer tüm renkler otomatik türetildi.
+- **Dinamik Kontrast ve Harmoni Kuralları:**
+  - **Açık / Pastel Renkler:** İkonlar (`accent`) seçilen rengin %35-45 daha koyu, doygun ve canlı haline getirildi; başlıklar (`textPrimary`) ve alt yazılar (`textSecondary`) aynı renk ailesinin derin, yüksek kontrastlı tonlarına bağlandı; çerçeveler (`border`) arka plandan %12 daha koyu şık bir sınır çizgisine dönüştü.
+  - **Koyu Renkler:** İkonlar rengin ışıldayan neon/pastel tonuna, metinler net okunabilirlik için beyaza, kartlar hafif aydınlatılmış koyu yüzeye dönüştürüldü.
+  - **Nötr / Grayscale:** Siyah/gri tonlarda renk sapması engellenerek Slate gri skalası uygulandı.
+- **Tema Entegrasyonu (`constants/themes.js`):**
+  - `generateCustomTheme` fonksiyonu dinamik renk motoruna bağlandı. Kullanıcı renk çarkından hangi rengi seçerse seçsin; ana ekrandaki "AJANDA" başlığı, alt çizgi, arama çubuğu ve dairesel butonların ikonları/çerçeveleri anında o renkle %100 uyumlu hale geldi.
+
+
 
 
 

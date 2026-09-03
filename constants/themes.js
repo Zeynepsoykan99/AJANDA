@@ -3,6 +3,7 @@
  * Her tema, uygulamanın tüm renklerini içeren bir paletten oluşur.
  * ThemeContext bu dosyayı kullanarak aktif temayı yönetir.
  */
+import { generateHarmonicPalette } from '../utils/colorUtils.js';
 
 export const THEMES = {
   powderPink: {
@@ -98,25 +99,13 @@ export function getAllThemes() {
   return Object.values(THEMES);
 }
 
-/**
- * Renk HEX kodunu R, G, B değerlerine dönüştürür
- */
-function hexToRgb(hex) {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result
-    ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16),
-      }
-    : { r: 255, g: 255, b: 255 }; // Hatalı format gelirse beyaz dön
-}
+
 
 /**
- * Verilen HEX koduna göre, parlaklığı ölçer ve en uyumlu/kontrast temayı dinamik üretir.
+ * Verilen HEX koduna göre HSL renk harmoni motorunu çalıştırır
+ * ve ikonlar, metinler ve çerçeveler için dinamik uyumlu palet üretir.
  */
 export function generateCustomTheme(hexColor) {
-  // Eğer hex 3 haneliyse veya hatalıysa normalize et
   let hex = hexColor.startsWith('#') ? hexColor : `#${hexColor}`;
   if (hex.length === 4) {
     hex = `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`;
@@ -124,30 +113,13 @@ export function generateCustomTheme(hexColor) {
     hex = '#FFFFFF';
   }
 
-  const { r, g, b } = hexToRgb(hex);
-
-  // Parlaklık / Luminance (W3C Standard)
-  const luminance = (r * 299 + g * 587 + b * 114) / 1000;
-  
-  // 128 eşik değeri. Eğer luminance > 128 ise renk açıktır, koyu metin gerekir.
-  const isLight = luminance > 140; 
+  const colors = generateHarmonicPalette(hex);
 
   return {
     id: `custom:${hex}`,
     name: 'Özel Renk',
     emoji: '✨',
-    colors: {
-      background: hex,
-      backgroundLight: isLight ? '#FFFFFF99' : '#00000033', // Yarı saydam beyaz veya siyah katman
-      card: isLight ? '#FFFFFF' : '#222222', // Arka plan çok koyuysa kartı çok az gri yap
-      border: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.2)',
-      shadow: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.4)',
-      textPrimary: isLight ? '#222222' : '#FFFFFF',
-      textSecondary: isLight ? '#444444' : '#E0E0E0',
-      textDeep: isLight ? '#111111' : '#FFFFFF',
-      accent: isLight ? '#444444' : '#FFFFFF',
-      white: '#FFFFFF',
-    },
+    colors,
   };
 }
 
