@@ -149,6 +149,7 @@ export default function PagesScreen() {
               page={item}
               onPress={() => handleOpenPage(item)}
               onLongPress={() => handleDeletePage(item)}
+              onDelete={() => handleDeletePage(item)}
             />
           )}
           contentContainerStyle={[

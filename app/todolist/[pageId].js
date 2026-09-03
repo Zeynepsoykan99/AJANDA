@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -111,6 +112,25 @@ export default function TodoViewScreen() {
     });
   }, []);
 
+  // Sayfayı tamamen sil
+  const handleDeletePage = useCallback(() => {
+    Alert.alert(
+      'Listeyi Sil',
+      `"${page.title}" listesini silmek istediğinize emin misiniz?`,
+      [
+        { text: 'İptal', style: 'cancel' },
+        {
+          text: 'Sil',
+          style: 'destructive',
+          onPress: async () => {
+            await StorageService.deletePage(page.id);
+            router.back();
+          },
+        },
+      ]
+    );
+  }, [page, router]);
+
   if (isLoading) {
     return (
       <SafeAreaView
@@ -208,6 +228,19 @@ export default function TodoViewScreen() {
             onUndo={handleUndoDrawing}
             canUndo={(page.drawings || []).length > 0}
           />
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={handleDeletePage}
+            style={[
+              styles.headerButton,
+              {
+                backgroundColor: '#FFEbee',
+                borderColor: '#FFCDD2',
+              },
+            ]}
+          >
+            <MaterialCommunityIcons name="trash-can-outline" size={20} color="#E53935" />
+          </TouchableOpacity>
         </View>
       </View>
 

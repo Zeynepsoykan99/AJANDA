@@ -11,7 +11,7 @@ import { PAGE_CATEGORIES, getPageTemplate } from '../constants/pageTemplates';
  * @param {function} onPress - Sayfaya tıklama
  * @param {function} onLongPress - Uzun basma (silme vb.)
  */
-export default function PageThumbnail({ page, onPress, onLongPress }) {
+export default function PageThumbnail({ page, onPress, onLongPress, onDelete }) {
   const category = PAGE_CATEGORIES.find((c) => c.id === page.category);
   const template = getPageTemplate(page.category, page.templateId);
   const templateColors = template?.colors || { bg: '#FFF0F5', accent: '#C2185B' };
@@ -102,12 +102,27 @@ export default function PageThumbnail({ page, onPress, onLongPress }) {
         </Text>
       </View>
 
-      {/* Sağ: Ok */}
-      <MaterialCommunityIcons
-        name="chevron-right"
-        size={22}
-        color={templateColors.accent + '60'}
-      />
+      {/* Sağ: İkonlar */}
+      <View style={styles.rightActions}>
+        {onDelete && (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={onDelete}
+            style={styles.deleteButton}
+          >
+            <MaterialCommunityIcons
+              name="trash-can-outline"
+              size={20}
+              color="#E53935"
+            />
+          </TouchableOpacity>
+        )}
+        <MaterialCommunityIcons
+          name="chevron-right"
+          size={22}
+          color={templateColors.accent + '60'}
+        />
+      </View>
     </TouchableOpacity>
   );
 }
@@ -158,5 +173,15 @@ const styles = StyleSheet.create({
   summary: {
     fontSize: 12,
     fontWeight: '500',
+  },
+  rightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  deleteButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#FFEbee',
   },
 });

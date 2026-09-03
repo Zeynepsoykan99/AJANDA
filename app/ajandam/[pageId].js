@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -194,6 +195,25 @@ export default function PageViewScreen() {
     []
   );
 
+  // Sayfayı tamamen sil
+  const handleDeletePage = useCallback(() => {
+    Alert.alert(
+      'Sayfayı Sil',
+      `"${page.title}" sayfasını silmek istediğinize emin misiniz?`,
+      [
+        { text: 'İptal', style: 'cancel' },
+        {
+          text: 'Sil',
+          style: 'destructive',
+          onPress: async () => {
+            await StorageService.deletePage(page.id);
+            router.back();
+          },
+        },
+      ]
+    );
+  }, [page, router]);
+
   if (isLoading) {
     return (
       <SafeAreaView
@@ -353,6 +373,20 @@ export default function PageViewScreen() {
             ]}
           >
             <Text style={{ fontSize: 18 }}>🎀</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={handleDeletePage}
+            style={[
+              styles.headerButton,
+              {
+                backgroundColor: '#FFEbee',
+                borderColor: '#FFCDD2',
+              },
+            ]}
+          >
+            <MaterialCommunityIcons name="trash-can-outline" size={20} color="#E53935" />
           </TouchableOpacity>
         </View>
       </View>

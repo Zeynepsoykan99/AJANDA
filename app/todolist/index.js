@@ -149,6 +149,7 @@ export default function TodoListScreen() {
               page={item}
               onPress={() => handleOpenTodo(item)}
               onLongPress={() => handleDeleteTodo(item)}
+              onDelete={() => handleDeleteTodo(item)}
             />
           )}
           contentContainerStyle={[

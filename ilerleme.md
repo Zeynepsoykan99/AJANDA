@@ -564,3 +564,15 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 - Çizim (`DrawingCanvas`) ve metin (`TextCanvas`) katmanları, ekranın tamamından koparılıp doğrudan bu yeni küçük `coverContainer` içerisine hapsedildi (`width: 100%, height: 100%`).
 - Bu sayede kullanıcı, sadece ve sadece **kapağın sınırları içerisine** (milimetrik bir doğrulukla) çizim yapabilir hale geldi. Çizgiler veya metinler hiçbir koşulda kapağın dışına veya ekranın geri kalanına taşmaz.
 - "İçine Gir" (Ajandayı Aç) butonu da kapağın tasarımını örtmemesi için kapağın dışına, alt bölüme konumlandırıldı.
+
+---
+
+## 📅 [2026-09-03 11:05] - Güvenli Sayfa Silme (Trash) Özelliği
+
+### 🗑️ 1. Liste Görünümünde Çöp Kutusu İkonu
+- Hem Ajandam sayfaları (`app/ajandam/pages.js`) hem de To-Do sayfaları (`app/todolist/index.js`) listesinde yer alan `PageThumbnail` kartlarına (sağ köşeye) estetik bir **çöp kutusu** ikonu eklendi.
+- Yanlışlıkla silmeyi önlemek için, ikona basıldığında React Native `Alert` modülü ile "Bu sayfayı silmek istediğinize emin misiniz?" onay penceresi çıkartılıyor. Onaylanırsa sayfa kalıcı olarak siliniyor.
+
+### 🛑 2. Açık Sayfadan Çıkmadan Silme (Toolbar)
+- Kullanıcı bir sayfanın içine girdiğinde (`app/ajandam/[pageId].js` veya `app/todolist/[pageId].js`), üst araç çubuğundaki (header) butonların yanına kırmızı renkli bir çöp kutusu ikonu eklendi.
+- Kullanıcı içerideyken "Sil" işlemini onaylarsa, uygulamanın çökmesini önlemek ve UX akışını korumak için, veri tabanındaki silme işleminin ardından otomatik olarak `router.back()` fonksiyonu çağrılarak güvenli bir şekilde bir önceki liste ekranına dönülmesi sağlandı.
