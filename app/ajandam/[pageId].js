@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  ActivityIndicator,
   Alert,
   Platform,
 } from 'react-native';

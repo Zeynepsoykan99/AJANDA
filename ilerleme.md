@@ -586,3 +586,6 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 - Mobildeki dar tıklama alanını genişletmek ve erişilebilirliği artırmak için silme ikonlarına `hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}` eklendi.
 - Uygulamanın **Web (Tarayıcı)** ortamında test edilirken (Expo Web) `Alert.alert` fonksiyonunun sessizce (silent) çalışmamasını engellemek için kod çapraz platform yapısına geçirildi. Web'de standart `window.confirm`, mobilde ise yerel `Alert.alert` çalışacak şekilde güncellendi.
 - State çakışmalarını önlemek için silme (ve `router.back`) işlemi `setTimeout` içine alınarak güvenli senkronizasyon (asenkron izolasyon) sağlandı.
+
+### 🚑 5. Çökme (Syntax Error) Hotfix'i
+- Bir önceki Web platform adaptasyonunda `app/ajandam/[pageId].js` dosyasına eklenen mükerrer `ActivityIndicator` satırı (Duplicate Declaration) silinerek Metro Bundler'ı kilitleyen ölümcül hata (fatal syntax error) giderildi. Uygulama tekrar stabil hale getirildi.
