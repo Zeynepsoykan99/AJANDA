@@ -7,32 +7,32 @@ export const COVER_TEMPLATES = [
   {
     id: 'cover_1',
     name: 'Kapak 1',
-    imageSource: require('../assets/covers/kapak1.png'),
+    imageSource: require('../assets/covers/kapak1.webp'),
   },
   {
     id: 'cover_2',
     name: 'Kapak 2',
-    imageSource: require('../assets/covers/kapak2.png'),
+    imageSource: require('../assets/covers/kapak2.webp'),
   },
   {
     id: 'cover_3',
     name: 'Kapak 3',
-    imageSource: require('../assets/covers/kapak3.png'),
+    imageSource: require('../assets/covers/kapak3.webp'),
   },
   {
     id: 'cover_4',
     name: 'Kapak 4',
-    imageSource: require('../assets/covers/kapak4.png'),
+    imageSource: require('../assets/covers/kapak4.webp'),
   },
   {
     id: 'cover_5',
     name: 'Kapak 5',
-    imageSource: require('../assets/covers/kapak5.png'),
+    imageSource: require('../assets/covers/kapak5.webp'),
   },
   {
     id: 'cover_6',
     name: 'Kapak 6',
-    imageSource: require('../assets/covers/kapak6.jpg'),
+    imageSource: require('../assets/covers/kapak6.webp'),
   },
 ];
 

@@ -98,11 +98,11 @@ export const STICKER_PACKS = [
     name: 'Özel Görseller',
     icon: '🖼️',
     stickers: [
-      { id: 'i1', type: 'image', source: require('../assets/stickers/sticker1.jpg') },
-      { id: 'i2', type: 'image', source: require('../assets/stickers/sticker2.jpg') },
-      { id: 'i3', type: 'image', source: require('../assets/stickers/sticker3.jpg') },
-      { id: 'i4', type: 'image', source: require('../assets/stickers/sticker4.png') },
-      { id: 'i5', type: 'image', source: require('../assets/stickers/sticker5.jpg') },
+      { id: 'i1', type: 'image', source: require('../assets/stickers/sticker1.webp') },
+      { id: 'i2', type: 'image', source: require('../assets/stickers/sticker2.webp') },
+      { id: 'i3', type: 'image', source: require('../assets/stickers/sticker3.webp') },
+      { id: 'i4', type: 'image', source: require('../assets/stickers/sticker4.webp') },
+      { id: 'i5', type: 'image', source: require('../assets/stickers/sticker5.webp') },
     ],
   },
 ];
