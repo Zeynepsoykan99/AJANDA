@@ -651,3 +651,11 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 - **Tarih Formatı:** `PageThumbnail.js` bileşenindeki oluşturulma tarihi formatı `"3 Eyl"` yerine `"3 Eyl 2026"` olarak zenginleştirildi (yıl bilgisi eklendi).
 - **Eski Veri Güvenliği:** `createdAt` alanı olmayan veya geçersiz tarih içeren eski veriler için null-safe fallback eklendi; uygulama çökmesi önlendi ve tarih yoksa `·` ayırıcı da gösterilmiyor.
 
+### 📅 18. Tarihe Göre Filtreleme (Date Filtering) Özelliği
+- **Özel Takvim Bileşeni:** Hiçbir dış bağımlılık eklemeden, React Native'in kendi `Modal` bileşeniyle tamamen özel, Türkçe, tema renklerine uyumlu bir takvim seçici (`components/ui/DatePickerModal.js`) oluşturuldu. Ay/yıl navigasyonu, "Bugün" kısayolu ve "Filtreyi Temizle" butonları içerir.
+- **Header Entegrasyonu:** Ajandam (`pages.js`) ve To-Do (`todolist/index.js`) ekranlarının üst menüsündeki boş placeholder yerine şık bir takvim arama ikonu (`calendar-search`) eklendi. Filtre aktifken ikon rengi accent'e döner.
+- **Filtre Çipi:** Tarih seçildiğinde header altında zarif bir bilgi çipi görünür (Örn: "📅 3 Eylül 2026 ✕"). Kullanıcı `✕` simgesine tıklayarak filtreyi anında temizleyebilir.
+- **Boş Durum Yönetimi:** Seçilen tarihte sayfa/liste yoksa, özel bir "Bu tarihte oluşturulmuş sayfa/liste yok" mesajı ve "Filtreyi Temizle" butonu gösterilir.
+- **Filtreleme Mantığı:** `createdAt` ISO string'i gün bazlı (`getFullYear/getMonth/getDate`) karşılaştırılır; saat/dakika farkları dikkate alınmaz. `useMemo` ile performans optimize edilmiştir.
+
+

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { StorageService } from '../../services/storageService';
 import PageThumbnail from '../../components/PageThumbnail';
 import AddPageModal from '../../components/AddPageModal';
 import ListSkeleton from '../../components/ui/ListSkeleton';
+import DatePickerModal from '../../components/ui/DatePickerModal';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 
 /**
@@ -30,6 +31,30 @@ export default function PagesScreen() {
   const [pages, setPages] = useState([]);
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [filterDate, setFilterDate] = useState(null);
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+
+  // Gün bazlı tarih karşılaştırma
+  const isSameDay = (dateStr, targetDate) => {
+    if (!dateStr || !targetDate) return false;
+    const d = new Date(dateStr);
+    return (
+      d.getFullYear() === targetDate.getFullYear() &&
+      d.getMonth() === targetDate.getMonth() &&
+      d.getDate() === targetDate.getDate()
+    );
+  };
+
+  // Filtrelenmiş veri
+  const displayPages = useMemo(() => {
+    if (!filterDate) return pages;
+    return pages.filter((p) => isSameDay(p.createdAt, filterDate));
+  }, [pages, filterDate]);
+
+  // Filtre aktifken Türkçe tarih metni
+  const filterLabel = filterDate
+    ? filterDate.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })
+    : null;
 
   // Sayfaları yükle (Ekran her odaklandığında çalışır)
   useFocusEffect(
@@ -108,16 +133,26 @@ export default function PagesScreen() {
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
       <MaterialCommunityIcons
-        name="notebook-outline"
+        name={filterDate ? 'calendar-remove' : 'notebook-outline'}
         size={64}
         color={colors.accent + '40'}
       />
       <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
-        Henüz sayfa eklenmedi
+        {filterDate ? 'Sayfa bulunamadı' : 'Henüz sayfa eklenmedi'}
       </Text>
       <Text style={[styles.emptyDesc, { color: colors.textSecondary + '99' }]}>
-        Aşağıdaki + butonuna basarak ilk sayfanı ekle!
+        {filterDate
+          ? `${filterLabel} tarihinde oluşturulmuş sayfa yok.`
+          : 'Aşağıdaki + butonuna basarak ilk sayfanı ekle!'}
       </Text>
+      {filterDate && (
+        <TouchableOpacity
+          onPress={() => setFilterDate(null)}
+          style={[styles.clearFilterInlineBtn, { borderColor: colors.accent }]}
+        >
+          <Text style={[styles.clearFilterInlineText, { color: colors.accent }]}>Filtreyi Temizle</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -150,8 +185,42 @@ export default function PagesScreen() {
           Sayfalarım
         </Text>
 
-        <View style={styles.headerRightPlaceholder} />
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => setIsDatePickerVisible(true)}
+          style={[
+            styles.backButton,
+            {
+              backgroundColor: filterDate ? colors.accent + '20' : colors.card,
+              borderColor: filterDate ? colors.accent : colors.border,
+            },
+          ]}
+        >
+          <MaterialCommunityIcons
+            name="calendar-search"
+            size={20}
+            color={filterDate ? colors.accent : colors.textSecondary}
+          />
+        </TouchableOpacity>
       </View>
+
+      {/* Filtre Aktif Çipi */}
+      {filterDate && (
+        <View style={[styles.filterChipContainer, isTablet && styles.tabletContainer]}>
+          <View style={[styles.filterChip, { backgroundColor: colors.accent + '12' }]}>
+            <MaterialCommunityIcons name="calendar-check" size={16} color={colors.accent} />
+            <Text style={[styles.filterChipText, { color: colors.accent }]}>
+              {filterLabel}
+            </Text>
+            <TouchableOpacity
+              onPress={() => setFilterDate(null)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <MaterialCommunityIcons name="close-circle" size={18} color={colors.accent + '80'} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {/* Sayfa Listesi */}
       <View style={[{ flex: 1 }, isTablet && styles.tabletContainer]}>
@@ -159,7 +228,7 @@ export default function PagesScreen() {
           <ListSkeleton count={4} />
         ) : (
           <FlatList
-            data={pages}
+            data={displayPages}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <PageThumbnail
@@ -171,7 +240,7 @@ export default function PagesScreen() {
             )}
             contentContainerStyle={[
               styles.listContent,
-              pages.length === 0 && styles.emptyListContent,
+              displayPages.length === 0 && styles.emptyListContent,
             ]}
             ListEmptyComponent={renderEmptyState}
             showsVerticalScrollIndicator={false}
@@ -193,6 +262,15 @@ export default function PagesScreen() {
         visible={isAddModalVisible}
         onClose={() => setIsAddModalVisible(false)}
         onAdd={handleAddPage}
+      />
+
+      {/* Tarih Filtresi Modal */}
+      <DatePickerModal
+        visible={isDatePickerVisible}
+        onClose={() => setIsDatePickerVisible(false)}
+        onSelectDate={setFilterDate}
+        selectedDate={filterDate}
+        onClearFilter={() => setFilterDate(null)}
       />
     </SafeAreaView>
   );
@@ -217,8 +295,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerRightPlaceholder: {
-    width: 42,
+  filterChipContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  clearFilterInlineBtn: {
+    marginTop: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1.5,
+  },
+  clearFilterInlineText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   pageTitle: {
     fontSize: 20,
