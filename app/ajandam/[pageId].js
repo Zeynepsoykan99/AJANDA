@@ -48,10 +48,8 @@ export default function PageViewScreen() {
   const [undoToast, setUndoToast] = useState({ visible: false, message: '' });
   const pendingStickerDeleteRef = useRef(null);
 
-  // Kement (Lasso) Seçim Durumu
-  const [selectedStrokeIds, setSelectedStrokeIds] = useState([]);
-  const [selectionBounds, setSelectionBounds] = useState(null);
-  const [selectedStrokes, setSelectedStrokes] = useState([]);
+  // Kement (Lasso) Seçim Durumu — tek obje ile 3 ayrı re-render'ı 1'e indiriyoruz
+  const [lassoSelection, setLassoSelection] = useState({ ids: [], bounds: null, strokes: [] });
   const [isRecognizingSelected, setIsRecognizingSelected] = useState(false);
   const [isRecognitionModalVisible, setIsRecognitionModalVisible] = useState(false);
   const [recognizedData, setRecognizedData] = useState({
@@ -59,6 +57,11 @@ export default function PageViewScreen() {
     candidates: [],
     estimatedFontSize: 16,
   });
+
+  // Kısayol değişkenler — geriye dönük uyumluluk için
+  const selectedStrokeIds = lassoSelection.ids;
+  const selectionBounds = lassoSelection.bounds;
+  const selectedStrokes = lassoSelection.strokes;
 
   // Atomik El Yazısı Dönüşüm Geçmişi (Undo/Redo)
   const conversionHistoryRef = useRef([]);
@@ -211,16 +214,13 @@ export default function PageViewScreen() {
   }, []);
 
   // ─── Kement (Lasso) Seçim ve Dönüştürme İşlemleri ───
+  // Tek setState çağrısı → tek re-render → TextInput odak kaybı yok
   const handleSelectionChange = useCallback(({ selectedStrokeIds: ids, bounds, selectedStrokes: strokes }) => {
-    setSelectedStrokeIds(ids || []);
-    setSelectionBounds(bounds || null);
-    setSelectedStrokes(strokes || []);
+    setLassoSelection({ ids: ids || [], bounds: bounds || null, strokes: strokes || [] });
   }, []);
 
   const handleCloseLassoSelection = useCallback(() => {
-    setSelectedStrokeIds([]);
-    setSelectionBounds(null);
-    setSelectedStrokes([]);
+    setLassoSelection({ ids: [], bounds: null, strokes: [] });
   }, []);
 
   // Kementle seçilen çizgileri sil

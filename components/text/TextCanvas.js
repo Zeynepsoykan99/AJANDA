@@ -18,7 +18,7 @@ const triggerHaptic = () => {
   } catch (e) {}
 };
 
-const DraggableTextBlock = ({
+const DraggableTextBlock = React.memo(function DraggableTextBlock({
   block,
   activeColor,
   activeFontSize,
@@ -197,7 +197,7 @@ const DraggableTextBlock = ({
       )}
     </View>
   );
-};
+});
 
 export default function TextCanvas({
   isTextMode = false,

@@ -4,6 +4,34 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-04] - Kement (Lasso) Aracı Onarımı & TextInput Yazma Kesintisi Düzeltmesi
+
+### 🐛 Giderilen Sorunlar
+- **TextInput Yazma Kesintisi:** Kement seçimi yapıldığında üst bileşende 3 ayrı `setState` çağrısı tetikleniyordu (`setSelectedStrokeIds`, `setSelectionBounds`, `setSelectedStrokes`). Her biri ayrı bir re-render başlatıyor, `DraggableTextBlock` bileşeninin yeniden render edilmesi klavye odağının kaybolmasına neden oluyordu.
+- **Kement Aracı Çalışmıyor:** Daha önce kaydedilmiş çizgiler (yalnızca `d` SVG path string'i olan, `points` array'i olmayan eski format) `isStrokeInsidePolygon` ve `getMultiStrokeBounds` fonksiyonları tarafından işlenemiyor, seçilen çizim sayısı her zaman 0 çıkıyor ve `LassoActionMenu` hiç görünmüyordu.
+- **Menü Titrenmesi:** 3 setState arasındaki geçiş penceresinde `ids.length > 0` ama `bounds === null` olan kısa bir durum oluşuyor, bu `LassoActionMenu`'nun `visible` koşulunu geçici olarak `false` yapıyor ve menü titriyor gibiydi.
+
+### ✅ Yapılan Değişiklikler
+
+#### `utils/lassoGeometry.js`
+- `parseSvgPathToPoints(d)` yardımcı fonksiyonu eklendi: SVG path string'indeki M, L, Q komutlarından koordinat noktaları çıkarır.
+- `getStrokePoints(stroke)` yardımcı fonksiyonu eklendi: `stroke.points` varsa onu, yoksa `stroke.d` SVG path'ini parse ederek döndürür. Eski verilerle tam geriye dönük uyumluluk sağlar.
+- `isStrokeInsidePolygon()`: Artık `stroke.points` yoksa `stroke.d` üzerinden fallback parse yapıyor.
+- `getMultiStrokeBounds()`: Artık `stroke.points` yoksa `stroke.d` üzerinden fallback parse yapıyor.
+
+#### `components/text/TextCanvas.js`
+- `DraggableTextBlock` bileşeni `React.memo` ile sarıldı. Üst bileşende lasso selection state değiştiğinde TextCanvas içindeki metin kutuları artık gereksiz yere yeniden render edilmiyor.
+
+#### `app/ajandam/[pageId].js`
+- 3 ayrı lasso state (`selectedStrokeIds`, `selectionBounds`, `selectedStrokes`) tek bir `lassoSelection = { ids, bounds, strokes }` objesine birleştirildi.
+- `handleSelectionChange` ve `handleCloseLassoSelection` tek `setLassoSelection` çağrısına indirgendi → re-render sayısı 3'ten 1'e düştü.
+- Geriye dönük uyumluluk için `const selectedStrokeIds = lassoSelection.ids` vb. kısayol değişkenler eklendi.
+
+#### `app/todolist/[pageId].js`
+- Ajandam ile aynı lasso state birleştirme düzeltmesi uygulandı.
+
+---
+
 ## 📅 [2026-08-28 15:37 - 16:06] - Proje Kurulumu ve İlk Görev (Ana Ekran Tasarımı)
 
 ### 🚀 Yapılan İşlemler ve Eklenen Özellikler

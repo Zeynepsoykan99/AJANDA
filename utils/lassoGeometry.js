@@ -5,6 +5,56 @@
  */
 
 /**
+ * SVG path string'inden nokta koordinatlarını çıkarır.
+ * Desteklenen komutlar: M (move to), L (line to), Q (quadratic bezier - kontrol noktası atlanır)
+ * Eski veriden yüklenen ve `points` array'i olmayan çizgiler için fallback.
+ *
+ * @param {string} d - SVG path string (örn: "M 10 20 L 30 40 Q 50 60, 70 80")
+ * @returns {Array<{ x: number, y: number }>}
+ */
+function parseSvgPathToPoints(d) {
+  if (!d || typeof d !== 'string') return [];
+  const points = [];
+  // M ve L komutlarını bul: M x y veya L x y
+  const mlRegex = /[ML]\s*([\d.\-]+)[,\s]+([\d.\-]+)/gi;
+  let match;
+  while ((match = mlRegex.exec(d)) !== null) {
+    const x = parseFloat(match[1]);
+    const y = parseFloat(match[2]);
+    if (!isNaN(x) && !isNaN(y)) {
+      points.push({ x, y });
+    }
+  }
+  // Q (quadratic bezier) biter noktalarını da ekle: Q cx cy, ex ey
+  const qRegex = /Q\s*[\d.\-]+[,\s]+[\d.\-]+[,\s]+([\d.\-]+)[,\s]+([\d.\-]+)/gi;
+  while ((match = qRegex.exec(d)) !== null) {
+    const x = parseFloat(match[1]);
+    const y = parseFloat(match[2]);
+    if (!isNaN(x) && !isNaN(y)) {
+      points.push({ x, y });
+    }
+  }
+  return points;
+}
+
+/**
+ * Bir stroke nesnesinden kullanılabilir nokta dizisini döndürür.
+ * Önce stroke.points'i dener, yoksa stroke.d SVG path'ini parse eder.
+ *
+ * @param {object} stroke - Çizgi nesnesi
+ * @returns {Array<{ x: number, y: number }>}
+ */
+function getStrokePoints(stroke) {
+  if (Array.isArray(stroke?.points) && stroke.points.length > 0) {
+    return stroke.points;
+  }
+  if (stroke?.d) {
+    return parseSvgPathToPoints(stroke.d);
+  }
+  return [];
+}
+
+/**
  * Bir noktanın kapalı bir çokgenin (polygon) içinde olup olmadığını belirler.
  * Ray-Casting (Işın Gönderme) Algoritması kullanır.
  *
@@ -57,10 +107,11 @@ export function doLineSegmentsIntersect(p1, p2, p3, p4) {
  * @returns {boolean}
  */
 export function isStrokeInsidePolygon(stroke, polygon) {
-  if (!stroke?.points || stroke.points.length === 0) return false;
   if (!polygon || polygon.length < 3) return false;
 
-  const points = stroke.points;
+  // points yoksa SVG path'ten fallback parse yap (eski verilerle uyumluluk)
+  const points = getStrokePoints(stroke);
+  if (points.length === 0) return false;
 
   // 1. Adım: Çizginin noktalarından herhangi biri çokgenin içinde mi? (Hızlı Kontrol)
   // Büyük çizgilerde performansı korumak için her 2. veya 3. noktayı kontrol edebiliriz
@@ -115,8 +166,10 @@ export function getMultiStrokeBounds(strokes) {
   let hasValidPoint = false;
 
   for (const stroke of strokes) {
-    if (!Array.isArray(stroke.points) || stroke.points.length === 0) continue;
-    for (const p of stroke.points) {
+    // points yoksa SVG path'ten fallback parse yap (eski verilerle uyumluluk)
+    const pts = getStrokePoints(stroke);
+    if (pts.length === 0) continue;
+    for (const p of pts) {
       if (typeof p.x === 'number' && typeof p.y === 'number') {
         hasValidPoint = true;
         if (p.x < minX) minX = p.x;
