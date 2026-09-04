@@ -853,11 +853,19 @@ export default function PageViewScreen() {
         {/* Serbest Klavye / Metin Katmanı */}
         <TextCanvas
           isTextMode={activeMode === 'text'}
+          isDrawingMode={activeMode === 'drawing'}
           textBlocks={page.textBlocks || []}
           onTextBlocksChange={handleTextBlocksChange}
           activeColor={textColor}
           activeFontSize={textFontSize}
           isEraserActive={activeMode === 'drawing' && drawingTool === 'eraser'}
+          pointerEvents={
+            activeMode === 'drawing'
+              ? 'none'
+              : activeMode === 'text'
+              ? 'auto'
+              : 'box-none'
+          }
         />
 
         {/* Apple Pencil & Çizim Katmanı - Uçtan uca tam hizalı */}
@@ -875,7 +883,10 @@ export default function PageViewScreen() {
           selectedStrokeIds={selectedStrokeIds}
           selectionBounds={selectionBounds}
           onSelectionChange={handleSelectionChange}
-          style={styles.fullBleedCanvas}
+          style={[
+            styles.fullBleedCanvas,
+            { zIndex: activeMode === 'drawing' ? 50 : 20 },
+          ]}
         />
 
         {/* Kement (Lasso) Bağlamsal Eylem Menüsü */}
@@ -899,6 +910,7 @@ export default function PageViewScreen() {
           onStickerMove={handleStickerMove}
           onStickerResize={handleStickerResize}
           onStickerDelete={handleStickerDelete}
+          isDrawingMode={activeMode === 'drawing'}
         />
       </View>
 

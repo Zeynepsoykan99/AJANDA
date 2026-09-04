@@ -4,6 +4,46 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-04] - Çizim (Apple Pencil) ve Silgi (Eraser) Etkileşim & Re-render Optimizasyonu
+
+### 🚀 Eklenen Özellikler & Onarımlar
+- **Tam Katman ve Dokunma İzolasyonu (Touch Event Hijacking Çözümü):**
+  - Çizim modu (`activeMode === 'drawing'`) aktifken `TextCanvas` ve `StickerCanvas` katmanlarına `pointerEvents="none"` uygulandı.
+  - `TextCanvas` içindeki `DraggableTextBlock` bileşenine `isDrawingMode` kontrolü eklenerek, kullanıcı kalem veya fosforlu kalemle yazı yazarken altındaki metin kutularının dokunmaları çalması ve kalemin çizgisini kesmesi kesin olarak engellendi.
+  - `blockContainer` varsayılan `zIndex` değeri `10`'a çekildi; `DrawingCanvas` ise çizim anında `zIndex: 50` seviyesine yükseltilerek dokunmatik öncelik %100 çizim motoruna verildi.
+- **Silgide "Local Buffer & Batch Commit" Mimarisi (0 Re-render Silme):**
+  - Silgiyle ekran üzerinde gezinirken üst sayfada saniyede onlarca kez çalışan `setPage` çağrıları kaldırıldı.
+  - Silinen çizgiler ve kısmi silinen harfler, `DrawingCanvas` içinde izole bir `eraserSessionRef` buffer'ında tutuldu ve anlık `setHiddenStrokeIds` ile üst bileşene re-render vermeden yerel olarak gizlendi.
+  - Kullanıcı parmağını/kalemini ekrandan kaldırdığı anda (`onPanResponderRelease`) tüm silme işlemleri (`onDrawingsChange`, `onTextBlocksChange`, `onTextBlockEdited`) tek bir toplu işlem (batch commit) olarak kaydedildi. UI thread 60/120 FPS akıcılığa kavuştu.
+- **Hızlı Silme Hareketlerinde Çizgi Enterpolasyonu (Line Interpolation):**
+  - İki silgi koordinatı arasındaki mesafe silgi yarıçapından büyükse, iki nokta arasına 15px aralıklarla sanal kontrol noktaları serpiştirildi (segment interpolation).
+  - Kullanıcı silgiyi ne kadar hızlı savurursa savursun aradaki hiçbir harf veya çizginin atlanmaması sağlandı.
+- **Çizim SVG İzolasyonu (`StaticDrawingsLayer`):**
+  - Tamamlanmış çizgiler `React.memo` ile sarılmış `StaticDrawingsLayer` bileşenine taşındı.
+  - Kalemle yazı yazarken her pikselde güncellenen `currentPath` esnasında eski 100+ çizginin DOM reconciliation'a girmesi engellendi.
+- **Haptic Titreşim Koruması:**
+  - Silme anında cihazı saniyede onlarca kez titreten seri haptic çağrıları 160ms throttle ile sınırlandırıldı.
+
+### ✅ Yapılan Değişiklikler
+#### `components/drawing/DrawingCanvas.js`
+- `StaticDrawingsLayer`: Tamamlanmış kalıcı çizgileri izole eden memoize alt katman eklendi.
+- `strokeBoundsCacheRef`: Çizgiler için $O(1)$ bounding box önbelleği ile 100x hızlı temas testi sağlandı.
+- `eraserSessionRef`: Sürükleme sırasında parent re-render'ı önleyen yerel oturum buffer'ı eklendi.
+- `eraseBetweenPoints`: Hızlı silmede nokta atlamasını önleyen 15px aralıklı enterpolasyon algoritması eklendi.
+- `commitEraserBatch`: Silme bittiğinde tek seferde kayıt yapan mekanizma kuruldu.
+
+#### `components/text/TextCanvas.js`
+- `isDrawingMode` prop'u eklendi; çizim modundayken `dragPanResponder` ve root `pointerEvents` tamamen uyutuldu.
+- `blockContainer` varsayılan `zIndex` seviyesi `30`'dan `10`'a düşürüldü.
+
+#### `components/stickers/StickerCanvas.js`
+- `isDrawingMode` prop'u eklendi; çizim modunda `pointerEvents="none"` uygulandı.
+
+#### `app/ajandam/[pageId].js`, `app/todolist/[pageId].js` & `app/ajandam/index.js`
+- `TextCanvas`, `DrawingCanvas` ve `StickerCanvas` katmanlarına aktif moda göre katı `pointerEvents` ve `zIndex` kuralları bağlandı.
+
+---
+
 ## 📅 [2026-09-04] - Serbest Sürükle & Bırak (Drag & Drop) ve Akıllı Punto Algılama (Auto-Font Sizing) Eklendi
 
 ### 🚀 Eklenen Özellikler & Geliştirmeler

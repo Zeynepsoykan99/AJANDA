@@ -34,6 +34,7 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
   canvasHeight = 0,
   onSnapChange,
   isEraserActive = false,
+  isDrawingMode = false,
 }) {
   const pan = useRef(new Animated.ValueXY({ x: block.x, y: block.y })).current;
   const initialDragPosRef = useRef({ x: block.x, y: block.y });
@@ -52,11 +53,15 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
   }, [block.width]);
 
   // Sürükle (Taşı) PanResponder + Akıllı Hizalama (Snapping) — Doğrudan Animated ile 0 Re-render
+  // Çizim veya silgi modu aktifken dokunma olaylarını dinlemez (kalem çizgisi asla kesilmez)
   const dragPanResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => !isEditing && !isEraserActive,
+      onStartShouldSetPanResponder: () => !isEditing && !isEraserActive && !isDrawingMode,
       onMoveShouldSetPanResponder: (_, gestureState) =>
-        !isEditing && !isEraserActive && (Math.abs(gestureState.dx) > 3 || Math.abs(gestureState.dy) > 3),
+        !isEditing &&
+        !isEraserActive &&
+        !isDrawingMode &&
+        (Math.abs(gestureState.dx) > 3 || Math.abs(gestureState.dy) > 3),
       onPanResponderGrant: () => {
         initialDragPosRef.current = {
           x: pan.x._value !== undefined ? pan.x._value : block.x,
@@ -169,7 +174,7 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
         isEditing && styles.blockEditing,
         isDragging && styles.blockDragging,
       ]}
-      {...(!isEditing && !isEraserActive ? dragPanResponder.panHandlers : {})}
+      {...(!isEditing && !isEraserActive && !isDrawingMode ? dragPanResponder.panHandlers : {})}
     >
       {isEditing ? (
         <View style={styles.inputWrapper}>
@@ -227,12 +232,14 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
 
 export default function TextCanvas({
   isTextMode = false,
+  isDrawingMode = false,
   textBlocks = [],
   onTextBlocksChange,
   activeColor = '#4E342E',
   activeFontSize = 15,
   activeFontFamily,
   isEraserActive = false,
+  pointerEvents,
 }) {
   const [editingId, setEditingId] = useState(null);
   const [canvasLayout, setCanvasLayout] = useState({ width: 0, height: 0 });
@@ -297,10 +304,17 @@ export default function TextCanvas({
     if (editingId === id) setEditingId(null);
   };
 
+  const resolvedPointerEvents =
+    pointerEvents !== undefined
+      ? pointerEvents
+      : isDrawingMode
+      ? 'none'
+      : 'box-none';
+
   return (
     <View
       style={StyleSheet.absoluteFillObject}
-      pointerEvents="box-none"
+      pointerEvents={resolvedPointerEvents}
       onLayout={(e) => {
         const { width, height } = e.nativeEvent.layout;
         setCanvasLayout({ width, height });
@@ -344,6 +358,7 @@ export default function TextCanvas({
           canvasHeight={canvasLayout.height}
           onSnapChange={handleSnapChange}
           isEraserActive={isEraserActive}
+          isDrawingMode={isDrawingMode}
         />
       ))}
     </View>
@@ -354,7 +369,7 @@ const styles = StyleSheet.create({
   blockContainer: {
     position: 'absolute',
     minWidth: 60,
-    zIndex: 30,
+    zIndex: 10,
   },
   blockEditing: {
     zIndex: 50,

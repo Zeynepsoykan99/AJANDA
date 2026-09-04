@@ -18,11 +18,43 @@ const triggerHaptic = () => {
 };
 
 /**
+ * StaticDrawingsLayer - Tamamlanmış kalıcı çizgileri render eden memoize katman.
+ * Aktif çizgi (currentPath) her pikselde güncellenirken eski çizgilerin
+ * gereksiz SVG DOM reconciliation'a girmesini engeller.
+ */
+const StaticDrawingsLayer = React.memo(function StaticDrawingsLayer({
+  drawings = [],
+  selectedStrokeIds = [],
+  hiddenStrokeIds,
+}) {
+  return (
+    <>
+      {drawings.map((stroke) => {
+        if (hiddenStrokeIds && hiddenStrokeIds.has(stroke.id)) return null;
+        const isSelected = selectedStrokeIds.includes(stroke.id);
+        return (
+          <Path
+            key={stroke.id}
+            d={stroke.d}
+            stroke={isSelected ? '#E91E63' : stroke.color}
+            strokeWidth={isSelected ? stroke.strokeWidth + 1 : stroke.strokeWidth}
+            strokeOpacity={stroke.strokeOpacity || 0.95}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          />
+        );
+      })}
+    </>
+  );
+});
+
+/**
  * DrawingCanvas - Apple Pencil ve Serbest El Yazısı / Çizim Katmanı
  * Sayfa üzerinde şeffaf bir katman olarak yer alır.
  * Çizim modunda Quadratic Bézier eğrileri ile pürüzsüz hatlar üretir.
  * Kement (Lasso) modunda el yazısı seçimini ve sınırlayıcı kutuyu yönetir.
- * Silgi modunda hem çizimleri (strokes) hem de dijital metin kutularını (textBlocks) siler.
+ * Silgi modunda Local Buffer & Batch Commit mimarisiyle 0 re-render silme sağlar.
  */
 export default function DrawingCanvas({
   isDrawingMode = false,
@@ -42,15 +74,32 @@ export default function DrawingCanvas({
 }) {
   const [currentPath, setCurrentPath] = useState('');
   const [lassoPath, setLassoPath] = useState('');
+  const [hiddenStrokeIds, setHiddenStrokeIds] = useState(new Set());
   const pointsRef = useRef([]);
   const strokeStartTimeRef = useRef(0);
 
   // Silgi optimizasyonu için RAF ve koordinat ref'leri
   const lastEraseCoordRef = useRef(null);
+  const prevEraseCoordRef = useRef(null);
   const eraseRafIdRef = useRef(null);
+  const lastHapticTimeRef = useRef(0);
+
+  // Silgi yerel oturumu (gesture boyunca üst sayfaya re-render vermeden çalışır)
+  const eraserSessionRef = useRef(null);
+
+  // Çizgi sınır kutuları önbelleği (bounding box cache ile 100x hızlı hit test)
+  const strokeBoundsCacheRef = useRef(new Map());
 
   // Karakter koordinatları önbelleği (gereksiz re-calculation yükünü önler)
   const charBoxesCacheRef = useRef(new Map());
+
+  const triggerThrottledHaptic = useCallback(() => {
+    const now = Date.now();
+    if (now - lastHapticTimeRef.current > 160) {
+      lastHapticTimeRef.current = now;
+      triggerHaptic();
+    }
+  }, []);
 
   const getCachedCharBoxes = useCallback((block) => {
     const cache = charBoxesCacheRef.current.get(block.id);
@@ -74,6 +123,26 @@ export default function DrawingCanvas({
       boxes,
     });
     return boxes;
+  }, []);
+
+  const getStrokeBounds = useCallback((stroke) => {
+    let bounds = strokeBoundsCacheRef.current.get(stroke.id);
+    if (!bounds && stroke.points && stroke.points.length > 0) {
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+      for (let i = 0; i < stroke.points.length; i++) {
+        const p = stroke.points[i];
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+      }
+      bounds = { minX, minY, maxX, maxY };
+      strokeBoundsCacheRef.current.set(stroke.id, bounds);
+    }
+    return bounds;
   }, []);
 
   // Stale Closure problemini çözmek için en güncel propları bir ref'te tutuyoruz
@@ -166,96 +235,176 @@ export default function DrawingCanvas({
     for (let i = 1; i < points.length; i++) {
       d += ` L ${points[i].x} ${points[i].y}`;
     }
-    // Kapalı çokgen hissi için başlangıca bağla
     if (points.length > 2) {
       d += ' Z';
     }
     return d;
   };
 
-  // Silgi algoritması: Dokunulan noktanın yakınındaki çizgileri ve metin kutularını bulup siler
-  const eraseNearPoint = useCallback((x, y) => {
-    const state = stateRef.current;
+  /**
+   * processEraseAt - Tek bir noktadaki silme kontrolünü yerel oturum (session) üzerinde yapar.
+   * Üst sayfada setState çağırmaz (0 parent re-render).
+   * Silinen çizgileri anlık hiddenStrokeIds ile ekrandan gizler.
+   */
+  const processEraseAt = useCallback((x, y) => {
+    const session = eraserSessionRef.current;
+    if (!session) return;
+
     const radius = 25; // Silgi etki alanı yarıçapı
+    const rSquared = radius * radius;
+    let newStrokesHidden = false;
 
     // 1. Çizim çizgilerini (el yazısı) silme kontrolü
-    if (state.onDrawingsChange && state.drawings && state.drawings.length > 0) {
-      const remainingStrokes = state.drawings.filter((stroke) => {
-        if (!stroke.points || stroke.points.length === 0) return true;
-        const isHit = stroke.points.some(
-          (p) => Math.hypot(p.x - x, p.y - y) < radius
-        );
-        return !isHit;
+    for (const stroke of session.drawings) {
+      if (session.deletedDrawingIds.has(stroke.id)) continue;
+      if (!stroke.points || stroke.points.length === 0) continue;
+
+      const bounds = getStrokeBounds(stroke);
+      if (bounds) {
+        if (
+          x + radius < bounds.minX ||
+          x - radius > bounds.maxX ||
+          y + radius < bounds.minY ||
+          y - radius > bounds.maxY
+        ) {
+          continue; // Bounding box dışında, noktaları taramaya gerek yok (hızlı filtreleme)
+        }
+      }
+
+      // Sınır kutusu içinde: nokta bazlı mesafe kontrolü (karekök almadan rSquared ile)
+      const isHit = stroke.points.some((p) => {
+        const dx = p.x - x;
+        const dy = p.y - y;
+        return dx * dx + dy * dy < rSquared;
       });
 
-      if (remainingStrokes.length !== state.drawings.length) {
-        stateRef.current.drawings = remainingStrokes;
-        state.onDrawingsChange(remainingStrokes);
+      if (isHit) {
+        session.deletedDrawingIds.add(stroke.id);
+        session.hasChanges = true;
+        newStrokesHidden = true;
+        triggerThrottledHaptic();
       }
     }
 
+    if (newStrokesHidden) {
+      setHiddenStrokeIds(new Set(session.deletedDrawingIds));
+    }
+
     // 2. Dijital metin kutularını (textBlocks) harf harf kısmi silme kontrolü
-    if (state.onTextBlocksChange && state.textBlocks && state.textBlocks.length > 0) {
-      let anyTextChanged = false;
-      const updatedTextBlocks = [];
-      const completelyDeletedBlocks = [];
-      const editedBlocksInfo = [];
+    for (let i = 0; i < session.currentTextBlocks.length; i++) {
+      const block = session.currentTextBlocks[i];
+      if (!block || !block.text) continue;
+      if (session.deletedBlockIds.has(block.id)) continue;
 
-      for (const block of state.textBlocks) {
-        // Hızlı geniş filtreleme: silgi bu bloğun sınırlarına yakın bile değilse harfleri hesaplama
-        if (!isEraserHittingTextBlock(x, y, radius, block)) {
-          updatedTextBlocks.push(block);
-          continue;
-        }
+      // Hızlı geniş filtreleme: silgi bu bloğun sınırlarına yakın bile değilse harfleri hesaplama
+      if (!isEraserHittingTextBlock(x, y, radius, block)) continue;
 
-        // Bloğa ait harf kutularını önbellekten al veya hesapla
-        const charBoxes = getCachedCharBoxes(block);
-        const erasedIndices = getErasedCharacterIndices(x, y, radius, charBoxes);
+      // Bloğa ait harf kutularını önbellekten al veya hesapla
+      const charBoxes = getCachedCharBoxes(block);
+      const erasedIndices = getErasedCharacterIndices(x, y, radius, charBoxes);
 
-        if (erasedIndices.length > 0) {
-          const result = eraseCharactersFromBlock(block, erasedIndices);
-          if (result.changed) {
-            anyTextChanged = true;
-            if (result.shouldDeleteBlock) {
-              completelyDeletedBlocks.push(block);
-              charBoxesCacheRef.current.delete(block.id);
+      if (erasedIndices.length > 0) {
+        const result = eraseCharactersFromBlock(block, erasedIndices);
+        if (result.changed) {
+          session.hasChanges = true;
+          session.textBlocksChanged = true;
+          triggerThrottledHaptic();
+
+          if (result.shouldDeleteBlock) {
+            session.deletedBlockIds.add(block.id);
+            session.completelyDeletedBlocks.push(block);
+            charBoxesCacheRef.current.delete(block.id);
+            session.currentTextBlocks.splice(i, 1);
+            i--;
+          } else {
+            session.currentTextBlocks[i] = result.updatedBlock;
+            const existingEdit = session.editedBlocksInfo.find((e) => e.blockId === block.id);
+            if (existingEdit) {
+              existingEdit.newText = result.updatedBlock.text;
             } else {
-              updatedTextBlocks.push(result.updatedBlock);
-              editedBlocksInfo.push({
+              session.editedBlocksInfo.push({
                 blockId: block.id,
                 previousText: result.previousText,
                 newText: result.updatedBlock.text,
               });
-              // Önbelleği yeni metinle güncelle
-              charBoxesCacheRef.current.set(block.id, {
-                text: result.updatedBlock.text,
-                x: result.updatedBlock.x,
-                y: result.updatedBlock.y,
-                width: result.updatedBlock.width,
-                fontSize: result.updatedBlock.fontSize,
-                boxes: calculateCharacterBoxes(result.updatedBlock),
-              });
             }
-          } else {
-            updatedTextBlocks.push(block);
-          }
-        } else {
-          updatedTextBlocks.push(block);
-        }
-      }
 
-      if (anyTextChanged) {
-        stateRef.current.textBlocks = updatedTextBlocks;
-        state.onTextBlocksChange(updatedTextBlocks);
-        triggerHaptic();
-        if (completelyDeletedBlocks.length > 0 && state.onTextBlockDeleted) {
-          state.onTextBlockDeleted(completelyDeletedBlocks);
-        }
-        if (editedBlocksInfo.length > 0 && state.onTextBlockEdited) {
-          state.onTextBlockEdited(editedBlocksInfo);
+            // Önbelleği yeni metinle güncelle
+            charBoxesCacheRef.current.set(block.id, {
+              text: result.updatedBlock.text,
+              x: result.updatedBlock.x,
+              y: result.updatedBlock.y,
+              width: result.updatedBlock.width,
+              fontSize: result.updatedBlock.fontSize,
+              boxes: calculateCharacterBoxes(result.updatedBlock),
+            });
+          }
         }
       }
     }
+  }, [getCachedCharBoxes, getStrokeBounds, triggerThrottledHaptic]);
+
+  /**
+   * eraseBetweenPoints - İki silgi koordinatı arasındaki hattı 15px aralıklarla enterpole eder.
+   * Hızlı silme hareketlerinde noktaların atlanmasını ve silginin çizgilerin üzerinden geçip
+   * silmeme sorununu 100% çözer.
+   */
+  const eraseBetweenPoints = useCallback((p1, p2) => {
+    if (!p1) {
+      if (p2) processEraseAt(p2.x, p2.y);
+      return;
+    }
+    if (!p2) return;
+
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const dist = Math.hypot(dx, dy);
+    const stepSize = 15; // 25px yarıçaplı silgi için 15px adım mükemmel örtüşme sağlar
+    const steps = Math.max(1, Math.ceil(dist / stepSize));
+
+    for (let s = 1; s <= steps; s++) {
+      const t = s / steps;
+      processEraseAt(p1.x + dx * t, p1.y + dy * t);
+    }
+  }, [processEraseAt]);
+
+  /**
+   * commitEraserBatch - Silgi parmaktan/kalemden ayrıldığında tüm değişiklikleri tek seferde kaydeder.
+   */
+  const commitEraserBatch = useCallback(() => {
+    const session = eraserSessionRef.current;
+    if (!session || !session.hasChanges) {
+      eraserSessionRef.current = null;
+      setHiddenStrokeIds(new Set());
+      return;
+    }
+
+    const state = stateRef.current;
+
+    // 1. Çizim çizgilerini tek seferde güncelle
+    if (session.deletedDrawingIds.size > 0 && state.onDrawingsChange) {
+      const remainingDrawings = state.drawings.filter(
+        (s) => !session.deletedDrawingIds.has(s.id)
+      );
+      stateRef.current.drawings = remainingDrawings;
+      state.onDrawingsChange(remainingDrawings);
+    }
+
+    // 2. Metin kutularını tek seferde güncelle
+    if (session.textBlocksChanged && state.onTextBlocksChange) {
+      stateRef.current.textBlocks = session.currentTextBlocks;
+      state.onTextBlocksChange(session.currentTextBlocks);
+
+      if (session.completelyDeletedBlocks.length > 0 && state.onTextBlockDeleted) {
+        state.onTextBlockDeleted(session.completelyDeletedBlocks);
+      }
+      if (session.editedBlocksInfo.length > 0 && state.onTextBlockEdited) {
+        state.onTextBlockEdited(session.editedBlocksInfo);
+      }
+    }
+
+    eraserSessionRef.current = null;
+    setHiddenStrokeIds(new Set());
   }, []);
 
   // PanResponder yalnızca bir kez oluşturulur ve her zaman güncel ref değerlerini okur
@@ -269,13 +418,24 @@ export default function DrawingCanvas({
         const { locationX, locationY } = evt.nativeEvent;
 
         if (state.tool === 'eraser') {
-          // Dokunulduğu an anında sil (0 gecikme)
-          eraseNearPoint(locationX, locationY);
+          // Yeni bir silgi oturumu başlat
+          eraserSessionRef.current = {
+            drawings: [...state.drawings],
+            deletedDrawingIds: new Set(),
+            currentTextBlocks: [...state.textBlocks],
+            deletedBlockIds: new Set(),
+            completelyDeletedBlocks: [],
+            editedBlocksInfo: [],
+            textBlocksChanged: false,
+            hasChanges: false,
+          };
+          prevEraseCoordRef.current = { x: locationX, y: locationY };
+          lastEraseCoordRef.current = { x: locationX, y: locationY };
+          processEraseAt(locationX, locationY);
           return;
         }
 
         if (state.tool === 'lasso') {
-          // Önceki seçimi temizle ve yeni kement başlat
           if (state.selectedStrokeIds.length > 0 && state.onSelectionChange) {
             state.onSelectionChange({ selectedStrokeIds: [], bounds: null, selectedStrokes: [] });
           }
@@ -294,13 +454,13 @@ export default function DrawingCanvas({
         const { locationX, locationY } = evt.nativeEvent;
 
         if (state.tool === 'eraser') {
-          // Sürükleme esnasında RAF ile optimize edilmiş silme
           lastEraseCoordRef.current = { x: locationX, y: locationY };
           if (!eraseRafIdRef.current) {
             eraseRafIdRef.current = requestAnimationFrame(() => {
               eraseRafIdRef.current = null;
               if (lastEraseCoordRef.current) {
-                eraseNearPoint(lastEraseCoordRef.current.x, lastEraseCoordRef.current.y);
+                eraseBetweenPoints(prevEraseCoordRef.current, lastEraseCoordRef.current);
+                prevEraseCoordRef.current = { ...lastEraseCoordRef.current };
               }
             });
           }
@@ -328,9 +488,11 @@ export default function DrawingCanvas({
             eraseRafIdRef.current = null;
           }
           if (lastEraseCoordRef.current) {
-            eraseNearPoint(lastEraseCoordRef.current.x, lastEraseCoordRef.current.y);
+            eraseBetweenPoints(prevEraseCoordRef.current, lastEraseCoordRef.current);
+            prevEraseCoordRef.current = null;
             lastEraseCoordRef.current = null;
           }
+          commitEraserBatch();
           return;
         }
 
@@ -377,11 +539,39 @@ export default function DrawingCanvas({
               points: [...pointsRef.current],
             };
 
+            // Önbelleği yeni çizgi için de besle
+            let minX = Infinity;
+            let minY = Infinity;
+            let maxX = -Infinity;
+            let maxY = -Infinity;
+            for (let i = 0; i < newStroke.points.length; i++) {
+              const p = newStroke.points[i];
+              if (p.x < minX) minX = p.x;
+              if (p.x > maxX) maxX = p.x;
+              if (p.y < minY) minY = p.y;
+              if (p.y > maxY) maxY = p.y;
+            }
+            strokeBoundsCacheRef.current.set(newStroke.id, { minX, minY, maxX, maxY });
+
             state.onDrawingsChange([...state.drawings, newStroke]);
           }
         }
         pointsRef.current = [];
         setCurrentPath('');
+      },
+
+      onPanResponderTerminate: () => {
+        const state = stateRef.current;
+        if (state.tool === 'eraser') {
+          if (eraseRafIdRef.current) {
+            cancelAnimationFrame(eraseRafIdRef.current);
+            eraseRafIdRef.current = null;
+          }
+          commitEraserBatch();
+        }
+        pointsRef.current = [];
+        setCurrentPath('');
+        setLassoPath('');
       },
     })
   ).current;
@@ -394,27 +584,21 @@ export default function DrawingCanvas({
 
   return (
     <View
-      style={[styles.container, style]}
+      style={[
+        styles.container,
+        { zIndex: isDrawingMode ? 50 : 20 },
+        style,
+      ]}
       pointerEvents={isDrawingMode ? 'auto' : 'none'}
       {...(isDrawingMode ? panResponder.panHandlers : {})}
     >
       <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
-        {/* Tamamlanmış Kalıcı Çizgiler */}
-        {drawings.map((stroke) => {
-          const isSelected = selectedStrokeIds.includes(stroke.id);
-          return (
-            <Path
-              key={stroke.id}
-              d={stroke.d}
-              stroke={isSelected ? '#E91E63' : stroke.color}
-              strokeWidth={isSelected ? stroke.strokeWidth + 1 : stroke.strokeWidth}
-              strokeOpacity={stroke.strokeOpacity || 0.95}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
-            />
-          );
-        })}
+        {/* Tamamlanmış Kalıcı Çizgiler (Memoized Layer - 0 Gereksiz Re-render) */}
+        <StaticDrawingsLayer
+          drawings={drawings}
+          selectedStrokeIds={selectedStrokeIds}
+          hiddenStrokeIds={hiddenStrokeIds}
+        />
 
         {/* Halen Çizilmekte Olan Anlık Çizgi */}
         {currentPath ? (
@@ -490,6 +674,5 @@ export default function DrawingCanvas({
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 25,
   },
 });

@@ -269,11 +269,19 @@ export default function AjandamScreen() {
             {/* Metin Katmanı */}
             <TextCanvas
               isTextMode={activeMode === 'text'}
+              isDrawingMode={activeMode === 'drawing'}
               textBlocks={coverData?.textBlocks || []}
               onTextBlocksChange={handleTextBlocksChange}
               activeColor={textColor}
               activeFontSize={textFontSize}
               isEraserActive={activeMode === 'drawing' && drawingTool === 'eraser'}
+              pointerEvents={
+                activeMode === 'drawing'
+                  ? 'none'
+                  : activeMode === 'text'
+                  ? 'auto'
+                  : 'box-none'
+              }
             />
 
             {/* Çizim Katmanı */}
@@ -286,7 +294,10 @@ export default function AjandamScreen() {
               onDrawingsChange={handleDrawingsChange}
               textBlocks={coverData?.textBlocks || []}
               onTextBlocksChange={handleTextBlocksChange}
-              style={styles.fullBleedCanvas}
+              style={[
+                styles.fullBleedCanvas,
+                { zIndex: activeMode === 'drawing' ? 50 : 20 },
+              ]}
             />
           </ImageWithSkeleton>
         </InteractiveCover3D>

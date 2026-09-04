@@ -18,6 +18,7 @@ export default function StickerCanvas({
   onStickerMove,
   onStickerResize,
   onStickerDelete,
+  isDrawingMode = false,
 }) {
   const [selectedStickerId, setSelectedStickerId] = useState(null);
   const [canvasLayout, setCanvasLayout] = useState({ width: 0, height: 0 });
@@ -30,7 +31,7 @@ export default function StickerCanvas({
   return (
     <View
       style={styles.canvas}
-      pointerEvents="box-none"
+      pointerEvents={isDrawingMode ? 'none' : 'box-none'}
       onLayout={(e) => {
         const { width, height } = e.nativeEvent.layout;
         setCanvasLayout({ width, height });
