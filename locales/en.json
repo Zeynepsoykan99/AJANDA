@@ -1,0 +1,40 @@
+{
+  "common": {
+    "appName": "PLANNER",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "undo": "Undo",
+    "edit": "Edit",
+    "close": "Close",
+    "search": "Search...",
+    "loading": "Loading...",
+    "confirm": "Confirm",
+    "back": "Back"
+  },
+  "home": {
+    "appTitle": "PLANNER",
+    "searchPlaceholder": "Search pages, notes or to-dos...",
+    "menuDiary": "my diary",
+    "menuAgenda": "my planner",
+    "menuNotes": "my notes",
+    "menuTodoList": "to-do list",
+    "themeTooltip": "App Theme",
+    "languageTooltip": "Language Selection"
+  },
+  "language": {
+    "title": "Select Language",
+    "subtitle": "Choose the application display language",
+    "turkish": "Türkçe",
+    "english": "English",
+    "systemDefault": "System Default (Auto)",
+    "currentLanguage": "Current Language"
+  },
+  "theme": {
+    "title": "App Theme",
+    "presetThemes": "Preset Themes",
+    "customColor": "Pick Custom Color",
+    "currentColor": "Current Color",
+    "applyColor": "Apply Color"
+  }
+}

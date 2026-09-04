@@ -9,11 +9,14 @@
     "expo-constants": "~18.0.14",
     "expo-haptics": "~15.0.8",
     "expo-linking": "~8.0.12",
+    "expo-localization": "~17.0.9",
     "expo-router": "~6.0.24",
     "expo-status-bar": "~3.0.9",
+    "i18next": "^26.4.2",
     "nativewind": "^2.0.11",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "react-i18next": "^17.0.13",
     "react-native": "0.81.5",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-reanimated": "~4.1.1",
@@ -29,7 +32,8 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "postinstall": "node -e \"const fs = require('fs'); const p = 'node_modules/i18next/package.json'; if (fs.existsSync(p)) { const pkg = JSON.parse(fs.readFileSync(p)); if (pkg.module !== './dist/cjs/i18next.js') { pkg.module = './dist/cjs/i18next.js'; fs.writeFileSync(p, JSON.stringify(pkg, null, 2)); } }\""
   },
   "private": true,
   "devDependencies": {

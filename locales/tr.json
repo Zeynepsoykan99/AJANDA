@@ -1,0 +1,40 @@
+{
+  "common": {
+    "appName": "AJANDA",
+    "save": "Kaydet",
+    "cancel": "Vazgeç",
+    "delete": "Sil",
+    "undo": "Geri Al",
+    "edit": "Düzenle",
+    "close": "Kapat",
+    "search": "Ara...",
+    "loading": "Yükleniyor...",
+    "confirm": "Onayla",
+    "back": "Geri"
+  },
+  "home": {
+    "appTitle": "AJANDA",
+    "searchPlaceholder": "Sayfa, not veya yapılacaklarda ara...",
+    "menuDiary": "günlüğüm",
+    "menuAgenda": "ajandam",
+    "menuNotes": "notlarım",
+    "menuTodoList": "yapılacaklar",
+    "themeTooltip": "Uygulama Teması",
+    "languageTooltip": "Dil Seçimi"
+  },
+  "language": {
+    "title": "Dil Seçin",
+    "subtitle": "Uygulama arayüz dilini belirleyin",
+    "turkish": "Türkçe",
+    "english": "English",
+    "systemDefault": "Sistem Dili (Otomatik)",
+    "currentLanguage": "Mevcut Dil"
+  },
+  "theme": {
+    "title": "Uygulama Teması",
+    "presetThemes": "Hazır Temalar",
+    "customColor": "Özel Renk Seç",
+    "currentColor": "Seçili Renk",
+    "applyColor": "Rengi Uygula"
+  }
+}

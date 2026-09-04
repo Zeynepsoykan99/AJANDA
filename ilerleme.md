@@ -4,6 +4,47 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-04] - Çoklu Dil (i18n) Desteği ve Otomatik Sistem Dili Algılama Eklendi
+
+### 🚀 Eklenen Özellikler & Geliştirmeler
+- **i18next & react-i18next Entegrasyonu:**
+  - Uygulamanın tüm arayüz metinlerini dinamik olarak yöneten modüler çeviri motoru kuruldu.
+  - Modüler JSON sözlükleri oluşturuldu: `locales/tr.json` (Türkçe) ve `locales/en.json` (İngilizce).
+  - React Native için `compatibilityJSON: 'v4'` ve `useSuspense: false` optimizasyonları ile sıfır gecikmeli, beyaz ekransız başlatma sağlandı.
+- **Otomatik Cihaz Dili Algılama (`expo-localization`):**
+  - Uygulama ilk açıldığında `expo-localization` aracılığıyla cihazın sistem dili (`getLocales()[0]?.languageCode`) tespit edilir.
+  - Sistem dili Türkçe ise varsayılan dil `'tr'`, diğer tüm diller için ise evrensel fallback olarak `'en'` (İngilizce) otomatik olarak belirlenir.
+- **Kalıcı Kullanıcı Tercihi (AsyncStorage Senkronizasyonu):**
+  - Kullanıcı dili arayüzden manuel olarak değiştirdiğinde (`changeAppLanguage`), bu seçim `@ajanda_language` anahtarıyla AsyncStorage'a kaydedilir.
+  - Sonraki açılışlarda cihazın sistem dili ne olursa olsun kullanıcının kayıtlı tercihi öncelikli olarak yüklenir.
+- **Şık Dil Seçim Modalı (`LanguagePickerModal`):**
+  - Bayrak emojileri (🇹🇷/🇬🇧), sistem dili rozeti ve dokunsal geri bildirim (Haptics) ile zenginleştirilmiş, tema uyumlu dil seçim menüsü eklendi.
+- **Ana Ekran (HomeScreen) Çeviri Entegrasyonu:**
+  - Header'a aktif dili gösteren (`TR` / `EN`) şık bir buton eklendi.
+  - 4 dairesel ana menü butonu (`günlüğüm` $\leftrightarrow$ `my diary`, `ajandam` $\leftrightarrow$ `my planner`, `notlarım` $\leftrightarrow$ `my notes`, `yapılacaklar` $\leftrightarrow$ `to-do list`), arama çubuğu ve uygulama başlığı `useTranslation()` ile dinamikleştirildi.
+
+### ✅ Yapılan Değişiklikler
+#### `locales/tr.json` & `locales/en.json`
+- `common`, `home`, `language` ve `theme` alanlarını içeren Türkçe ve İngilizce dil sözlükleri oluşturuldu.
+
+#### `i18n/index.js`
+- `i18next`, `react-i18next` ve `expo-localization` entegrasyonu, senkron cihaz dili fallback'i ve `changeAppLanguage` servisi kuruldu.
+
+#### `services/storageService.js`
+- `KEYS.LANGUAGE = '@ajanda_language'` tanımlandı; `getLanguage` ve `setLanguage` metodları eklendi.
+
+#### `components/LanguagePickerModal.js`
+- Türkçe ve İngilizce arasında anlık geçiş sağlayan, dokunsal geri bildirimli seçim modalı oluşturuldu.
+
+#### `app/_layout.js` & `app/index.js`
+- Kök layout'ta `i18n` başlatıldı.
+- Ana ekranda dil seçim butonu, modalı ve dinamik çeviriler (`useTranslation`) devreye alındı.
+
+#### `package.json`
+- `expo-localization`, `i18next`, `react-i18next` bağımlılıkları ve Metro web desteği için `postinstall` yaması eklendi.
+
+---
+
 ## 📅 [2026-09-04] - Çizim (Apple Pencil) ve Silgi (Eraser) Etkileşim & Re-render Optimizasyonu
 
 ### 🚀 Eklenen Özellikler & Onarımlar

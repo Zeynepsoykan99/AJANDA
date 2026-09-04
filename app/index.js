@@ -3,9 +3,11 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import CircleMenuButton from '../components/CircleMenuButton';
 import ThemePickerModal from '../components/ThemePickerModal';
 import GlobalSearchModal from '../components/ui/GlobalSearchModal';
+import LanguagePickerModal from '../components/LanguagePickerModal';
 import { useTheme } from '../context/ThemeContext';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
 
@@ -13,14 +15,19 @@ export default function HomeScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { isTablet } = useResponsiveLayout();
+  const { t, i18n } = useTranslation();
+
   const [isThemeModalVisible, setIsThemeModalVisible] = React.useState(false);
   const [isSearchModalVisible, setIsSearchModalVisible] = React.useState(false);
+  const [isLanguageModalVisible, setIsLanguageModalVisible] = React.useState(false);
+
+  const currentLang = (i18n.language || 'tr').substring(0, 2).toUpperCase();
 
   const menuItems = [
-    { id: 'gunlugum', label: 'günlüğüm', route: '/gunlugum', icon: 'book-heart-outline' },
-    { id: 'ajandam', label: 'ajandam', route: '/ajandam', icon: 'calendar-heart' },
-    { id: 'notlarim', label: 'notlarım', route: '/defterlerim', icon: 'notebook-outline' },
-    { id: 'todolist', label: 'yapılacaklar', route: '/todolist', icon: 'format-list-checkbox' },
+    { id: 'gunlugum', label: t('home.menuDiary', 'günlüğüm'), route: '/gunlugum', icon: 'book-heart-outline' },
+    { id: 'ajandam', label: t('home.menuAgenda', 'ajandam'), route: '/ajandam', icon: 'calendar-heart' },
+    { id: 'notlarim', label: t('home.menuNotes', 'notlarım'), route: '/defterlerim', icon: 'notebook-outline' },
+    { id: 'todolist', label: t('home.menuTodoList', 'yapılacaklar'), route: '/todolist', icon: 'format-list-checkbox' },
   ];
 
   const handleMenuPress = (item) => {
@@ -35,16 +42,31 @@ export default function HomeScreen() {
       >
         {/* Başlık Bölümü */}
         <View style={styles.headerContainer}>
-          <Text style={[styles.appTitle, { color: colors.textPrimary }]}>AJANDA</Text>
+          <Text style={[styles.appTitle, { color: colors.textPrimary }]}>
+            {t('home.appTitle', 'AJANDA')}
+          </Text>
           <View style={[styles.titleUnderline, { backgroundColor: colors.border }]} />
-          
-          <TouchableOpacity
-            style={[styles.settingsButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-            onPress={() => setIsThemeModalVisible(true)}
-            activeOpacity={0.7}
-          >
-            <MaterialCommunityIcons name="palette-outline" size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
+
+          {/* Sağ Üst Buton Grubu (Dil Seçimi + Tema Seçimi) */}
+          <View style={styles.headerRightButtons}>
+            <TouchableOpacity
+              style={[styles.headerIconButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => setIsLanguageModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.langBadgeText, { color: colors.accent }]}>
+                {currentLang}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.headerIconButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => setIsThemeModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              <MaterialCommunityIcons name="palette-outline" size={22} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Hızlı Arama Çubuğu (Spotlight Search Bar) */}
@@ -62,7 +84,7 @@ export default function HomeScreen() {
         >
           <MaterialCommunityIcons name="magnify" size={22} color={colors.accent} />
           <Text style={[styles.searchBarPlaceholder, { color: colors.textSecondary + '99' }]}>
-            Sayfa, not veya yapılacaklarda ara...
+            {t('home.searchPlaceholder', 'Sayfa, not veya yapılacaklarda ara...')}
           </Text>
           <View style={[styles.searchBadge, { backgroundColor: colors.accent + '15' }]}>
             <MaterialCommunityIcons name="arrow-right" size={14} color={colors.accent} />
@@ -82,6 +104,12 @@ export default function HomeScreen() {
           ))}
         </View>
       </ScrollView>
+
+      {/* Dil Seçici Modal */}
+      <LanguagePickerModal
+        visible={isLanguageModalVisible}
+        onClose={() => setIsLanguageModalVisible(false)}
+      />
 
       {/* Tema Seçici Modal */}
       <ThemePickerModal
@@ -127,22 +155,31 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     marginTop: 6,
   },
-  settingsButton: {
+  headerRightButtons: {
     position: 'absolute',
     right: 0,
     top: 0,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerIconButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    // Gölge
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+  },
+  langBadgeText: {
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   searchBar: {
     width: '100%',

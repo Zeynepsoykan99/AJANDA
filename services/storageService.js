@@ -9,9 +9,28 @@ const KEYS = {
   THEME: '@ajanda_theme',
   COVER: '@ajanda_cover',
   PAGES: '@ajanda_pages',
+  LANGUAGE: '@ajanda_language',
 };
 
 export const StorageService = {
+  // ─── Dil (Language) ──────────────────────────────────
+  getLanguage: async () => {
+    try {
+      return await AsyncStorage.getItem(KEYS.LANGUAGE);
+    } catch (error) {
+      console.warn('StorageService.getLanguage hata:', error);
+      return null;
+    }
+  },
+
+  setLanguage: async (languageCode) => {
+    try {
+      await AsyncStorage.setItem(KEYS.LANGUAGE, languageCode);
+    } catch (error) {
+      console.warn('StorageService.setLanguage hata:', error);
+    }
+  },
+
   // ─── Tema ─────────────────────────────────────────────
   getTheme: async () => {
     try {
