@@ -4,6 +4,31 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-04] - Ana Ekran Renk Seçici Menüsünün Yenilenmesi (Lüks Reanimated Bottom Sheet)
+
+### 🚀 Eklenen Özellikler & Tasarım İyileştirmeleri
+- **Lüks "Bottom Sheet" Mimarisine Geçiş (`ThemePickerModal.js`):**
+  - Hantal modal ve dikey kutular yerine, ekranın altından pürüzsüzce yükselen modern ve ergonomik bir Bottom Sheet oluşturuldu.
+  - Tabletlerde ekranın alt-ortasında yüzen lüks kart yapısına (`maxWidth: 520px`) adapte edildi.
+- **Akıcı Animasyonlar (`react-native-reanimated`):**
+  - **Açılış (Spring Entrance):** Arka perde `withTiming` ile kararırken, panel ekranın altından yaylanarak (`withSpring(0, { damping: 20, stiffness: 160 })`) doğal bir fiziksel hissiyatla yükselir.
+  - **Kapanış:** Panel aşağıya doğru kayar (`withTiming`) ve modal kapanır.
+  - **Aşağı Sürükleyerek Kapatma (Swipe-to-Dismiss / PanResponder):** Kullanıcı tutamaçtan (drag handle) aşağı doğru kaydırdığında parmağı 1:1 takip eder; eşik mesafe aşıldığında veya hızlıca fırlatıldığında titreşimle birlikte pürüzsüzce kapanır.
+- **Lüks Renk Swatch'ları (Palette Swatches):**
+  - Dikey dikdörtgen butonlar yerine; yatay kaydırılabilir, dairesel renk kapsülleri tasarlandı.
+  - Her swatch'ta pastel arka plan, zengin tema vurgu rengi, sevimli emojiler ve zarif tipografi yer aldı.
+  - **Aktif Renk Vurgusu (Halo Ring):** Seçili olan temanın etrafında 2.5px kalınlığında dış halka, hafif parlama ve ortasında beyaz onay ikonu (`check`) konumlandırıldı.
+- **Entegre Özel Renk Seçici (Custom Color Drawer):**
+  - "+ Özel" renk swatch'u ile `reanimated-color-picker` çarkı, seçili HEX kodu etiketi ve canlı önizleme rozeti katlanabilir şekilde entegre edildi.
+- **Dokunsal Geri Bildirim (Haptics):**
+  - Her renk değişiminde ve sürükleyerek kapatma aksiyonunda `expo-haptics` ile hafif titreşim sağlandı.
+
+### ✅ Doğrulama & Testler
+- Android ve iOS Metro bundle derlemeleri (`HTTP 200 OK`) hatasız tamamlandı.
+- Sürükleyerek kapatma, renk geçişleri ve özel renk çarkı doğrulandı.
+
+---
+
 ## 📅 [2026-09-04] - To-Do ve Ajanda Varsayılan Başlıklarının Render Anında Dinamik Çevirisi (Seçenek B)
 
 ### 🐛 Çözülen Mantıksal Hata (Root Cause: Data Creation vs. Render)
