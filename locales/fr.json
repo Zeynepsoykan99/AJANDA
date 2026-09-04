@@ -68,7 +68,7 @@
     "selectCover": "Choisir la Couverture",
     "categoryTodo": "Liste de Tâches",
     "categoryMonthly": "Agenda Mensuel",
-    "categoryWeekly": "Agenda Semanal"
+    "categoryWeekly": "Agenda Hebdomadaire"
   },
   "pageCards": {
     "completedSummary": "{{done}}/{{total}} terminées",

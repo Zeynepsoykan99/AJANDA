@@ -51,7 +51,7 @@ export default function AddTodoModal({ visible, onClose, onAdd }) {
       id: generatePageId(),
       category: 'todo',
       templateId: selectedTemplateId,
-      title: title.trim() || t('todo.defaultTitle', 'Yeni Liste'),
+      title: title.trim(),
       createdAt: new Date().toISOString(),
       order: Date.now(),
       data: createDefaultPageData('todo'),

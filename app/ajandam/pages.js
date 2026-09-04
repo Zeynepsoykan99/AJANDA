@@ -20,6 +20,7 @@ import DatePickerModal from '../../components/ui/DatePickerModal';
 import UndoToast from '../../components/ui/UndoToast';
 import GlobalSearchModal from '../../components/ui/GlobalSearchModal';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
+import { getPageDisplayTitle } from '../../utils/pageTitleHelper';
 
 /**
  * PagesScreen - Ajanda Sayfa Listesi
@@ -122,8 +123,8 @@ export default function PagesScreen() {
     setUndoToast({
       visible: true,
       message: t('agenda.deletedToast', {
-        title: pageToDelete.title || t('agenda.newPageDefault', 'Sayfa'),
-        defaultValue: `"${pageToDelete.title || 'Sayfa'}" silindi`,
+        title: getPageDisplayTitle(pageToDelete, t),
+        defaultValue: `"${getPageDisplayTitle(pageToDelete, t)}" silindi`,
       }),
     });
   }, [t]);

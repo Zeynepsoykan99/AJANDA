@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { StorageService } from '../../services/storageService';
 import { searchAllData } from '../../services/searchService';
+import { getPageDisplayTitle } from '../../utils/pageTitleHelper';
 
 const DATE_LOCALE_MAP = {
   tr: 'tr-TR',
@@ -346,7 +347,7 @@ export default function GlobalSearchModal({
                               style={[styles.resultTitle, { color: colors.textPrimary }]}
                               numberOfLines={1}
                             >
-                              {item.title}
+                              {getPageDisplayTitle(item, t)}
                             </Text>
                             <Text style={[styles.categoryTag, { color: colors.accent }]}>
                               {getCategoryLabel(item.category, item.categoryName)}

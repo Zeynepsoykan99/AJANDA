@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { PAGE_CATEGORIES, getPageTemplate } from '../constants/pageTemplates';
+import { getPageDisplayTitle, getCategoryDisplayName } from '../utils/pageTitleHelper';
 
 /**
  * PageThumbnail - Sayfa önizleme kartı
@@ -102,7 +103,7 @@ export default function PageThumbnail({ page, onPress, onLongPress, onDelete }) 
             style={[styles.pageTitle, { color: templateColors.accent }]}
             numberOfLines={1}
           >
-            {page.title}
+            {getPageDisplayTitle(page, t)}
           </Text>
           <View style={styles.metaRow}>
             <Text
@@ -114,7 +115,7 @@ export default function PageThumbnail({ page, onPress, onLongPress, onDelete }) 
                 },
               ]}
             >
-              {category?.emoji} {category?.name}
+              {category?.emoji} {getCategoryDisplayName(page.category, t, category?.name)}
             </Text>
           </View>
           <Text style={[styles.summary, { color: templateColors.accent + '99' }]}>

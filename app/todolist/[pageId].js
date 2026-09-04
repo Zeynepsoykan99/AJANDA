@@ -27,6 +27,7 @@ import LassoActionMenu from '../../components/drawing/LassoActionMenu';
 import RecognitionConfirmationModal from '../../components/drawing/RecognitionConfirmationModal';
 import { fitTextToBounds } from '../../utils/lassoGeometry';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
+import { getPageDisplayTitle, getCategoryDisplayName } from '../../utils/pageTitleHelper';
 
 /**
  * TodoViewScreen - Sadece To-Do listesini görüntüler ve düzenler
@@ -661,10 +662,10 @@ export default function TodoViewScreen() {
             style={[styles.pageTitle, { color: colors.textPrimary }]}
             numberOfLines={1}
           >
-            {page.title}
+            {getPageDisplayTitle(page, t)}
           </Text>
           <Text style={[styles.categoryLabel, { color: colors.textSecondary + '99' }]}>
-            {category?.emoji} {t('todo.categoryLabel', 'Yapılacaklar')}
+            {category?.emoji} {getCategoryDisplayName('todo', t, t('todo.categoryLabel', 'Yapılacaklar'))}
           </Text>
         </View>
 

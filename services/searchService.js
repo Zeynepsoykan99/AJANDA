@@ -241,7 +241,7 @@ export const searchAllData = async (
 
       results.push({
         id: page.id,
-        title: page.title || 'İsimsiz Sayfa',
+        title: page.title || '',
         category: page.category,
         categoryName,
         categoryEmoji,

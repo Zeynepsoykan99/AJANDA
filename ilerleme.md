@@ -4,6 +4,34 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-04] - To-Do ve Ajanda Varsayılan Başlıklarının Render Anında Dinamik Çevirisi (Seçenek B)
+
+### 🐛 Çözülen Mantıksal Hata (Root Cause: Data Creation vs. Render)
+- **Sorun:** Almanca veya başka bir dil seçildiğinde alt metinler ("Leere Liste" vb.) çevrilirken, liste başlıklarının statik olarak "Yeni Liste" kalması sorunu giderildi.
+- **Kök Neden:** `AddTodoModal.js` ve `AddPageModal.js` içerisinde kullanıcı başlık girmediğinde `title: title.trim() || t(...)` şeklinde o anki dildeki metin kalıcı veri olarak `AsyncStorage`'a kaydediliyordu ve UI tarafında `{page.title}` doğrudan basıldığı için dil değişimlerinden etkilenmiyordu.
+
+### 🚀 Uygulanan Çözüm (Seçenek B - Render Anında Dinamik Çeviri)
+- **Veri Oluşturma Düzeltmesi (Data Creation):**
+  - `components/AddTodoModal.js` ve `components/AddPageModal.js` modallarında kullanıcı özel bir başlık girmediğinde başlık boş string (`""`) olarak kaydedilmeye başlandı.
+- **Merkezi Başlık Yardımcısı (`utils/pageTitleHelper.js`):**
+  - `DEFAULT_PAGE_TITLES`: Türkçe, İngilizce, Almanca, İspanyolca ve Fransızca dillerindeki bilinen tüm varsayılan başlıkları içeren kapsamlı set oluşturuldu (`"Yeni Liste"`, `"New List"`, `"Neue Liste"`, `"Aylık Ajanda"`, `"Monatsplaner"`, vb.).
+  - `getPageDisplayTitle(page, t)`: Kullanıcı özel bir başlık belirlediyse (örn: "Market Alışverişi", "Mathe") başlığı korur; başlık boşsa veya sistemin varsayılan başlıklarından biriyse aktif dildeki çeviriyi (`t('todo.defaultTitle')`, `t('agenda.categoryMonthly')` vb.) render eder.
+  - `getCategoryDisplayName(catId, t, fallback)`: Kartlar ve üst barlardaki kategori rozetlerini aktif dilde dinamik çevirir.
+- **Geriye Dönük Uyumluluk (Backward Compatibility):**
+  - Kullanıcının cihazında önceden kaydedilmiş eski "Yeni Liste", "New List" vb. veriler de algılanarak dil değişiminde anında yeni dile adapte edilmesi sağlandı.
+- **Arayüz Entegrasyonları (Render Time):**
+  - `components/PageThumbnail.js`: Kart başlıkları ve kategori rozetleri dinamikleştirildi.
+  - `app/todolist/[pageId].js` & `app/ajandam/[pageId].js`: Üst başlık çubuğu ve kategori etiketleri dinamikleştirildi.
+  - `app/todolist/index.js` & `app/ajandam/pages.js`: Silme geri al (undo toast) mesajlarındaki sayfa adları dinamikleştirildi.
+  - `components/ui/GlobalSearchModal.js` & `services/searchService.js`: Arama sonuç kartlarındaki sayfa başlıkları dinamikleştirildi.
+  - `locales/fr.json`: Fransızca `agenda.categoryWeekly` çevirisindeki yazım düzeltildi ("Agenda Hebdomadaire").
+
+### ✅ Doğrulama & Testler
+- 5 dilde (TR, EN, DE, ES, FR) birim testleri (16 test) başarıyla tamamlandı.
+- Android ve iOS Metro bundle derlemeleri (HTTP 200 OK) başarıyla doğrulandı.
+
+---
+
 ## 📅 [2026-09-04] - Çoklu Dil (i18n) Genişletmesi: 5 Dil Desteği & Tüm Alt Sayfaların Yerelleştirilmesi
 
 ### 🚀 Eklenen Özellikler & Geliştirmeler

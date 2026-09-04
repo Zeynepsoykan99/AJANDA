@@ -20,6 +20,7 @@ import DatePickerModal from '../../components/ui/DatePickerModal';
 import UndoToast from '../../components/ui/UndoToast';
 import GlobalSearchModal from '../../components/ui/GlobalSearchModal';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
+import { getPageDisplayTitle } from '../../utils/pageTitleHelper';
 
 /**
  * TodoListScreen - Yapılacaklar Ana Ekranı
@@ -122,8 +123,8 @@ export default function TodoListScreen() {
     setUndoToast({
       visible: true,
       message: t('todo.deletedToast', {
-        title: pageToDelete.title || t('todo.defaultTitle', 'Liste'),
-        defaultValue: `"${pageToDelete.title || 'Liste'}" silindi`,
+        title: getPageDisplayTitle(pageToDelete, t),
+        defaultValue: `"${getPageDisplayTitle(pageToDelete, t)}" silindi`,
       }),
     });
   }, [t]);

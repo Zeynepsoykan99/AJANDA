@@ -74,7 +74,7 @@ export default function AddPageModal({ visible, onClose, onAdd }) {
       id: generatePageId(),
       category: selectedCategory.id,
       templateId: selectedTemplateId,
-      title: title.trim() || getCategoryName(selectedCategory) || t('agenda.newPageDefault', 'Yeni Sayfa'),
+      title: title.trim(),
       createdAt: new Date().toISOString(),
       order: Date.now(),
       data: createDefaultPageData(selectedCategory.id),

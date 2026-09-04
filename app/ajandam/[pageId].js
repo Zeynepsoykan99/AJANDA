@@ -32,6 +32,7 @@ import { recognizeHandwriting, recognizeSelectedStrokes } from '../../services/h
 import LassoActionMenu from '../../components/drawing/LassoActionMenu';
 import RecognitionConfirmationModal from '../../components/drawing/RecognitionConfirmationModal';
 import { fitTextToBounds } from '../../utils/lassoGeometry';
+import { getPageDisplayTitle, getCategoryDisplayName } from '../../utils/pageTitleHelper';
 
 /**
  * PageViewScreen - Dinamik sayfa görüntüleme ve düzenleme
@@ -765,10 +766,10 @@ export default function PageViewScreen() {
             style={[styles.pageTitle, { color: colors.textPrimary }]}
             numberOfLines={1}
           >
-            {page.title}
+            {getPageDisplayTitle(page, t)}
           </Text>
           <Text style={[styles.categoryLabel, { color: colors.textSecondary + '99' }]}>
-            {category?.emoji} {category?.name}
+            {category?.emoji} {getCategoryDisplayName(page?.category, t, category?.name)}
           </Text>
         </View>
 
