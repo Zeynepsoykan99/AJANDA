@@ -1,0 +1,199 @@
+{
+  "common": {
+    "appName": "AJANDA",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "undo": "Annuler",
+    "undoUpper": "ANNULER",
+    "edit": "Modifier",
+    "close": "Fermer",
+    "search": "Rechercher...",
+    "loading": "Chargement...",
+    "confirm": "Confirmer",
+    "back": "Retour",
+    "today": "Aujourd'hui",
+    "emptyItem": "Élément supprimé"
+  },
+  "home": {
+    "appTitle": "AJANDA",
+    "searchPlaceholder": "Rechercher des pages, notes ou tâches...",
+    "menuDiary": "mon journal",
+    "menuAgenda": "mon agenda",
+    "menuNotes": "mes notes",
+    "menuTodoList": "mes tâches",
+    "themeTooltip": "Thème de l'application",
+    "languageTooltip": "Choix de la langue"
+  },
+  "todo": {
+    "title": "Liste de Tâches",
+    "defaultTitle": "Nouvelle Liste",
+    "templateStep": "Choisir un Modèle",
+    "titleStep": "Titre de la Liste",
+    "next": "Continuer",
+    "createList": "Créer la Liste",
+    "inputLabel": "Titre de la liste (optionnel)",
+    "inputPlaceholder": "Courses, Tâches Quotidiennes...",
+    "emptyFilterTitle": "Aucune liste trouvée",
+    "emptyTitle": "Plus aucune tâche restante !",
+    "emptyFilterDesc": "Aucune liste créée le {{date}}.",
+    "emptyDesc": "Appuyez sur le bouton + pour créer une nouvelle liste.",
+    "clearFilter": "Effacer le Filtre",
+    "deletedToast": "\"{{title}}\" supprimé",
+    "notFound": "Liste introuvable",
+    "goBack": "Retourner",
+    "deleteConfirmTitle": "Supprimer la Liste",
+    "deleteConfirmMessage": "Voulez-vous vraiment supprimer cette liste ?",
+    "categoryLabel": "Liste de Tâches"
+  },
+  "agenda": {
+    "coverTitle": "Couverture de l'Agenda",
+    "pagesTitle": "Mes Pages",
+    "emptyFilterTitle": "Aucune page trouvée",
+    "emptyTitle": "Aucune page ajoutée pour l'instant",
+    "emptyFilterDesc": "Aucune page créée le {{date}}.",
+    "emptyDesc": "Appuyez sur le bouton + ci-dessous pour ajouter votre première page !",
+    "clearFilter": "Effacer le Filtre",
+    "deletedToast": "\"{{title}}\" supprimé",
+    "deleteConfirmTitle": "Supprimer la Page",
+    "deleteConfirmMessage": "Voulez-vous vraiment supprimer cette page ?",
+    "notFound": "Page introuvable",
+    "typeStep": "Type de Page",
+    "templateStep": "Choisir un Modèle",
+    "finalStep": "Dernières Retouches",
+    "pageType": "Type de Page",
+    "pageTitleOptional": "Titre de la Page (optionnel)",
+    "newPageDefault": "Nouvelle Page",
+    "createPage": "Créer la Page",
+    "selectCover": "Choisir la Couverture",
+    "categoryTodo": "Liste de Tâches",
+    "categoryMonthly": "Agenda Mensuel",
+    "categoryWeekly": "Agenda Semanal"
+  },
+  "pageCards": {
+    "completedSummary": "{{done}}/{{total}} terminées",
+    "emptyTodo": "Liste vide",
+    "eventsSummary": "{{count}} événements",
+    "emptyEvents": "Aucun événement",
+    "tasksSummary": "{{count}} tâches",
+    "emptyWeekly": "Semaine vide",
+    "charsSummary": "{{count}} caractères",
+    "emptyBlank": "Page blanche"
+  },
+  "drawing": {
+    "modeDrawing": "Dessiner",
+    "modeText": "Clavier",
+    "strokeThin": "Fin",
+    "strokeMedium": "Moyen",
+    "strokeThick": "Épais",
+    "fontSmall": "Petit",
+    "fontMedium": "Moyen",
+    "fontLarge": "Grand",
+    "customColorTitle": "Choisir une Couleur",
+    "apply": "Appliquer",
+    "strokesDeleted": "{{count}} tracés supprimés",
+    "textDeleted": "Texte supprimé",
+    "textsDeleted": "{{count}} textes supprimés",
+    "handwritingConverted": "Écriture convertie en texte",
+    "stickerDeleted": "Autocollant supprimé",
+    "typeNotePlaceholder": "Écrivez votre note..."
+  },
+  "lasso": {
+    "convertToText": "Convertir en Texte",
+    "delete": "Supprimer"
+  },
+  "recognition": {
+    "title": "Convertir l'Écriture en Texte",
+    "scanning": "Numérisation de l'écriture avec le moteur d'encre numérique...",
+    "recognizedLabel": "Texte Reconnu (modifiez si nécessaire) :",
+    "placeholder": "Aucun texte détecté, écrivez ici...",
+    "candidates": "Lectures Alternatives :",
+    "selectFont": "Choisir la Police :",
+    "fontSize": "Taille de Police :",
+    "confirm": "Convertir et Ajouter"
+  },
+  "stickers": {
+    "title": "🎀 Autocollants",
+    "hearts": "Cœurs",
+    "stars": "Étoiles",
+    "nature": "Nature",
+    "decorative": "Décoratif",
+    "food": "Nourriture",
+    "mood": "Humeur",
+    "custom_images": "Images personnalisées"
+  },
+  "datePicker": {
+    "title": "Filtrer par Date",
+    "today": "Aujourd'hui",
+    "clearFilter": "Effacer le Filtre"
+  },
+  "search": {
+    "placeholder": "Rechercher des pages, notes ou tâches...",
+    "tabAll": "Tout",
+    "tabAgenda": "Agenda",
+    "tabTodo": "Tâches",
+    "tabCover": "Couverture",
+    "initialTitle": "Rechercher dans Toutes les Pages",
+    "initialSubtitle": "Recherchez dans les titres, notes d'agenda, tâches ou couvertures.",
+    "noResultsTitle": "Aucun Résultat Trouvé",
+    "noResultsSubtitle": "Aucun titre ou note ne correspond à \"{{query}}\". Essayez un autre mot.",
+    "resultsCount": "{{count}} résultats trouvés",
+    "foundFromHandwriting": "Trouvé dans l'écriture manuscrite"
+  },
+  "theme": {
+    "title": "Thème de l'Application",
+    "subtitle": "Personnalisez l'apparence d'AJANDA selon vos goûts.",
+    "presetThemes": "Thèmes Prédéfinis",
+    "customColor": "✨ Choisissez votre Couleur",
+    "currentColor": "Couleur Sélectionnée",
+    "applyColor": "Appliquer la Couleur",
+    "customHint": "Choisissez n'importe quelle couleur, l'application s'adapte instantanément."
+  },
+  "language": {
+    "title": "Sélectionner la Langue",
+    "subtitle": "Choisissez la langue de l'interface",
+    "turkish": "Türkçe",
+    "english": "English",
+    "german": "Deutsch",
+    "spanish": "Español",
+    "french": "Français",
+    "systemDefault": "Par Défaut du Système (Auto)",
+    "currentLanguage": "Langue Actuelle"
+  },
+  "subpages": {
+    "notebooks": "mes carnets",
+    "diary": "mon journal"
+  },
+  "templates": {
+    "todoPage": {
+      "priority": "Priorités du jour",
+      "study": "Études et devoirs",
+      "personal": "Personnel et habitudes",
+      "emptyCategory": "Aucune tâche ajoutée à cette section pour le moment",
+      "addPlaceholder": "Ajouter {{name}}...",
+      "reminderTitle": "Rappel du jour et examens 🌸",
+      "reminderPlaceholder": "Dates d'examens importantes, dates limites de devoirs et citations motivantes...",
+      "importantNoteTitle": "Note importante 🎀",
+      "importantNotePlaceholder": "À ne pas oublier...",
+      "watermark": "DAILY STUDY & TO-DO 📚",
+      "badgeLabel": "🌸 OBJECTIFS QUOTIDIENS ET TO-DO 🌸"
+    },
+    "monthlyPage": {
+      "goalsTitle": "✨ OBJECTIFS DU MOIS ✨",
+      "notesTitle": "Notes et examens de {{month}} 🎀",
+      "mobileGoalsTitle": "Objectifs de {{month}} 🌸",
+      "goalsPlaceholder": "Projets à rendre ce mois-ci, semaines d'examens, livres à lire et objectifs personnels...",
+      "mobileGoalsPlaceholder": "Dates importantes et objectifs de ce mois...",
+      "eventsTitle": "📅 Événements de ce mois",
+      "noEvents": "Appuyez sur un jour du calendrier pour ajouter un événement ou un examen !",
+      "modalPrompt": "Écrivez l'examen, le devoir ou l'événement pour ce jour :",
+      "modalInputPlaceholder": "Ex. : Examen de maths, Fête d'anniversaire..."
+    },
+    "weeklyPage": {
+      "notesTitle": "Objectifs hebdomadaires et notes 🎀",
+      "notesPlaceholder": "Quels examens cette semaine ? Objectifs et notes de motivation...",
+      "addPlaceholder": "Écrire un nouveau plan ou cours...",
+      "badgeLabel": "PLAN HEBDOMADAIRE"
+    }
+  }
+}

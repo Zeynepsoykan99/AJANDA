@@ -14,6 +14,7 @@ import WashiTape from '../stationery/WashiTape';
 import StickyNote from '../stationery/StickyNote';
 import PaperSheet from '../stationery/PaperSheet';
 import SpiralBinder from '../stationery/SpiralBinder';
+import { useTranslation } from 'react-i18next';
 
 const MONTH_NAMES = [
   'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
@@ -22,18 +23,49 @@ const MONTH_NAMES = [
 
 const DAY_NAMES = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 
+const DATE_LOCALE_MAP = {
+  tr: 'tr-TR',
+  en: 'en-US',
+  de: 'de-DE',
+  es: 'es-ES',
+  fr: 'fr-FR',
+};
+
 /**
  * MonthlyPage - Kırtasiye Masa Takvimi & Aylık Ajanda Şablonu
  * iPad'de geniş masa takvimi ve yan not paneli;
  * fosforlu kalem (highlighter) ve washi bant efektleriyle zenginleştirilmiştir.
  */
 export default function MonthlyPage({ template, data, onDataChange }) {
+  const { t, i18n } = useTranslation();
   const { isTwoPage, isTablet } = useResponsiveLayout();
+
+  const currentLang = i18n.language?.slice(0, 2) || 'tr';
+  const activeLocale = DATE_LOCALE_MAP[currentLang] || 'tr-TR';
 
   const year = data?.year || new Date().getFullYear();
   const month = data?.month || new Date().getMonth();
   const events = data?.events || [];
   const monthlyGoals = data?.monthlyGoals || '';
+
+  const monthDisplayName = React.useMemo(() => {
+    try {
+      return new Intl.DateTimeFormat(activeLocale, { month: 'long' }).format(new Date(year, month, 1));
+    } catch {
+      return MONTH_NAMES[month];
+    }
+  }, [activeLocale, year, month]);
+
+  const dayNames = React.useMemo(() => {
+    try {
+      const formatter = new Intl.DateTimeFormat(activeLocale, { weekday: 'short' });
+      return [1, 2, 3, 4, 5, 6, 7].map((d) =>
+        formatter.format(new Date(2026, 7, 30 + d))
+      );
+    } catch {
+      return DAY_NAMES;
+    }
+  }, [activeLocale]);
 
   // Gün seçimi ve etkinlik düzenleme modalı
   const [selectedDay, setSelectedDay] = useState(null);
@@ -147,7 +179,7 @@ export default function MonthlyPage({ template, data, onDataChange }) {
           height={26}
           rotation={-1}
           pattern="hearts"
-          label={`🌸 ${MONTH_NAMES[month]} ${year}`}
+          label={`🌸 ${monthDisplayName} ${year}`}
         />
 
         <TouchableOpacity
@@ -164,8 +196,8 @@ export default function MonthlyPage({ template, data, onDataChange }) {
 
       {/* Gün İsimleri */}
       <View style={styles.dayNamesRow}>
-        {DAY_NAMES.map((name) => (
-          <View key={name} style={styles.dayNameCell}>
+        {dayNames.map((name, idx) => (
+          <View key={`dayname-${idx}`} style={styles.dayNameCell}>
             <Text style={[styles.dayNameText, { color: colors.header }]}>
               {name}
             </Text>
@@ -252,24 +284,24 @@ export default function MonthlyPage({ template, data, onDataChange }) {
                 height={24}
                 rotation={1}
                 pattern="dots"
-                label="✨ AYIN HEDEFLERİ ✨"
+                label={t('templates.monthlyPage.goalsTitle')}
               />
             </View>
 
             {/* Ayın Hedefleri Post-it */}
             <StickyNote
-              title={`${MONTH_NAMES[month]} Notları & Sınavlar 🎀`}
+              title={t('templates.monthlyPage.notesTitle', { month: monthDisplayName })}
               content={monthlyGoals}
               onChangeContent={handleGoalsChange}
               color="#FFF9C4"
               tapeColor="#FFCC80"
-              placeholder="Bu ay teslim edilecek projeler, sınav haftaları, okunacak kitaplar ve kendime hedefler..."
+              placeholder={t('templates.monthlyPage.goalsPlaceholder')}
               style={styles.stickyPanel}
             />
 
             {/* Ayın Etkinlik Özeti Listesi */}
             <View style={styles.eventsListCard}>
-              <Text style={styles.eventsListTitle}>📅 Bu Ayın Etkinlikleri</Text>
+              <Text style={styles.eventsListTitle}>{t('templates.monthlyPage.eventsTitle')}</Text>
               {events.length > 0 ? (
                 events
                   .sort((a, b) => a.day - b.day)
@@ -285,7 +317,7 @@ export default function MonthlyPage({ template, data, onDataChange }) {
                   ))
               ) : (
                 <Text style={styles.noEventsText}>
-                  Takvimdeki bir güne tıklayarak etkinlik veya sınav ekleyebilirsin!
+                  {t('templates.monthlyPage.noEvents')}
                 </Text>
               )}
             </View>
@@ -311,12 +343,12 @@ export default function MonthlyPage({ template, data, onDataChange }) {
         {/* Mobil Alt Notluk */}
         <View style={styles.mobileStickySection}>
           <StickyNote
-            title={`${MONTH_NAMES[month]} Hedefleri 🌸`}
+            title={t('templates.monthlyPage.mobileGoalsTitle', { month: monthDisplayName })}
             content={monthlyGoals}
             onChangeContent={handleGoalsChange}
             color="#FFF9C4"
             tapeColor="#FFCC80"
-            placeholder="Bu ayın önemli tarihleri ve hedefleri..."
+            placeholder={t('templates.monthlyPage.mobileGoalsPlaceholder')}
           />
         </View>
       </ScrollView>
@@ -345,17 +377,17 @@ export default function MonthlyPage({ template, data, onDataChange }) {
               width={140}
               height={22}
               pattern="dots"
-              label={`🌸 ${selectedDay} ${MONTH_NAMES[month]}`}
+              label={`🌸 ${selectedDay} ${monthDisplayName}`}
             />
             <Text style={styles.modalSub}>
-              Bu güne ait sınav, ödev veya etkinliğini yaz:
+              {t('templates.monthlyPage.modalPrompt')}
             </Text>
 
             <TextInput
               style={styles.modalInput}
               value={eventInputText}
               onChangeText={setEventInputText}
-              placeholder="Örn: Matematik Sınavı, Doğum Günü Partisi..."
+              placeholder={t('templates.monthlyPage.modalInputPlaceholder')}
               placeholderTextColor="#9E9E9E"
               multiline
               numberOfLines={3}
@@ -369,14 +401,14 @@ export default function MonthlyPage({ template, data, onDataChange }) {
                 }}
                 style={styles.deleteModalBtn}
               >
-                <Text style={styles.deleteModalText}>Sil</Text>
+                <Text style={styles.deleteModalText}>{t('common.delete')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 onPress={handleSaveDayEvent}
                 style={[styles.saveModalBtn, { backgroundColor: colors.accent }]}
               >
-                <Text style={styles.saveModalText}>Kaydet</Text>
+                <Text style={styles.saveModalText}>{t('common.save')}</Text>
               </TouchableOpacity>
             </View>
           </View>

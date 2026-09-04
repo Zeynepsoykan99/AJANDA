@@ -15,6 +15,7 @@ import SpiralBinder from '../stationery/SpiralBinder';
 import PaperSheet from '../stationery/PaperSheet';
 import GridPaperSheet from '../stationery/GridPaperSheet';
 import { DaisyFlower, RibbonBow, FloralCorner, DoodleHeart } from '../stationery/FloralDecorations';
+import { useTranslation } from 'react-i18next';
 
 const DAY_NAMES_FULL = [
   'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar',
@@ -24,14 +25,37 @@ const DAY_EMOJIS = ['🌸', '✨', '🎀', '🌷', '🧁', '🏖️', '☕'];
 
 const WASHI_PATTERNS = ['dots', 'stripes', 'hearts', 'dots', 'stripes', 'hearts', 'dots'];
 
+const DATE_LOCALE_MAP = {
+  tr: 'tr-TR',
+  en: 'en-US',
+  de: 'de-DE',
+  es: 'es-ES',
+  fr: 'fr-FR',
+};
+
 /**
  * WeeklyPage - Kırtasiye Haftalık Plan Şablonu
  * iPad/Tablet'te çift sayfalı telli ajanda düzeni,
  * mobilde sevimli washi bantlı günlük kartlar ve post-it notları sunar.
  */
 export default function WeeklyPage({ template, data, onDataChange }) {
+  const { t, i18n } = useTranslation();
   const { isTwoPage, isTablet } = useResponsiveLayout();
   const [newItemTexts, setNewItemTexts] = useState({});
+
+  const currentLang = i18n.language?.slice(0, 2) || 'tr';
+  const activeLocale = DATE_LOCALE_MAP[currentLang] || 'tr-TR';
+
+  const dayNamesFull = React.useMemo(() => {
+    try {
+      const formatter = new Intl.DateTimeFormat(activeLocale, { weekday: 'long' });
+      return [1, 2, 3, 4, 5, 6, 7].map((d) =>
+        formatter.format(new Date(2026, 7, 30 + d))
+      );
+    } catch {
+      return DAY_NAMES_FULL;
+    }
+  }, [activeLocale]);
 
   const days = data?.days || DAY_NAMES_FULL.map((_, i) => ({ dayOfWeek: i, items: [] }));
   const weeklyNote = data?.weeklyNote || '';
@@ -126,7 +150,7 @@ export default function WeeklyPage({ template, data, onDataChange }) {
   const renderDayBlock = (dayIndex) => {
     const day = days.find((d) => d.dayOfWeek === dayIndex) || { dayOfWeek: dayIndex, items: [] };
     const isToday = dayIndex === todayDow;
-    const dayName = DAY_NAMES_FULL[dayIndex];
+    const dayName = dayNamesFull[dayIndex] || DAY_NAMES_FULL[dayIndex];
     const emoji = DAY_EMOJIS[dayIndex];
     const washiPattern = WASHI_PATTERNS[dayIndex];
 
@@ -165,7 +189,7 @@ export default function WeeklyPage({ template, data, onDataChange }) {
           </View>
           {isToday && (
             <View style={styles.todayPill}>
-              <Text style={styles.todayPillText}>Bugün</Text>
+              <Text style={styles.todayPillText}>{t('common.today')}</Text>
             </View>
           )}
         </View>
@@ -218,7 +242,7 @@ export default function WeeklyPage({ template, data, onDataChange }) {
                   [day.dayOfWeek]: text,
                 }))
               }
-              placeholder="Yeni plan veya ders yaz..."
+              placeholder={t('templates.weeklyPage.addPlaceholder')}
               placeholderTextColor={colors.accent + '50'}
               onSubmitEditing={() => handleAddItem(day.dayOfWeek)}
               returnKeyType="done"
@@ -282,12 +306,12 @@ export default function WeeklyPage({ template, data, onDataChange }) {
             {/* Haftanın Notları / Post-It */}
             <View style={styles.stickyWrapper}>
               <StickyNote
-                title="Haftalık Hedefler & Notlar 🎀"
+                title={t('templates.weeklyPage.notesTitle')}
                 content={weeklyNote}
                 onChangeContent={handleWeeklyNoteChange}
                 color="#FFF9C4"
                 tapeColor="#FFCC80"
-                placeholder="Bu hafta hangi sınavlar var? Hedefler ve motivasyon notları..."
+                placeholder={t('templates.weeklyPage.notesPlaceholder')}
               />
             </View>
           </ScrollView>
@@ -314,7 +338,7 @@ export default function WeeklyPage({ template, data, onDataChange }) {
             width={180}
             height={26}
             pattern="hearts"
-            label={`🎀 ${template?.name || 'HAFTALIK PLAN'} 🎀`}
+            label={`🎀 ${template?.name || t('templates.weeklyPage.badgeLabel')} 🎀`}
           />
         </View>
 
@@ -324,12 +348,12 @@ export default function WeeklyPage({ template, data, onDataChange }) {
         {/* Alt Post-it Notu */}
         <View style={styles.mobileSticky}>
           <StickyNote
-            title="Haftanın Notları 🌸"
+            title={t('templates.weeklyPage.notesTitle')}
             content={weeklyNote}
             onChangeContent={handleWeeklyNoteChange}
             color="#FFF9C4"
             tapeColor="#FFCC80"
-            placeholder="Bu haftanın önemli notları, sınavlar ve hatırlatmalar..."
+            placeholder={t('templates.weeklyPage.notesPlaceholder')}
           />
         </View>
       </ScrollView>

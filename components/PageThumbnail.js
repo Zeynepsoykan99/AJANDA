@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { PAGE_CATEGORIES, getPageTemplate } from '../constants/pageTemplates';
 
 /**
@@ -12,6 +13,7 @@ import { PAGE_CATEGORIES, getPageTemplate } from '../constants/pageTemplates';
  * @param {function} onLongPress - Uzun basma (silme vb.)
  */
 export default function PageThumbnail({ page, onPress, onLongPress, onDelete }) {
+  const { t, i18n } = useTranslation();
   const category = PAGE_CATEGORIES.find((c) => c.id === page.category);
   const template = getPageTemplate(page.category, page.templateId);
   const templateColors = template?.colors || { bg: '#FFF0F5', accent: '#C2185B' };
@@ -22,22 +24,30 @@ export default function PageThumbnail({ page, onPress, onLongPress, onDelete }) 
       case 'todo': {
         const total = page.data?.items?.length || 0;
         const done = page.data?.items?.filter((i) => i.completed)?.length || 0;
-        return total > 0 ? `${done}/${total} tamamlandı` : 'Boş liste';
+        return total > 0
+          ? t('pageCards.completedSummary', { done, total, defaultValue: `${done}/${total} tamamlandı` })
+          : t('pageCards.emptyTodo', 'Boş liste');
       }
       case 'monthly': {
         const events = page.data?.events?.length || 0;
-        return events > 0 ? `${events} etkinlik` : 'Etkinlik yok';
+        return events > 0
+          ? t('pageCards.eventsSummary', { count: events, defaultValue: `${events} etkinlik` })
+          : t('pageCards.emptyEvents', 'Etkinlik yok');
       }
       case 'weekly': {
         const totalItems = page.data?.days?.reduce(
           (sum, d) => sum + (d.items?.length || 0),
           0
         ) || 0;
-        return totalItems > 0 ? `${totalItems} görev` : 'Boş hafta';
+        return totalItems > 0
+          ? t('pageCards.tasksSummary', { count: totalItems, defaultValue: `${totalItems} görev` })
+          : t('pageCards.emptyWeekly', 'Boş hafta');
       }
       case 'blank': {
         const len = page.data?.content?.length || 0;
-        return len > 0 ? `${len} karakter` : 'Boş sayfa';
+        return len > 0
+          ? t('pageCards.charsSummary', { count: len, defaultValue: `${len} karakter` })
+          : t('pageCards.emptyBlank', 'Boş sayfa');
       }
       default:
         return '';
@@ -45,8 +55,10 @@ export default function PageThumbnail({ page, onPress, onLongPress, onDelete }) 
   };
 
   const rawDate = page.createdAt ? new Date(page.createdAt) : null;
+  const dateLocaleMap = { tr: 'tr-TR', en: 'en-US', de: 'de-DE', es: 'es-ES', fr: 'fr-FR' };
+  const currentLocale = dateLocaleMap[i18n.language?.slice(0, 2)] || 'en-US';
   const createdDate = rawDate && !isNaN(rawDate)
-    ? rawDate.toLocaleDateString('tr-TR', {
+    ? rawDate.toLocaleDateString(currentLocale, {
         day: 'numeric',
         month: 'short',
         year: 'numeric',

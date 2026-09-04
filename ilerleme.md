@@ -4,6 +4,53 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-04] - Çoklu Dil (i18n) Genişletmesi: 5 Dil Desteği & Tüm Alt Sayfaların Yerelleştirilmesi
+
+### 🚀 Eklenen Özellikler & Geliştirmeler
+- **5 Dil Desteğine Genişletme (TR, EN, DE, ES, FR):**
+  - Dil havuzuna Almanca (🇩🇪 Deutsch), İspanyolca (🇪🇸 Español) ve Fransızca (🇫🇷 Français) eklendi.
+  - Tüm 5 dilde %100 anahtar uyumu (161 anahtar) sağlandı:
+    - `locales/tr.json` (Türkçe)
+    - `locales/en.json` (İngilizce)
+    - `locales/de.json` (Almanca)
+    - `locales/es.json` (İspanyolca)
+    - `locales/fr.json` (Fransızca)
+- **Akıllı Cihaz Dili ve Yedekleme (Fallback):**
+  - Cihaz dili 5 dilden biriyse doğrudan o dil seçilir (`tr`, `en`, `de`, `es`, `fr`); diğer tüm diller için varsayılan fallback dili İngilizce (`en`) olarak çalışır.
+- **Kaydırılabilir Dil Seçim Arayüzü (`LanguagePickerModal`):**
+  - 5 dili rahatça göstermek için `ScrollView` ve maksimum yükseklik optimizasyonu yapıldı; aktif dil bayrağı ve rozeti güncellendi.
+- **Tüm Alt Sayfalardaki Sabit (Hardcoded) Metinlerin Çözülmesi:**
+  - **Yapılacaklar (`app/todolist`):**
+    - `components/AddTodoModal.js`: Kullanıcının belirttiği hardcoded `"Yeni Liste"` metni dinamik `t('todo.defaultTitle')` ile değiştirildi. Şablon seçimi, liste başlığı ve oluşturma adımları yerelleştirildi.
+    - `app/todolist/index.js` & `app/todolist/[pageId].js`: Başlıklar, geri al (undo) bildirimleri, el yazısı dönüştürme dili ve sayfa silme onayları yerelleştirildi.
+  - **Ajandam (`app/ajandam`):**
+    - `components/AddPageModal.js`: Sayfa oluşturma adımları, kategori isimleri, özet ve ipuçları yerelleştirildi.
+    - `app/ajandam/index.js`, `app/ajandam/pages.js`, `app/ajandam/[pageId].js`: Kapak, sayfalarım listesi, silme uyarıları ve el yazısı tanıma dili dinamikleştirildi.
+    - `components/CoverEditor.js`: Kapak seçimi ve kaydetme butonları yerelleştirildi.
+  - **Çizim Araçları & Modallar:**
+    - `components/drawing/DrawingToolbar.js`: Çizim/klavye modları, çizgi kalınlıkları, font boyutları ve özel renk paleti modalı yerelleştirildi.
+    - `components/drawing/LassoActionMenu.js`: Kement menüsü ("Metne Dönüştür" ve "Sil") yerelleştirildi.
+    - `components/drawing/RecognitionConfirmationModal.js`: Tanıma başlığı, taranıyor metni, alternatif okumalar, font seçici ve onay butonları yerelleştirildi.
+    - `components/text/TextCanvas.js`: Not yazma placeholder'ı yerelleştirildi.
+    - `components/stickers/StickerMenu.js`: Çıkartmalar başlığı ve tüm paket isimleri (Kalpler, Yıldızlar, Doğa vb.) dinamikleştirildi.
+    - `components/ui/DatePickerModal.js`: `Intl.DateTimeFormat` ile aktif dile göre dinamik ay ve gün isimleri, filtre temizleme ve bugün butonları yerelleştirildi.
+    - `components/ui/GlobalSearchModal.js`: Arama sekmeleri, arama placeholder'ı, sonuç sayısı, boş durumlar ve "El Yazısından Bulundu" rozeti yerelleştirildi.
+    - `components/ui/UndoToast.js`: "GERİ AL" butonu ve varsayılan silme mesajı yerelleştirildi.
+    - `components/ThemePickerModal.js`: Tema başlığı, alt başlık ve özel renk seçici ipuçları yerelleştirildi.
+    - `components/pages/TodoPage.js`, `components/pages/MonthlyPage.js`, `components/pages/WeeklyPage.js`: Sayfa şablonlarındaki kategoriler, takvim başlıkları, post-it notları ve hatırlatıcılar yerelleştirildi.
+    - `app/defterlerim.js` & `app/gunlugum.js`: Geri butonu ve sayfa başlıkları yerelleştirildi.
+
+### ✅ Yapılan Değişiklikler
+- `locales/tr.json`, `locales/en.json`, `locales/de.json`, `locales/es.json`, `locales/fr.json`: 5 dilli eksiksiz çeviri sözlükleri.
+- `i18n/index.js`: 5 dil yapılandırması ve `SUPPORTED_LANGUAGES` tanımı.
+- `components/LanguagePickerModal.js`: 5 dil destekli kaydırmalı modal.
+- `components/AddTodoModal.js`, `components/AddPageModal.js`, `components/CoverEditor.js`, `components/PageThumbnail.js`, `components/ThemePickerModal.js`, `components/stickers/StickerMenu.js`, `components/text/TextCanvas.js`, `components/ui/DatePickerModal.js`, `components/ui/GlobalSearchModal.js`, `components/ui/UndoToast.js`: Tam yerelleştirme.
+- `components/drawing/DrawingToolbar.js`, `components/drawing/LassoActionMenu.js`, `components/drawing/RecognitionConfirmationModal.js`: Çizim araç çubuğu ve modal yerelleştirmeleri.
+- `components/pages/TodoPage.js`, `components/pages/MonthlyPage.js`, `components/pages/WeeklyPage.js`: Şablon bileşenlerinin yerelleştirilmesi.
+- `app/todolist/index.js`, `app/todolist/[pageId].js`, `app/ajandam/index.js`, `app/ajandam/pages.js`, `app/ajandam/[pageId].js`, `app/defterlerim.js`, `app/gunlugum.js`: Ekran rotalarının yerelleştirilmesi.
+
+---
+
 ## 📅 [2026-09-04] - Çoklu Dil (i18n) Desteği ve Otomatik Sistem Dili Algılama Eklendi
 
 ### 🚀 Eklenen Özellikler & Geliştirmeler

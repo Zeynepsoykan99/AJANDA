@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { StorageService } from '../../services/storageService';
 import PageThumbnail from '../../components/PageThumbnail';
@@ -25,6 +26,7 @@ import useResponsiveLayout from '../../hooks/useResponsiveLayout';
  * Eklenen sayfaları listeler, yeni sayfa ekleme ve silme imkanı sunar.
  */
 export default function PagesScreen() {
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const { colors } = useTheme();
   const { isTablet } = useResponsiveLayout();
@@ -57,9 +59,11 @@ export default function PagesScreen() {
     return pages.filter((p) => isSameDay(p.createdAt, filterDate));
   }, [pages, filterDate]);
 
-  // Filtre aktifken Türkçe tarih metni
+  // Filtre aktifken yerelleştirilmiş tarih metni
+  const dateLocaleMap = { tr: 'tr-TR', en: 'en-US', de: 'de-DE', es: 'es-ES', fr: 'fr-FR' };
+  const currentLocale = dateLocaleMap[i18n.language?.slice(0, 2)] || 'en-US';
   const filterLabel = filterDate
-    ? filterDate.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })
+    ? filterDate.toLocaleDateString(currentLocale, { day: 'numeric', month: 'long', year: 'numeric' })
     : null;
 
   // Sayfaları yükle (Ekran her odaklandığında çalışır)
@@ -117,9 +121,12 @@ export default function PagesScreen() {
     pendingDeleteRef.current = { item: pageToDelete, timer };
     setUndoToast({
       visible: true,
-      message: `"${pageToDelete.title || 'Sayfa'}" silindi`,
+      message: t('agenda.deletedToast', {
+        title: pageToDelete.title || t('agenda.newPageDefault', 'Sayfa'),
+        defaultValue: `"${pageToDelete.title || 'Sayfa'}" silindi`,
+      }),
     });
-  }, []);
+  }, [t]);
 
   // Geri al işlemi
   const handleUndoDelete = useCallback(() => {
@@ -171,19 +178,21 @@ export default function PagesScreen() {
         color={colors.accent + '40'}
       />
       <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
-        {filterDate ? 'Sayfa bulunamadı' : 'Henüz sayfa eklenmedi'}
+        {filterDate ? t('agenda.emptyFilterTitle', 'Sayfa bulunamadı') : t('agenda.emptyTitle', 'Henüz sayfa eklenmedi')}
       </Text>
       <Text style={[styles.emptyDesc, { color: colors.textSecondary + '99' }]}>
         {filterDate
-          ? `${filterLabel} tarihinde oluşturulmuş sayfa yok.`
-          : 'Aşağıdaki + butonuna basarak ilk sayfanı ekle!'}
+          ? t('agenda.emptyFilterDesc', { date: filterLabel, defaultValue: `${filterLabel} tarihinde oluşturulmuş sayfa yok.` })
+          : t('agenda.emptyDesc', 'Aşağıdaki + butonuna basarak ilk sayfanı ekle!')}
       </Text>
       {filterDate && (
         <TouchableOpacity
           onPress={() => setFilterDate(null)}
           style={[styles.clearFilterInlineBtn, { borderColor: colors.accent }]}
         >
-          <Text style={[styles.clearFilterInlineText, { color: colors.accent }]}>Filtreyi Temizle</Text>
+          <Text style={[styles.clearFilterInlineText, { color: colors.accent }]}>
+            {t('agenda.clearFilter', 'Filtreyi Temizle')}
+          </Text>
         </TouchableOpacity>
       )}
     </View>
@@ -215,7 +224,7 @@ export default function PagesScreen() {
         </TouchableOpacity>
 
         <Text style={[styles.pageTitle, { color: colors.textPrimary }]}>
-          Sayfalarım
+          {t('agenda.pagesTitle', 'Sayfalarım')}
         </Text>
 
         <View style={styles.headerRightGroup}>

@@ -10,6 +10,7 @@ import {
   Image,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import { COVER_TEMPLATES } from '../constants/coverTemplates';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
@@ -20,6 +21,7 @@ import InteractiveCover3D from './stationery/InteractiveCover3D';
  * Metin girişleri kaldırılmıştır; kullanıcı sadece temiz bir galeriden şablon seçer.
  */
 export default function CoverEditor({ visible, onClose, coverData, onSave }) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const { isTablet } = useResponsiveLayout();
 
@@ -54,14 +56,14 @@ export default function CoverEditor({ visible, onClose, coverData, onSave }) {
             />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-            Kapak Seç
+            {t('agenda.selectCover', 'Kapak Seç')}
           </Text>
           <TouchableOpacity
             onPress={handleSave}
             style={[styles.saveButton, { backgroundColor: colors.accent }]}
           >
             <MaterialCommunityIcons name="check" size={20} color="#FFFFFF" />
-            <Text style={styles.saveButtonText}>Kaydet</Text>
+            <Text style={styles.saveButtonText}>{t('common.save', 'Kaydet')}</Text>
           </TouchableOpacity>
         </View>
 

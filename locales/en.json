@@ -1,20 +1,23 @@
 {
   "common": {
-    "appName": "PLANNER",
+    "appName": "AJANDA",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
     "undo": "Undo",
+    "undoUpper": "UNDO",
     "edit": "Edit",
     "close": "Close",
     "search": "Search...",
     "loading": "Loading...",
     "confirm": "Confirm",
-    "back": "Back"
+    "back": "Back",
+    "today": "Today",
+    "emptyItem": "Item deleted"
   },
   "home": {
-    "appTitle": "PLANNER",
-    "searchPlaceholder": "Search pages, notes or to-dos...",
+    "appTitle": "AJANDA",
+    "searchPlaceholder": "Search pages, notes, or to-dos...",
     "menuDiary": "my diary",
     "menuAgenda": "my planner",
     "menuNotes": "my notes",
@@ -22,19 +25,175 @@
     "themeTooltip": "App Theme",
     "languageTooltip": "Language Selection"
   },
-  "language": {
-    "title": "Select Language",
-    "subtitle": "Choose the application display language",
-    "turkish": "Türkçe",
-    "english": "English",
-    "systemDefault": "System Default (Auto)",
-    "currentLanguage": "Current Language"
+  "todo": {
+    "title": "To-Do List",
+    "defaultTitle": "New List",
+    "templateStep": "Select Template",
+    "titleStep": "List Title",
+    "next": "Continue",
+    "createList": "Create List",
+    "inputLabel": "List Title (optional)",
+    "inputPlaceholder": "Grocery Shopping, Daily Tasks...",
+    "emptyFilterTitle": "No list found",
+    "emptyTitle": "No tasks left!",
+    "emptyFilterDesc": "No list created on {{date}}.",
+    "emptyDesc": "Tap the + button to create a new to-do list.",
+    "clearFilter": "Clear Filter",
+    "deletedToast": "\"{{title}}\" deleted",
+    "notFound": "List not found",
+    "goBack": "Go Back",
+    "deleteConfirmTitle": "Delete List",
+    "deleteConfirmMessage": "Are you sure you want to delete this list?",
+    "categoryLabel": "To-Do List"
+  },
+  "agenda": {
+    "coverTitle": "Planner Cover",
+    "pagesTitle": "My Pages",
+    "emptyFilterTitle": "No pages found",
+    "emptyTitle": "No pages added yet",
+    "emptyFilterDesc": "No pages created on {{date}}.",
+    "emptyDesc": "Tap the + button below to add your first page!",
+    "clearFilter": "Clear Filter",
+    "deletedToast": "\"{{title}}\" deleted",
+    "deleteConfirmTitle": "Delete Page",
+    "deleteConfirmMessage": "Are you sure you want to delete this page?",
+    "notFound": "Page not found",
+    "typeStep": "Select Page Type",
+    "templateStep": "Select Template",
+    "finalStep": "Finishing Touches",
+    "pageType": "Page Type",
+    "pageTitleOptional": "Page Title (optional)",
+    "newPageDefault": "New Page",
+    "createPage": "Create Page",
+    "selectCover": "Select Cover",
+    "categoryTodo": "To-Do List",
+    "categoryMonthly": "Monthly Planner",
+    "categoryWeekly": "Weekly Planner"
+  },
+  "pageCards": {
+    "completedSummary": "{{done}}/{{total}} completed",
+    "emptyTodo": "Empty list",
+    "eventsSummary": "{{count}} events",
+    "emptyEvents": "No events",
+    "tasksSummary": "{{count}} tasks",
+    "emptyWeekly": "Empty week",
+    "charsSummary": "{{count}} characters",
+    "emptyBlank": "Blank page"
+  },
+  "drawing": {
+    "modeDrawing": "Draw",
+    "modeText": "Keyboard",
+    "strokeThin": "Thin",
+    "strokeMedium": "Medium",
+    "strokeThick": "Thick",
+    "fontSmall": "Small",
+    "fontMedium": "Medium",
+    "fontLarge": "Large",
+    "customColorTitle": "Choose Custom Color",
+    "apply": "Apply",
+    "strokesDeleted": "{{count}} drawings deleted",
+    "textDeleted": "Text deleted",
+    "textsDeleted": "{{count}} texts deleted",
+    "handwritingConverted": "Handwriting converted to text",
+    "stickerDeleted": "Sticker deleted",
+    "typeNotePlaceholder": "Type your note..."
+  },
+  "lasso": {
+    "convertToText": "Convert to Text",
+    "delete": "Delete"
+  },
+  "recognition": {
+    "title": "Convert Handwriting to Text",
+    "scanning": "Scanning handwriting with digital ink engine...",
+    "recognizedLabel": "Recognized Text (edit if needed):",
+    "placeholder": "No text detected, type here...",
+    "candidates": "Alternative Readings:",
+    "selectFont": "Select Font:",
+    "fontSize": "Font Size:",
+    "confirm": "Convert and Add"
+  },
+  "stickers": {
+    "title": "🎀 Stickers",
+    "hearts": "Hearts",
+    "stars": "Stars",
+    "nature": "Nature",
+    "decorative": "Decorative",
+    "food": "Food",
+    "mood": "Mood",
+    "custom_images": "Custom Images"
+  },
+  "datePicker": {
+    "title": "Filter by Date",
+    "today": "Today",
+    "clearFilter": "Clear Filter"
+  },
+  "search": {
+    "placeholder": "Search pages, notes, or to-dos...",
+    "tabAll": "All",
+    "tabAgenda": "Planner",
+    "tabTodo": "To-Do",
+    "tabCover": "Cover",
+    "initialTitle": "Search in All Pages",
+    "initialSubtitle": "Search across page titles, agenda notes, to-do items, or covers.",
+    "noResultsTitle": "No Results Found",
+    "noResultsSubtitle": "No titles or notes matched \"{{query}}\". Try a different keyword.",
+    "resultsCount": "{{count}} results found",
+    "foundFromHandwriting": "Found in Handwriting"
   },
   "theme": {
     "title": "App Theme",
+    "subtitle": "Personalize the look of AJANDA to match your taste.",
     "presetThemes": "Preset Themes",
-    "customColor": "Pick Custom Color",
-    "currentColor": "Current Color",
-    "applyColor": "Apply Color"
+    "customColor": "✨ Choose Your Color",
+    "currentColor": "Selected Color",
+    "applyColor": "Apply Color",
+    "customHint": "Pick any color and the app will match instantly."
+  },
+  "language": {
+    "title": "Select Language",
+    "subtitle": "Choose the application interface language",
+    "turkish": "Türkçe",
+    "english": "English",
+    "german": "Deutsch",
+    "spanish": "Español",
+    "french": "Français",
+    "systemDefault": "System Default (Auto)",
+    "currentLanguage": "Current Language"
+  },
+  "subpages": {
+    "notebooks": "my notebooks",
+    "diary": "my diary"
+  },
+  "templates": {
+    "todoPage": {
+      "priority": "Daily Priorities",
+      "study": "Studies & Homework",
+      "personal": "Personal & Habits",
+      "emptyCategory": "No tasks added to this section yet",
+      "addPlaceholder": "Add {{name}}...",
+      "reminderTitle": "Daily Reminder & Exams 🌸",
+      "reminderPlaceholder": "Important exam dates, homework deadlines and motivational quote...",
+      "importantNoteTitle": "Important Note 🎀",
+      "importantNotePlaceholder": "Things not to forget...",
+      "watermark": "DAILY STUDY & TO-DO 📚",
+      "badgeLabel": "🌸 DAILY GOALS & TO-DO 🌸"
+    },
+    "monthlyPage": {
+      "goalsTitle": "✨ MONTHLY GOALS ✨",
+      "notesTitle": "{{month}} Notes & Exams 🎀",
+      "mobileGoalsTitle": "{{month}} Goals 🌸",
+      "goalsPlaceholder": "Projects due this month, exam weeks, books to read and personal goals...",
+      "mobileGoalsPlaceholder": "Important dates and goals for this month...",
+      "eventsTitle": "📅 Events This Month",
+      "noEvents": "Tap a day on the calendar to add an event or exam!",
+      "modalPrompt": "Write the exam, homework, or event for this day:",
+      "modalInputPlaceholder": "e.g., Math Exam, Birthday Party..."
+    },
+    "weeklyPage": {
+      "notesTitle": "Weekly Goals & Notes 🎀",
+      "notesPlaceholder": "Which exams are this week? Goals and motivation notes...",
+      "addPlaceholder": "Write a new plan or lesson...",
+      "badgeLabel": "WEEKLY PLAN"
+    }
   }
 }

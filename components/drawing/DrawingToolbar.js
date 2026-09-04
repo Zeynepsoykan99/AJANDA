@@ -8,6 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import ColorPicker, { Panel3, Preview } from 'reanimated-color-picker';
 
@@ -56,6 +57,7 @@ export default function DrawingToolbar({
   canUndo = false,
   style,
 }) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
   const [isCustomColorModalVisible, setIsCustomColorModalVisible] = useState(false);
@@ -103,7 +105,7 @@ export default function DrawingToolbar({
             { color: isDrawingMode ? '#FFFFFF' : colors.textSecondary },
           ]}
         >
-          Çizim
+          {t('drawing.modeDrawing', 'Çizim')}
         </Text>
       </TouchableOpacity>
 
@@ -129,7 +131,7 @@ export default function DrawingToolbar({
             { color: isTextMode ? '#FFFFFF' : colors.textSecondary },
           ]}
         >
-          Klavye
+          {t('drawing.modeText', 'Klavye')}
         </Text>
       </TouchableOpacity>
 
@@ -352,7 +354,7 @@ export default function DrawingToolbar({
                     ]}
                   />
                   <Text style={[styles.widthText, { color: colors.textSecondary }]}>
-                    {item.label}
+                    {item.id === 'thin' ? t('drawing.strokeThin', item.label) : item.id === 'medium' ? t('drawing.strokeMedium', item.label) : t('drawing.strokeThick', item.label)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -370,7 +372,7 @@ export default function DrawingToolbar({
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Özel Renk Seç</Text>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>{t('drawing.customColorTitle', 'Özel Renk Seç')}</Text>
             
             <View style={styles.colorPickerContainer}>
               <ColorPicker style={{ width: '100%', alignItems: 'center', gap: 20 }} value={tempColor} onComplete={(c) => onSelectColor(c.hex)}>
@@ -384,14 +386,14 @@ export default function DrawingToolbar({
                 style={[styles.modalBtn, { backgroundColor: colors.border }]}
                 onPress={() => setIsCustomColorModalVisible(false)}
               >
-                <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>İptal</Text>
+                <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>{t('common.cancel', 'İptal')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.modalBtn, { backgroundColor: colors.accent }]}
                 onPress={applyCustomColor}
               >
-                <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Uygula</Text>
+                <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>{t('drawing.apply', 'Uygula')}</Text>
               </TouchableOpacity>
             </View>
           </View>

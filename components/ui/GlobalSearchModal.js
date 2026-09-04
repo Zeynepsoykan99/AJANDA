@@ -13,16 +13,18 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { StorageService } from '../../services/storageService';
 import { searchAllData } from '../../services/searchService';
 
-const CATEGORY_TABS = [
-  { id: 'all', label: 'Tümü', icon: 'sparkles' },
-  { id: 'ajandam', label: 'Ajandam', icon: 'calendar-month' },
-  { id: 'todo', label: 'Yapılacaklar', icon: 'checkbox-marked-circle-outline' },
-  { id: 'cover', label: 'Kapak', icon: 'book-open-page-variant' },
-];
+const DATE_LOCALE_MAP = {
+  tr: 'tr-TR',
+  en: 'en-US',
+  de: 'de-DE',
+  es: 'es-ES',
+  fr: 'fr-FR',
+};
 
 /**
  * GlobalSearchModal - Tüm sayfa, not ve yapılacaklar için canlı arama ekranı
@@ -37,7 +39,18 @@ export default function GlobalSearchModal({
   initialCategory = 'all',
 }) {
   const router = useRouter();
+  const { t, i18n } = useTranslation();
   const { colors } = useTheme();
+
+  const currentLang = i18n.language?.slice(0, 2) || 'tr';
+  const activeLocale = DATE_LOCALE_MAP[currentLang] || 'tr-TR';
+
+  const categoryTabs = [
+    { id: 'all', label: t('search.tabAll'), icon: 'sparkles' },
+    { id: 'ajandam', label: t('search.tabAgenda'), icon: 'calendar-month' },
+    { id: 'todo', label: t('search.tabTodo'), icon: 'checkbox-marked-circle-outline' },
+    { id: 'cover', label: t('search.tabCover'), icon: 'book-open-page-variant' },
+  ];
 
   const [query, setQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
@@ -120,12 +133,25 @@ export default function GlobalSearchModal({
     }, 150);
   };
 
+  const getCategoryLabel = (cat, fallback) => {
+    switch (cat) {
+      case 'ajandam':
+        return t('search.tabAgenda');
+      case 'todo':
+        return t('search.tabTodo');
+      case 'cover':
+        return t('search.tabCover');
+      default:
+        return fallback || cat;
+    }
+  };
+
   const formatDate = (isoStr) => {
     if (!isoStr) return '';
     try {
       const d = new Date(isoStr);
       if (isNaN(d.getTime())) return '';
-      return d.toLocaleDateString('tr-TR', {
+      return d.toLocaleDateString(activeLocale, {
         day: 'numeric',
         month: 'short',
         year: 'numeric',
@@ -169,7 +195,7 @@ export default function GlobalSearchModal({
               />
               <TextInput
                 style={[styles.searchInput, { color: colors.textPrimary }]}
-                placeholder="Sayfa, not veya yapılacaklarda ara..."
+                placeholder={t('search.placeholder')}
                 placeholderTextColor={colors.textSecondary + '80'}
                 value={query}
                 onChangeText={handleQueryChange}
@@ -198,13 +224,15 @@ export default function GlobalSearchModal({
               style={styles.cancelButton}
               activeOpacity={0.7}
             >
-              <Text style={[styles.cancelText, { color: colors.accent }]}>Vazgeç</Text>
+              <Text style={[styles.cancelText, { color: colors.accent }]}>
+                {t('common.cancel')}
+              </Text>
             </TouchableOpacity>
           </View>
 
           {/* ── Kategori Filtre Çipleri ── */}
           <View style={styles.categoriesRow}>
-            {CATEGORY_TABS.map((tab) => {
+            {categoryTabs.map((tab) => {
               const isSelected = selectedCategory === tab.id;
               return (
                 <TouchableOpacity
@@ -250,10 +278,10 @@ export default function GlobalSearchModal({
                   />
                 </View>
                 <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
-                  Tüm Sayfalarda Ara
+                  {t('search.initialTitle')}
                 </Text>
                 <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                  Sayfa başlıklarında, ajanda notlarında, yapılacak maddelerinde veya kapakta arama yapabilirsiniz.
+                  {t('search.initialSubtitle')}
                 </Text>
               </View>
             ) : results.length === 0 ? (
@@ -267,10 +295,10 @@ export default function GlobalSearchModal({
                   />
                 </View>
                 <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
-                  Sonuç Bulunamadı
+                  {t('search.noResultsTitle')}
                 </Text>
                 <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                  "{query}" ile eşleşen hiçbir başlık veya not metni bulunamadı. Farklı bir kelime deneyin.
+                  {t('search.noResultsSubtitle', { query })}
                 </Text>
               </View>
             ) : (
@@ -278,7 +306,7 @@ export default function GlobalSearchModal({
               <View style={{ flex: 1 }}>
                 <View style={styles.resultsHeader}>
                   <Text style={[styles.resultsCountText, { color: colors.textSecondary }]}>
-                    {results.length} sonuç bulundu
+                    {t('search.resultsCount', { count: results.length })}
                   </Text>
                 </View>
 
@@ -321,7 +349,7 @@ export default function GlobalSearchModal({
                               {item.title}
                             </Text>
                             <Text style={[styles.categoryTag, { color: colors.accent }]}>
-                              {item.categoryName}
+                              {getCategoryLabel(item.category, item.categoryName)}
                             </Text>
                           </View>
 
@@ -351,7 +379,7 @@ export default function GlobalSearchModal({
                               <View style={[styles.handwritingBadge, { backgroundColor: colors.accent + '18' }]}>
                                 <MaterialCommunityIcons name="draw-pen" size={12} color={colors.accent} />
                                 <Text style={[styles.handwritingBadgeText, { color: colors.accent }]}>
-                                  El Yazısından Bulundu
+                                  {t('search.foundFromHandwriting')}
                                 </Text>
                               </View>
                             )}

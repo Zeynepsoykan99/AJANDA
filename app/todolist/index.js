@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { StorageService } from '../../services/storageService';
 import PageThumbnail from '../../components/PageThumbnail';
@@ -25,6 +26,7 @@ import useResponsiveLayout from '../../hooks/useResponsiveLayout';
  * Yalnızca To-Do kategorisindeki sayfaları listeler.
  */
 export default function TodoListScreen() {
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const { colors } = useTheme();
   const { isTablet } = useResponsiveLayout();
@@ -57,9 +59,11 @@ export default function TodoListScreen() {
     return todoPages.filter((p) => isSameDay(p.createdAt, filterDate));
   }, [todoPages, filterDate]);
 
-  // Filtre aktifken Türkçe tarih metni
+  // Filtre aktifken yerelleştirilmiş tarih metni
+  const dateLocaleMap = { tr: 'tr-TR', en: 'en-US', de: 'de-DE', es: 'es-ES', fr: 'fr-FR' };
+  const currentLocale = dateLocaleMap[i18n.language?.slice(0, 2)] || 'en-US';
   const filterLabel = filterDate
-    ? filterDate.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })
+    ? filterDate.toLocaleDateString(currentLocale, { day: 'numeric', month: 'long', year: 'numeric' })
     : null;
 
   // Verileri yükle (Ekran her odaklandığında çalışır)
@@ -117,9 +121,12 @@ export default function TodoListScreen() {
     pendingDeleteRef.current = { item: pageToDelete, timer };
     setUndoToast({
       visible: true,
-      message: `"${pageToDelete.title || 'Liste'}" silindi`,
+      message: t('todo.deletedToast', {
+        title: pageToDelete.title || t('todo.defaultTitle', 'Liste'),
+        defaultValue: `"${pageToDelete.title || 'Liste'}" silindi`,
+      }),
     });
-  }, []);
+  }, [t]);
 
   // Geri al işlemi
   const handleUndoDelete = useCallback(() => {
@@ -171,19 +178,21 @@ export default function TodoListScreen() {
         color={colors.accent + '40'}
       />
       <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
-        {filterDate ? 'Liste bulunamadı' : 'Yapılacak iş kalmadı!'}
+        {filterDate ? t('todo.emptyFilterTitle', 'Liste bulunamadı') : t('todo.emptyTitle', 'Yapılacak iş kalmadı!')}
       </Text>
       <Text style={[styles.emptyDesc, { color: colors.textSecondary + '99' }]}>
         {filterDate
-          ? `${filterLabel} tarihinde oluşturulmuş liste yok.`
-          : 'Yeni bir yapılacaklar listesi oluşturmak için + butonuna dokunun.'}
+          ? t('todo.emptyFilterDesc', { date: filterLabel, defaultValue: `${filterLabel} tarihinde oluşturulmuş liste yok.` })
+          : t('todo.emptyDesc', 'Yeni bir yapılacaklar listesi oluşturmak için + butonuna dokunun.')}
       </Text>
       {filterDate && (
         <TouchableOpacity
           onPress={() => setFilterDate(null)}
           style={[styles.clearFilterInlineBtn, { borderColor: colors.accent }]}
         >
-          <Text style={[styles.clearFilterInlineText, { color: colors.accent }]}>Filtreyi Temizle</Text>
+          <Text style={[styles.clearFilterInlineText, { color: colors.accent }]}>
+            {t('todo.clearFilter', 'Filtreyi Temizle')}
+          </Text>
         </TouchableOpacity>
       )}
     </View>
@@ -215,7 +224,7 @@ export default function TodoListScreen() {
         </TouchableOpacity>
 
         <Text style={[styles.pageTitle, { color: colors.textPrimary }]}>
-          Yapılacaklar
+          {t('todo.title', 'Yapılacaklar')}
         </Text>
 
         <View style={styles.headerRightGroup}>

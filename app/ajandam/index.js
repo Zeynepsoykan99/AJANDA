@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { StorageService } from '../../services/storageService';
 import {
@@ -33,6 +34,7 @@ import { recognizeHandwriting } from '../../services/handwritingService';
  * Kapağın üzerine çizim yapabilir, metin ekleyebilir ve kapağı değiştirebilir.
  */
 export default function AjandamScreen() {
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const { colors } = useTheme();
   const { isTablet } = useResponsiveLayout();
@@ -107,7 +109,7 @@ export default function AjandamScreen() {
         });
       } else {
         recognitionTimeoutRef.current = setTimeout(async () => {
-          const result = await recognizeHandwriting(newDrawings, { language: 'tr' });
+          const result = await recognizeHandwriting(newDrawings, { language: i18n.language || 'tr' });
           if (result.success && !result.aborted && !result.stale) {
             setCoverData((current) => ({
               ...current,
@@ -156,7 +158,7 @@ export default function AjandamScreen() {
         StorageService.setCover({ ...updated, recognizedText: '', recognizedWords: [] });
       } else {
         recognitionTimeoutRef.current = setTimeout(async () => {
-          const result = await recognizeHandwriting(updatedDrawings, { language: 'tr' });
+          const result = await recognizeHandwriting(updatedDrawings, { language: i18n.language || 'tr' });
           if (result.success && !result.aborted && !result.stale) {
             StorageService.setCover({
               ...updated,
@@ -219,7 +221,7 @@ export default function AjandamScreen() {
         </TouchableOpacity>
 
         <View style={styles.headerCenter}>
-          <Text style={[styles.pageTitle, { color: colors.textPrimary }]}>Ajanda Kapağı</Text>
+          <Text style={[styles.pageTitle, { color: colors.textPrimary }]}>{t('agenda.coverTitle', 'Ajanda Kapağı')}</Text>
         </View>
 
         <View style={styles.headerRightGroup}>

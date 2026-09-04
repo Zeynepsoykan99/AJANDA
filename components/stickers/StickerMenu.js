@@ -10,6 +10,7 @@ import {
   Image,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { STICKER_PACKS } from '../../constants/stickerPacks';
 
@@ -22,6 +23,7 @@ import { STICKER_PACKS } from '../../constants/stickerPacks';
  * @param {function} onSelectSticker - (sticker) => void
  */
 export default function StickerMenu({ visible, onClose, onSelectSticker }) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const [selectedPackId, setSelectedPackId] = useState(STICKER_PACKS[0]?.id);
 
@@ -61,7 +63,7 @@ export default function StickerMenu({ visible, onClose, onSelectSticker }) {
         {/* Başlık */}
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.textPrimary }]}>
-            🎀 Çıkartmalar
+            {t('stickers.title')}
           </Text>
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
             <MaterialCommunityIcons
@@ -109,7 +111,7 @@ export default function StickerMenu({ visible, onClose, onSelectSticker }) {
                   },
                 ]}
               >
-                {pack.name}
+                {t(`stickers.${pack.id}`, pack.name)}
               </Text>
             </TouchableOpacity>
           ))}

@@ -1,0 +1,199 @@
+{
+  "common": {
+    "appName": "AJANDA",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "undo": "Deshacer",
+    "undoUpper": "DESHACER",
+    "edit": "Editar",
+    "close": "Cerrar",
+    "search": "Buscar...",
+    "loading": "Cargando...",
+    "confirm": "Confirmar",
+    "back": "Volver",
+    "today": "Hoy",
+    "emptyItem": "Elemento eliminado"
+  },
+  "home": {
+    "appTitle": "AJANDA",
+    "searchPlaceholder": "Buscar páginas, notas o tareas...",
+    "menuDiary": "mi diario",
+    "menuAgenda": "mi agenda",
+    "menuNotes": "mis notas",
+    "menuTodoList": "mis tareas",
+    "themeTooltip": "Tema de la aplicación",
+    "languageTooltip": "Selección de idioma"
+  },
+  "todo": {
+    "title": "Lista de Tareas",
+    "defaultTitle": "Nueva Lista",
+    "templateStep": "Seleccionar Plantilla",
+    "titleStep": "Título de la Lista",
+    "next": "Continuar",
+    "createList": "Crear Lista",
+    "inputLabel": "Título de la lista (opcional)",
+    "inputPlaceholder": "Compras, Tareas Diarias...",
+    "emptyFilterTitle": "Lista no encontrada",
+    "emptyTitle": "¡No quedan tareas pendientes!",
+    "emptyFilterDesc": "No hay listas creadas el {{date}}.",
+    "emptyDesc": "Toca el botón + para crear una nueva lista de tareas.",
+    "clearFilter": "Limpiar Filtro",
+    "deletedToast": "\"{{title}}\" eliminado",
+    "notFound": "Lista no encontrada",
+    "goBack": "Volver",
+    "deleteConfirmTitle": "Eliminar Lista",
+    "deleteConfirmMessage": "¿Estás seguro de que deseas eliminar esta lista?",
+    "categoryLabel": "Lista de Tareas"
+  },
+  "agenda": {
+    "coverTitle": "Portada de la Agenda",
+    "pagesTitle": "Mis Páginas",
+    "emptyFilterTitle": "Página no encontrada",
+    "emptyTitle": "Aún no se han añadido páginas",
+    "emptyFilterDesc": "No hay páginas creadas el {{date}}.",
+    "emptyDesc": "¡Toca el botón + de abajo para añadir tu primera página!",
+    "clearFilter": "Limpiar Filtro",
+    "deletedToast": "\"{{title}}\" eliminado",
+    "deleteConfirmTitle": "Eliminar Página",
+    "deleteConfirmMessage": "¿Estás seguro de que deseas eliminar esta página?",
+    "notFound": "Página no encontrada",
+    "typeStep": "Elegir Tipo de Página",
+    "templateStep": "Seleccionar Plantilla",
+    "finalStep": "Toques Finales",
+    "pageType": "Tipo de Página",
+    "pageTitleOptional": "Título de la Página (opcional)",
+    "newPageDefault": "Nueva Página",
+    "createPage": "Crear Página",
+    "selectCover": "Elegir Portada",
+    "categoryTodo": "Lista de Tareas",
+    "categoryMonthly": "Agenda Mensual",
+    "categoryWeekly": "Agenda Semanal"
+  },
+  "pageCards": {
+    "completedSummary": "{{done}}/{{total}} completadas",
+    "emptyTodo": "Lista vacía",
+    "eventsSummary": "{{count}} eventos",
+    "emptyEvents": "Sin eventos",
+    "tasksSummary": "{{count}} tareas",
+    "emptyWeekly": "Semana vacía",
+    "charsSummary": "{{count}} caracteres",
+    "emptyBlank": "Página en blanco"
+  },
+  "drawing": {
+    "modeDrawing": "Dibujar",
+    "modeText": "Teclado",
+    "strokeThin": "Fino",
+    "strokeMedium": "Medio",
+    "strokeThick": "Grueso",
+    "fontSmall": "Pequeño",
+    "fontMedium": "Medio",
+    "fontLarge": "Grande",
+    "customColorTitle": "Elegir Color Personalizado",
+    "apply": "Aplicar",
+    "strokesDeleted": "{{count}} trazos eliminados",
+    "textDeleted": "Texto eliminado",
+    "textsDeleted": "{{count}} textos eliminados",
+    "handwritingConverted": "Escritura convertida a texto",
+    "stickerDeleted": "Sticker eliminado",
+    "typeNotePlaceholder": "Escribe tu nota..."
+  },
+  "lasso": {
+    "convertToText": "Convertir a Texto",
+    "delete": "Eliminar"
+  },
+  "recognition": {
+    "title": "Convertir Escritura a Texto",
+    "scanning": "Escaneando escritura con motor de tinta digital...",
+    "recognizedLabel": "Texto Reconocido (edita si es necesario):",
+    "placeholder": "No se detectó texto, escribe aquí...",
+    "candidates": "Lecturas Alternativas:",
+    "selectFont": "Elegir Fuente:",
+    "fontSize": "Tamaño de Fuente:",
+    "confirm": "Convertir y Añadir"
+  },
+  "stickers": {
+    "title": "🎀 Pegatinas",
+    "hearts": "Corazones",
+    "stars": "Estrellas",
+    "nature": "Naturaleza",
+    "decorative": "Decorativo",
+    "food": "Comida",
+    "mood": "Estado de ánimo",
+    "custom_images": "Imágenes personalizadas"
+  },
+  "datePicker": {
+    "title": "Filtrar por Fecha",
+    "today": "Hoy",
+    "clearFilter": "Limpiar Filtro"
+  },
+  "search": {
+    "placeholder": "Buscar páginas, notas o tareas...",
+    "tabAll": "Todo",
+    "tabAgenda": "Agenda",
+    "tabTodo": "Tareas",
+    "tabCover": "Portada",
+    "initialTitle": "Buscar en Todas las Páginas",
+    "initialSubtitle": "Busca en títulos de página, notas de agenda, tareas o portadas.",
+    "noResultsTitle": "No se Encontraron Resultados",
+    "noResultsSubtitle": "Ningún título o nota coincide con \"{{query}}\". Intenta con otra palabra.",
+    "resultsCount": "{{count}} resultados encontrados",
+    "foundFromHandwriting": "Encontrado en escritura a mano"
+  },
+  "theme": {
+    "title": "Tema de la Aplicación",
+    "subtitle": "Personaliza el aspecto de AJANDA a tu gusto.",
+    "presetThemes": "Temas Predeterminados",
+    "customColor": "✨ Elige tu Color",
+    "currentColor": "Color Seleccionado",
+    "applyColor": "Aplicar Color",
+    "customHint": "Elige cualquier color y la aplicación se adaptará al instante."
+  },
+  "language": {
+    "title": "Seleccionar Idioma",
+    "subtitle": "Elige el idioma de la interfaz",
+    "turkish": "Türkçe",
+    "english": "English",
+    "german": "Deutsch",
+    "spanish": "Español",
+    "french": "Français",
+    "systemDefault": "Predeterminado del Sistema (Auto)",
+    "currentLanguage": "Idioma Actual"
+  },
+  "subpages": {
+    "notebooks": "mis cuadernos",
+    "diary": "mi diario"
+  },
+  "templates": {
+    "todoPage": {
+      "priority": "Prioridades del día",
+      "study": "Estudios y tareas",
+      "personal": "Personal y hábitos",
+      "emptyCategory": "Aún no se han añadido tareas a esta sección",
+      "addPlaceholder": "Añadir {{name}}...",
+      "reminderTitle": "Recordatorio diario y exámenes 🌸",
+      "reminderPlaceholder": "Fechas importantes de exámenes, entregas de tareas y frases motivacionales...",
+      "importantNoteTitle": "Nota importante 🎀",
+      "importantNotePlaceholder": "Cosas que no olvidar...",
+      "watermark": "DAILY STUDY & TO-DO 📚",
+      "badgeLabel": "🌸 OBJETIVOS DIARIOS Y TO-DO 🌸"
+    },
+    "monthlyPage": {
+      "goalsTitle": "✨ OBJETIVOS DEL MES ✨",
+      "notesTitle": "Notas y exámenes de {{month}} 🎀",
+      "mobileGoalsTitle": "Objetivos de {{month}} 🌸",
+      "goalsPlaceholder": "Proyectos a entregar este mes, semanas de exámenes, libros por leer y objetivos...",
+      "mobileGoalsPlaceholder": "Fechas importantes y objetivos de este mes...",
+      "eventsTitle": "📅 Eventos de este mes",
+      "noEvents": "¡Toca un día en el calendario para añadir un evento o examen!",
+      "modalPrompt": "Escribe el examen, tarea o evento para este día:",
+      "modalInputPlaceholder": "Ej: Examen de Matemáticas, Fiesta de cumpleaños..."
+    },
+    "weeklyPage": {
+      "notesTitle": "Objetivos semanales y notas 🎀",
+      "notesPlaceholder": "¿Qué exámenes hay esta semana? Objetivos y notas de motivación...",
+      "addPlaceholder": "Escribe un nuevo plan o lección...",
+      "badgeLabel": "PLAN SEMANAL"
+    }
+  }
+}

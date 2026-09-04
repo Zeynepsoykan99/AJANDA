@@ -5,12 +5,15 @@
     "cancel": "Vazgeç",
     "delete": "Sil",
     "undo": "Geri Al",
+    "undoUpper": "GERİ AL",
     "edit": "Düzenle",
     "close": "Kapat",
     "search": "Ara...",
     "loading": "Yükleniyor...",
     "confirm": "Onayla",
-    "back": "Geri"
+    "back": "Geri",
+    "today": "Bugün",
+    "emptyItem": "Öğe silindi"
   },
   "home": {
     "appTitle": "AJANDA",
@@ -22,19 +25,175 @@
     "themeTooltip": "Uygulama Teması",
     "languageTooltip": "Dil Seçimi"
   },
+  "todo": {
+    "title": "Yapılacaklar",
+    "defaultTitle": "Yeni Liste",
+    "templateStep": "Şablon Seç",
+    "titleStep": "Liste Başlığı",
+    "next": "Devam Et",
+    "createList": "Listeyi Oluştur",
+    "inputLabel": "Liste Adı (opsiyonel)",
+    "inputPlaceholder": "Market Alışverişi, Günlük Görevler...",
+    "emptyFilterTitle": "Liste bulunamadı",
+    "emptyTitle": "Yapılacak iş kalmadı!",
+    "emptyFilterDesc": "{{date}} tarihinde oluşturulmuş liste yok.",
+    "emptyDesc": "Yeni bir yapılacaklar listesi oluşturmak için + butonuna dokunun.",
+    "clearFilter": "Filtreyi Temizle",
+    "deletedToast": "\"{{title}}\" silindi",
+    "notFound": "Liste bulunamadı",
+    "goBack": "Geri Dön",
+    "deleteConfirmTitle": "Listeyi Sil",
+    "deleteConfirmMessage": "Bu sayfayı silmek istediğinize emin misiniz?",
+    "categoryLabel": "Yapılacaklar"
+  },
+  "agenda": {
+    "coverTitle": "Ajanda Kapağı",
+    "pagesTitle": "Sayfalarım",
+    "emptyFilterTitle": "Sayfa bulunamadı",
+    "emptyTitle": "Henüz sayfa eklenmedi",
+    "emptyFilterDesc": "{{date}} tarihinde oluşturulmuş sayfa yok.",
+    "emptyDesc": "Aşağıdaki + butonuna basarak ilk sayfanı ekle!",
+    "clearFilter": "Filtreyi Temizle",
+    "deletedToast": "\"{{title}}\" silindi",
+    "deleteConfirmTitle": "Sayfayı Sil",
+    "deleteConfirmMessage": "Bu sayfayı silmek istediğinize emin misiniz?",
+    "notFound": "Sayfa bulunamadı",
+    "typeStep": "Sayfa Türü Seç",
+    "templateStep": "Şablon Seç",
+    "finalStep": "Son Dokunuşlar",
+    "pageType": "Sayfa Türü",
+    "pageTitleOptional": "Sayfa Başlığı (opsiyonel)",
+    "newPageDefault": "Yeni Sayfa",
+    "createPage": "Sayfayı Oluştur",
+    "selectCover": "Kapak Seç",
+    "categoryTodo": "To-Do List",
+    "categoryMonthly": "Aylık Ajanda",
+    "categoryWeekly": "Haftalık Ajanda"
+  },
+  "pageCards": {
+    "completedSummary": "{{done}}/{{total}} tamamlandı",
+    "emptyTodo": "Boş liste",
+    "eventsSummary": "{{count}} etkinlik",
+    "emptyEvents": "Etkinlik yok",
+    "tasksSummary": "{{count}} görev",
+    "emptyWeekly": "Boş hafta",
+    "charsSummary": "{{count}} karakter",
+    "emptyBlank": "Boş sayfa"
+  },
+  "drawing": {
+    "modeDrawing": "Çizim",
+    "modeText": "Klavye",
+    "strokeThin": "İnce",
+    "strokeMedium": "Orta",
+    "strokeThick": "Kalın",
+    "fontSmall": "Küçük",
+    "fontMedium": "Orta",
+    "fontLarge": "Büyük",
+    "customColorTitle": "Özel Renk Seç",
+    "apply": "Uygula",
+    "strokesDeleted": "{{count}} çizim silindi",
+    "textDeleted": "Metin silindi",
+    "textsDeleted": "{{count}} metin silindi",
+    "handwritingConverted": "El yazısı metne dönüştürüldü",
+    "stickerDeleted": "Çıkartma silindi",
+    "typeNotePlaceholder": "Notunu yaz..."
+  },
+  "lasso": {
+    "convertToText": "Metne Dönüştür",
+    "delete": "Sil"
+  },
+  "recognition": {
+    "title": "El Yazısını Metne Dönüştür",
+    "scanning": "El yazınız dijital mürekkep motoruyla taranıyor...",
+    "recognizedLabel": "Tanınan Metin (Gerekiyorsa düzenleyin):",
+    "placeholder": "Metin bulunamadı, buraya yazabilirsiniz...",
+    "candidates": "Alternatif Okumalar:",
+    "selectFont": "Yazı Tipi (Font) Seçin:",
+    "fontSize": "Yazı Boyutu:",
+    "confirm": "Dönüştür ve Ekle"
+  },
+  "stickers": {
+    "title": "🎀 Çıkartmalar",
+    "hearts": "Kalpler",
+    "stars": "Yıldızlar",
+    "nature": "Doğa",
+    "decorative": "Dekoratif",
+    "food": "Yiyecekler",
+    "mood": "Ruh Hali",
+    "custom_images": "Özel Görseller"
+  },
+  "datePicker": {
+    "title": "Tarihe Göre Filtrele",
+    "today": "Bugün",
+    "clearFilter": "Filtreyi Temizle"
+  },
+  "search": {
+    "placeholder": "Sayfa, not veya yapılacaklarda ara...",
+    "tabAll": "Tümü",
+    "tabAgenda": "Ajandam",
+    "tabTodo": "Yapılacaklar",
+    "tabCover": "Kapak",
+    "initialTitle": "Tüm Sayfalarda Ara",
+    "initialSubtitle": "Sayfa başlıklarında, ajanda notlarında, yapılacak maddelerinde veya kapakta arama yapabilirsiniz.",
+    "noResultsTitle": "Sonuç Bulunamadı",
+    "noResultsSubtitle": "\"{{query}}\" ile eşleşen hiçbir başlık veya not metni bulunamadı. Farklı bir kelime deneyin.",
+    "resultsCount": "{{count}} sonuç bulundu",
+    "foundFromHandwriting": "El Yazısından Bulundu"
+  },
+  "theme": {
+    "title": "Uygulama Teması",
+    "subtitle": "AJANDA'nın görünümünü kendi zevkine göre kişiselleştir.",
+    "presetThemes": "Hazır Temalar",
+    "customColor": "✨ Kendi Rengini Seç",
+    "currentColor": "Seçili Renk",
+    "applyColor": "Rengi Uygula",
+    "customHint": "İstediğin rengi seç, uygulama anında uyum sağlasın."
+  },
   "language": {
     "title": "Dil Seçin",
     "subtitle": "Uygulama arayüz dilini belirleyin",
     "turkish": "Türkçe",
     "english": "English",
+    "german": "Deutsch",
+    "spanish": "Español",
+    "french": "Français",
     "systemDefault": "Sistem Dili (Otomatik)",
     "currentLanguage": "Mevcut Dil"
   },
-  "theme": {
-    "title": "Uygulama Teması",
-    "presetThemes": "Hazır Temalar",
-    "customColor": "Özel Renk Seç",
-    "currentColor": "Seçili Renk",
-    "applyColor": "Rengi Uygula"
+  "subpages": {
+    "notebooks": "defterlerim",
+    "diary": "günlüğüm"
+  },
+  "templates": {
+    "todoPage": {
+      "priority": "Günün Öncelikleri",
+      "study": "Dersler & Ödevler",
+      "personal": "Kişisel & Alışkanlıklar",
+      "emptyCategory": "Henüz bu bölüme görev eklenmedi",
+      "addPlaceholder": "{{name}} ekle...",
+      "reminderTitle": "Günün Hatırlatıcısı & Sınavlar 🌸",
+      "reminderPlaceholder": "Önemli sınav tarihleri, teslim edilecek ödevler ve motivasyon sözü...",
+      "importantNoteTitle": "Önemli Not 🎀",
+      "importantNotePlaceholder": "Unutulmaması gerekenler...",
+      "watermark": "DAILY STUDY & TO-DO 📚",
+      "badgeLabel": "🌸 GÜNLÜK HEDEF & TO-DO 🌸"
+    },
+    "monthlyPage": {
+      "goalsTitle": "✨ AYIN HEDEFLERİ ✨",
+      "notesTitle": "{{month}} Notları & Sınavlar 🎀",
+      "mobileGoalsTitle": "{{month}} Hedefleri 🌸",
+      "goalsPlaceholder": "Bu ay teslim edilecek projeler, sınav haftaları, okunacak kitaplar ve kendime hedefler...",
+      "mobileGoalsPlaceholder": "Bu ayın önemli tarihleri ve hedefleri...",
+      "eventsTitle": "📅 Bu Ayın Etkinlikleri",
+      "noEvents": "Takvimdeki bir güne tıklayarak etkinlik veya sınav ekleyebilirsin!",
+      "modalPrompt": "Bu güne ait sınav, ödev veya etkinliğini yaz:",
+      "modalInputPlaceholder": "Örn: Matematik Sınavı, Doğum Günü Partisi..."
+    },
+    "weeklyPage": {
+      "notesTitle": "Haftalık Hedefler & Notlar 🎀",
+      "notesPlaceholder": "Bu hafta hangi sınavlar var? Hedefler ve motivasyon notları...",
+      "addPlaceholder": "Yeni plan veya ders yaz...",
+      "badgeLabel": "HAFTALIK PLAN"
+    }
   }
 }

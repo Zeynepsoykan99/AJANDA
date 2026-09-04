@@ -12,6 +12,7 @@ import {
   Image,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import {
   PAGE_CATEGORIES,
@@ -32,6 +33,7 @@ import useResponsiveLayout from '../hooks/useResponsiveLayout';
  * @param {function} onAdd - (newPage) => void
  */
 export default function AddPageModal({ visible, onClose, onAdd }) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const { isTablet } = useResponsiveLayout();
 
@@ -57,6 +59,14 @@ export default function AddPageModal({ visible, onClose, onAdd }) {
     setStep(2);
   };
 
+  const getCategoryName = (cat) => {
+    if (!cat) return '';
+    if (cat.id === 'todo') return t('agenda.categoryTodo', cat.name);
+    if (cat.id === 'monthly') return t('agenda.categoryMonthly', cat.name);
+    if (cat.id === 'weekly') return t('agenda.categoryWeekly', cat.name);
+    return cat.name;
+  };
+
   const handleCreate = () => {
     if (!selectedCategory || !selectedTemplateId) return;
 
@@ -64,7 +74,7 @@ export default function AddPageModal({ visible, onClose, onAdd }) {
       id: generatePageId(),
       category: selectedCategory.id,
       templateId: selectedTemplateId,
-      title: title.trim() || `${selectedCategory.name}`,
+      title: title.trim() || getCategoryName(selectedCategory) || t('agenda.newPageDefault', 'Yeni Sayfa'),
       createdAt: new Date().toISOString(),
       order: Date.now(),
       data: createDefaultPageData(selectedCategory.id),
@@ -111,10 +121,10 @@ export default function AddPageModal({ visible, onClose, onAdd }) {
             </TouchableOpacity>
             <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
               {step === 1
-                ? 'Sayfa Türü Seç'
+                ? t('agenda.typeStep', 'Sayfa Türü Seç')
                 : step === 2
-                ? 'Şablon Seç'
-                : 'Son Dokunuşlar'}
+                ? t('agenda.templateStep', 'Şablon Seç')
+                : t('agenda.finalStep', 'Son Dokunuşlar')}
             </Text>
             <View style={styles.headerBtn} />
           </View>
@@ -164,7 +174,7 @@ export default function AddPageModal({ visible, onClose, onAdd }) {
                       { color: colors.textPrimary },
                     ]}
                   >
-                    {category.name}
+                    {getCategoryName(category)}
                   </Text>
                   <Text
                     style={[
@@ -276,7 +286,7 @@ export default function AddPageModal({ visible, onClose, onAdd }) {
                   { backgroundColor: colors.accent },
                 ]}
               >
-                <Text style={styles.nextButtonText}>Devam Et</Text>
+                <Text style={styles.nextButtonText}>{t('todo.next', 'Devam Et')}</Text>
                 <MaterialCommunityIcons
                   name="arrow-right"
                   size={20}
@@ -291,10 +301,10 @@ export default function AddPageModal({ visible, onClose, onAdd }) {
             <View style={styles.finalStep}>
               <View style={styles.summaryCard}>
                 <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
-                  Sayfa Türü
+                  {t('agenda.pageType', 'Sayfa Türü')}
                 </Text>
                 <Text style={[styles.summaryValue, { color: colors.textPrimary }]}>
-                  {selectedCategory?.emoji} {selectedCategory?.name}
+                  {selectedCategory?.emoji} {getCategoryName(selectedCategory)}
                 </Text>
               </View>
 
@@ -302,7 +312,7 @@ export default function AddPageModal({ visible, onClose, onAdd }) {
                 <Text
                   style={[styles.inputLabel, { color: colors.textSecondary }]}
                 >
-                  Sayfa Başlığı (opsiyonel)
+                  {t('agenda.pageTitleOptional', 'Sayfa Başlığı (opsiyonel)')}
                 </Text>
                 <TextInput
                   style={[
@@ -315,7 +325,7 @@ export default function AddPageModal({ visible, onClose, onAdd }) {
                   ]}
                   value={title}
                   onChangeText={setTitle}
-                  placeholder={`${selectedCategory?.name || 'Yeni Sayfa'}`}
+                  placeholder={getCategoryName(selectedCategory) || t('agenda.newPageDefault', 'Yeni Sayfa')}
                   placeholderTextColor={colors.border}
                   maxLength={40}
                 />
@@ -334,7 +344,7 @@ export default function AddPageModal({ visible, onClose, onAdd }) {
                   size={22}
                   color="#FFFFFF"
                 />
-                <Text style={styles.createButtonText}>Sayfayı Oluştur</Text>
+                <Text style={styles.createButtonText}>{t('agenda.createPage', 'Sayfayı Oluştur')}</Text>
               </TouchableOpacity>
             </View>
           )}

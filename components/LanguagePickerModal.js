@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Modal,
+  ScrollView,
   Dimensions,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -84,7 +85,11 @@ export default function LanguagePickerModal({ visible, onClose }) {
           </Text>
 
           {/* Language Options List */}
-          <View style={styles.optionsList}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            style={styles.scrollWrapper}
+            contentContainerStyle={styles.optionsList}
+          >
             {SUPPORTED_LANGUAGES.map((lang) => {
               const isSelected = currentLang.startsWith(lang.code);
               const isDeviceLang = deviceLang === lang.code;
@@ -142,7 +147,7 @@ export default function LanguagePickerModal({ visible, onClose }) {
                 </TouchableOpacity>
               );
             })}
-          </View>
+          </ScrollView>
         </View>
       </TouchableOpacity>
     </Modal>
@@ -209,6 +214,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  scrollWrapper: {
+    maxHeight: 380,
   },
   optionsList: {
     gap: 12,

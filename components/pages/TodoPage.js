@@ -8,6 +8,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 import WashiTape from '../stationery/WashiTape';
 import StickyNote from '../stationery/StickyNote';
@@ -26,6 +27,7 @@ const CATEGORIES = [
  * iPad'de çok sütunlu açık defter, mobilde kartlı sevimli defter listesi.
  */
 export default function TodoPage({ template, data, onDataChange }) {
+  const { t } = useTranslation();
   const { isTwoPage, isTablet } = useResponsiveLayout();
   const [selectedCategory, setSelectedCategory] = useState('priority');
   const [newItemText, setNewItemText] = useState('');
@@ -99,9 +101,11 @@ export default function TodoPage({ template, data, onDataChange }) {
   };
 
   // Bir kategori listesi render fonksiyonu
+  // Bir kategori listesi render fonksiyonu
   const renderCategoryCard = (cat) => {
     const catItems = getItemsForCategory(cat.id);
     const completedCount = catItems.filter((i) => i.completed).length;
+    const catDisplayName = t(`templates.todoPage.${cat.id}`, cat.name);
 
     return (
       <View key={cat.id} style={styles.categoryCard}>
@@ -113,7 +117,7 @@ export default function TodoPage({ template, data, onDataChange }) {
             height={24}
             rotation={cat.id === 'study' ? 1.5 : -1.5}
             pattern="dots"
-            label={`${cat.emoji} ${cat.name}`}
+            label={`${cat.emoji} ${catDisplayName}`}
           />
           <Text style={styles.counterText}>
             {completedCount}/{catItems.length}
@@ -159,7 +163,7 @@ export default function TodoPage({ template, data, onDataChange }) {
 
           {catItems.length === 0 && (
             <Text style={styles.emptyCatText}>
-              Henüz bu bölüme görev eklenmedi
+              {t('templates.todoPage.emptyCategory')}
             </Text>
           )}
 
@@ -172,7 +176,7 @@ export default function TodoPage({ template, data, onDataChange }) {
                 setActiveCategoryInput(cat.id);
                 setNewItemText(text);
               }}
-              placeholder={`${cat.name} ekle...`}
+              placeholder={t('templates.todoPage.addPlaceholder', { name: catDisplayName })}
               placeholderTextColor="#9E9E9E"
               onSubmitEditing={() => handleAddItem(cat.id)}
               returnKeyType="done"
@@ -202,7 +206,7 @@ export default function TodoPage({ template, data, onDataChange }) {
             contentContainerStyle={styles.scrollContent}
           >
             <View style={styles.pageWatermark}>
-              <Text style={styles.watermarkText}>DAILY STUDY & TO-DO 📚</Text>
+              <Text style={styles.watermarkText}>{t('templates.todoPage.watermark')}</Text>
             </View>
             {renderCategoryCard(CATEGORIES[0])}
             {renderCategoryCard(CATEGORIES[1])}
@@ -222,12 +226,12 @@ export default function TodoPage({ template, data, onDataChange }) {
 
             <View style={styles.stickySection}>
               <StickyNote
-                title="Günün Hatırlatıcısı & Sınavlar 🌸"
+                title={t('templates.todoPage.reminderTitle')}
                 content={reminderNote}
                 onChangeContent={handleReminderNoteChange}
                 color="#FFF9C4"
                 tapeColor="#FFCC80"
-                placeholder="Önemli sınav tarihleri, teslim edilecek ödevler ve motivasyon sözü..."
+                placeholder={t('templates.todoPage.reminderPlaceholder')}
               />
             </View>
           </ScrollView>
@@ -252,7 +256,7 @@ export default function TodoPage({ template, data, onDataChange }) {
             width={200}
             height={26}
             pattern="hearts"
-            label="🌸 GÜNLÜK HEDEF & TO-DO 🌸"
+            label={t('templates.todoPage.badgeLabel')}
           />
         </View>
 
@@ -262,12 +266,12 @@ export default function TodoPage({ template, data, onDataChange }) {
         {/* Post-it Hatırlatıcı */}
         <View style={styles.mobileStickyWrapper}>
           <StickyNote
-            title="Önemli Not 🎀"
+            title={t('templates.todoPage.importantNoteTitle')}
             content={reminderNote}
             onChangeContent={handleReminderNoteChange}
             color="#FFF9C4"
             tapeColor="#FFCC80"
-            placeholder="Unutulmaması gerekenler..."
+            placeholder={t('templates.todoPage.importantNotePlaceholder')}
           />
         </View>
       </ScrollView>

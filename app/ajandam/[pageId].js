@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { StorageService } from '../../services/storageService';
 import { getPageTemplate, PAGE_CATEGORIES } from '../../constants/pageTemplates';
@@ -37,6 +38,7 @@ import { fitTextToBounds } from '../../utils/lassoGeometry';
  * URL parametresinden pageId alır, ilgili sayfayı yükler.
  */
 export default function PageViewScreen() {
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const { pageId } = useLocalSearchParams();
   const { colors } = useTheme();
@@ -199,7 +201,7 @@ export default function PageViewScreen() {
         StorageService.updatePage(prev.id, { recognizedText: '', recognizedWords: [] });
       } else {
         recognitionTimeoutRef.current = setTimeout(async () => {
-          const result = await recognizeHandwriting(updatedDrawings, { language: 'tr' });
+          const result = await recognizeHandwriting(updatedDrawings, { language: i18n.language || 'tr' });
           if (result.success && !result.aborted && !result.stale) {
             StorageService.updatePage(prev.id, {
               recognizedText: result.text,
@@ -244,9 +246,12 @@ export default function PageViewScreen() {
         setUndoToast({ visible: false, message: '' });
       }, 4500),
     };
-    setUndoToast({ visible: true, message: `${toDelete.length} çizim silindi` });
+    setUndoToast({
+      visible: true,
+      message: t('drawing.strokesDeleted', { count: toDelete.length, defaultValue: `${toDelete.length} çizim silindi` }),
+    });
     handleCloseLassoSelection();
-  }, [selectedStrokeIds, selectedStrokes, page?.id, handleCloseLassoSelection]);
+  }, [selectedStrokeIds, selectedStrokes, page?.id, handleCloseLassoSelection, t]);
 
   // Silgiyle metin kutusu silindiğinde UndoToast göster
   const handleTextBlockDeleted = useCallback(
@@ -266,10 +271,12 @@ export default function PageViewScreen() {
       };
       setUndoToast({
         visible: true,
-        message: deletedBlocks.length === 1 ? 'Metin silindi' : `${deletedBlocks.length} metin silindi`,
+        message: deletedBlocks.length === 1
+          ? t('drawing.textDeleted', 'Metin silindi')
+          : t('drawing.textsDeleted', { count: deletedBlocks.length, defaultValue: `${deletedBlocks.length} metin silindi` }),
       });
     },
-    [page?.id]
+    [page?.id, t]
   );
 
   // Silgiyle metin içinden harf/kelime silindiğinde UndoToast göster
@@ -305,10 +312,10 @@ export default function PageViewScreen() {
       };
       setUndoToast({
         visible: true,
-        message: 'Metin silindi',
+        message: t('drawing.textDeleted', 'Metin silindi'),
       });
     },
-    [page?.id]
+    [page?.id, t]
   );
 
   // Kementle seçilen el yazısını metne dönüştürme başlat
@@ -318,7 +325,7 @@ export default function PageViewScreen() {
     setIsRecognizingSelected(true);
     setIsRecognitionModalVisible(true);
 
-    const result = await recognizeSelectedStrokes(selectedStrokes, { language: 'tr' });
+    const result = await recognizeSelectedStrokes(selectedStrokes, { language: i18n.language || 'tr' });
 
     const fitted = fitTextToBounds(selectionBounds, result.text || '');
     setRecognizedData({
@@ -385,13 +392,13 @@ export default function PageViewScreen() {
           setUndoToast({ visible: false, message: '' });
         }, 5500),
       };
-      setUndoToast({ visible: true, message: 'El yazısı metne dönüştürüldü' });
+      setUndoToast({ visible: true, message: t('drawing.handwritingConverted', 'El yazısı metne dönüştürüldü') });
 
       setIsRecognitionModalVisible(false);
       handleCloseLassoSelection();
       setActiveMode('none');
     },
-    [selectionBounds, selectedStrokes, selectedStrokeIds, textColor, page?.id, handleCloseLassoSelection, setActiveMode]
+    [selectionBounds, selectedStrokes, selectedStrokeIds, textColor, page?.id, handleCloseLassoSelection, setActiveMode, t]
   );
 
   // Sticker ekle
@@ -475,12 +482,12 @@ export default function PageViewScreen() {
         }, 4500);
 
         pendingStickerDeleteRef.current = { sticker: deletedSticker, timer, pageId: prev.id };
-        setUndoToast({ visible: true, message: 'Çıkartma silindi' });
+        setUndoToast({ visible: true, message: t('drawing.stickerDeleted', 'Çıkartma silindi') });
 
         return { ...prev, stickers: updatedStickers };
       });
     },
-    []
+    [t]
   );
 
   // Genel Geri Al (Undo) İşlemi - Çıkartma, Çizim ve Dönüştürmeyi Kapsar
@@ -597,7 +604,7 @@ export default function PageViewScreen() {
 
   // Sayfayı tamamen sil
   const handleDeletePage = useCallback(() => {
-    const message = 'Bu sayfayı silmek istediğinize emin misiniz?';
+    const message = t('agenda.deleteConfirmMessage', 'Bu sayfayı silmek istediğinize emin misiniz?');
     
     const executeDelete = async () => {
       await StorageService.deletePage(page.id);
@@ -615,12 +622,12 @@ export default function PageViewScreen() {
       }
     } else {
       Alert.alert(
-        'Sayfayı Sil',
+        t('agenda.deleteConfirmTitle', 'Sayfayı Sil'),
         message,
         [
-          { text: 'İptal', style: 'cancel' },
+          { text: t('common.cancel', 'İptal'), style: 'cancel' },
           {
-            text: 'Sil',
+            text: t('common.delete', 'Sil'),
             style: 'destructive',
             onPress: () => {
               setTimeout(() => {
@@ -631,7 +638,7 @@ export default function PageViewScreen() {
         ]
       );
     }
-  }, [page, router]);
+  }, [page, router, t]);
 
   if (isLoading) {
     return (
@@ -651,11 +658,11 @@ export default function PageViewScreen() {
         edges={['top', 'bottom']}
       >
         <Text style={[styles.errorText, { color: colors.textSecondary }]}>
-          Sayfa bulunamadı
+          {t('agenda.notFound', 'Sayfa bulunamadı')}
         </Text>
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={[styles.backLink, { color: colors.accent }]}>
-            Geri Dön
+            {t('todo.goBack', 'Geri Dön')}
           </Text>
         </TouchableOpacity>
       </SafeAreaView>

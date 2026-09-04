@@ -8,6 +8,7 @@ import {
   Platform,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 
 /**
@@ -22,6 +23,7 @@ export default function LassoActionMenu({
   onClose,
   isLoading = false,
 }) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
 
   if (!visible || !bounds || bounds.width <= 0) {
@@ -63,7 +65,7 @@ export default function LassoActionMenu({
         ) : (
           <>
             <MaterialCommunityIcons name="format-text" size={16} color="#FFFFFF" />
-            <Text style={styles.primaryActionText}>Metne Dönüştür</Text>
+            <Text style={styles.primaryActionText}>{t('lasso.convertToText', 'Metne Dönüştür')}</Text>
           </>
         )}
       </TouchableOpacity>
@@ -79,7 +81,7 @@ export default function LassoActionMenu({
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
         <MaterialCommunityIcons name="trash-can-outline" size={17} color="#E53935" />
-        <Text style={styles.deleteText}>Sil</Text>
+        <Text style={styles.deleteText}>{t('lasso.delete', 'Sil')}</Text>
       </TouchableOpacity>
 
       <View style={[styles.divider, { backgroundColor: colors.border || '#EEE' }]} />

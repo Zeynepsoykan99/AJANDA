@@ -12,6 +12,7 @@ import {
   Image,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import {
   getTemplatesForCategory,
@@ -26,6 +27,7 @@ import useResponsiveLayout from '../hooks/useResponsiveLayout';
  * Akış: Şablon seç → Başlık gir → Oluştur
  */
 export default function AddTodoModal({ visible, onClose, onAdd }) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const { isTablet } = useResponsiveLayout();
 
@@ -49,7 +51,7 @@ export default function AddTodoModal({ visible, onClose, onAdd }) {
       id: generatePageId(),
       category: 'todo',
       templateId: selectedTemplateId,
-      title: title.trim() || 'Yeni Liste',
+      title: title.trim() || t('todo.defaultTitle', 'Yeni Liste'),
       createdAt: new Date().toISOString(),
       order: Date.now(),
       data: createDefaultPageData('todo'),
@@ -91,7 +93,7 @@ export default function AddTodoModal({ visible, onClose, onAdd }) {
               />
             </TouchableOpacity>
             <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-              {step === 1 ? 'Şablon Seç' : 'Liste Başlığı'}
+              {step === 1 ? t('todo.templateStep', 'Şablon Seç') : t('todo.titleStep', 'Liste Başlığı')}
             </Text>
             <View style={styles.headerBtn} />
           </View>
@@ -141,7 +143,7 @@ export default function AddTodoModal({ visible, onClose, onAdd }) {
                 ]}
                 disabled={!selectedTemplateId}
               >
-                <Text style={styles.nextButtonText}>Devam Et</Text>
+                <Text style={styles.nextButtonText}>{t('todo.next', 'Devam Et')}</Text>
                 <MaterialCommunityIcons
                   name="arrow-right"
                   size={20}
@@ -158,7 +160,7 @@ export default function AddTodoModal({ visible, onClose, onAdd }) {
                 <Text
                   style={[styles.inputLabel, { color: colors.textSecondary }]}
                 >
-                  Liste Adı (opsiyonel)
+                  {t('todo.inputLabel', 'Liste Adı (opsiyonel)')}
                 </Text>
                 <TextInput
                   style={[
@@ -171,7 +173,7 @@ export default function AddTodoModal({ visible, onClose, onAdd }) {
                   ]}
                   value={title}
                   onChangeText={setTitle}
-                  placeholder="Market Alışverişi, Günlük Görevler..."
+                  placeholder={t('todo.inputPlaceholder', 'Market Alışverişi, Günlük Görevler...')}
                   placeholderTextColor={colors.border}
                   maxLength={40}
                   autoFocus={true}
@@ -191,7 +193,7 @@ export default function AddTodoModal({ visible, onClose, onAdd }) {
                   size={22}
                   color="#FFFFFF"
                 />
-                <Text style={styles.createButtonText}>Listeyi Oluştur</Text>
+                <Text style={styles.createButtonText}>{t('todo.createList', 'Listeyi Oluştur')}</Text>
               </TouchableOpacity>
             </View>
           )}

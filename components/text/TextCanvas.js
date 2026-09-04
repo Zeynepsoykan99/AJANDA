@@ -11,6 +11,7 @@ import {
   Animated,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 
 const triggerHaptic = () => {
@@ -36,6 +37,7 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
   isEraserActive = false,
   isDrawingMode = false,
 }) {
+  const { t } = useTranslation();
   const pan = useRef(new Animated.ValueXY({ x: block.x, y: block.y })).current;
   const initialDragPosRef = useRef({ x: block.x, y: block.y });
   const [isDragging, setIsDragging] = useState(false);
@@ -184,7 +186,7 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
             onBlur={() => onBlur(block.id)}
             autoFocus
             multiline
-            placeholder="Notunu yaz..."
+            placeholder={t('drawing.typeNotePlaceholder', 'Notunu yaz...')}
             placeholderTextColor={block.color + '55'}
             style={[
               styles.textInput,

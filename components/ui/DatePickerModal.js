@@ -8,6 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 
 const TURKISH_MONTHS = [
@@ -17,8 +18,16 @@ const TURKISH_MONTHS = [
 
 const TURKISH_DAYS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 
+const DATE_LOCALE_MAP = {
+  tr: 'tr-TR',
+  en: 'en-US',
+  de: 'de-DE',
+  es: 'es-ES',
+  fr: 'fr-FR',
+};
+
 /**
- * DatePickerModal - Özel Türkçe takvim seçici
+ * DatePickerModal - Özel Türkçe/Çok Dilli takvim seçici
  * Dışarıdan bağımlılık gerektirmez, tema renklerine tam uyumludur.
  *
  * @param {boolean} visible
@@ -34,8 +43,12 @@ export default function DatePickerModal({
   selectedDate,
   onClearFilter,
 }) {
+  const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const today = new Date();
+
+  const currentLang = i18n.language?.slice(0, 2) || 'tr';
+  const activeLocale = DATE_LOCALE_MAP[currentLang] || 'tr-TR';
 
   const [viewYear, setViewYear] = useState(
     selectedDate ? selectedDate.getFullYear() : today.getFullYear()
@@ -43,6 +56,27 @@ export default function DatePickerModal({
   const [viewMonth, setViewMonth] = useState(
     selectedDate ? selectedDate.getMonth() : today.getMonth()
   );
+
+  const monthName = useMemo(() => {
+    try {
+      return new Intl.DateTimeFormat(activeLocale, { month: 'long' }).format(
+        new Date(viewYear, viewMonth, 1)
+      );
+    } catch {
+      return TURKISH_MONTHS[viewMonth];
+    }
+  }, [activeLocale, viewYear, viewMonth]);
+
+  const weekDayLabels = useMemo(() => {
+    try {
+      const formatter = new Intl.DateTimeFormat(activeLocale, { weekday: 'short' });
+      return [1, 2, 3, 4, 5, 6, 7].map((d) =>
+        formatter.format(new Date(2026, 7, 30 + d))
+      );
+    } catch {
+      return TURKISH_DAYS;
+    }
+  }, [activeLocale]);
 
   // Ay değiştirme
   const goToPrevMonth = () => {
@@ -123,7 +157,7 @@ export default function DatePickerModal({
           {/* Başlık */}
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors.textPrimary }]}>
-              Tarihe Göre Filtrele
+              {t('datePicker.title')}
             </Text>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <MaterialCommunityIcons name="close" size={22} color={colors.textSecondary} />
@@ -136,7 +170,7 @@ export default function DatePickerModal({
               <MaterialCommunityIcons name="chevron-left" size={28} color={colors.accent} />
             </TouchableOpacity>
             <Text style={[styles.monthLabel, { color: colors.textPrimary }]}>
-              {TURKISH_MONTHS[viewMonth]} {viewYear}
+              {monthName} {viewYear}
             </Text>
             <TouchableOpacity onPress={goToNextMonth} style={styles.navBtn}>
               <MaterialCommunityIcons name="chevron-right" size={28} color={colors.accent} />
@@ -145,8 +179,8 @@ export default function DatePickerModal({
 
           {/* Gün Başlıkları */}
           <View style={styles.weekRow}>
-            {TURKISH_DAYS.map((d) => (
-              <Text key={d} style={[styles.weekDayLabel, { color: colors.textSecondary }]}>
+            {weekDayLabels.map((d, index) => (
+              <Text key={`weekday-${index}`} style={[styles.weekDayLabel, { color: colors.textSecondary }]}>
                 {d}
               </Text>
             ))}
@@ -199,7 +233,7 @@ export default function DatePickerModal({
               >
                 <MaterialCommunityIcons name="filter-off" size={16} color={colors.accent} />
                 <Text style={[styles.clearBtnText, { color: colors.accent }]}>
-                  Filtreyi Temizle
+                  {t('datePicker.clearFilter')}
                 </Text>
               </TouchableOpacity>
             )}
@@ -213,7 +247,7 @@ export default function DatePickerModal({
               style={[styles.todayBtn, { backgroundColor: colors.accent + '15' }]}
             >
               <Text style={[styles.todayBtnText, { color: colors.accent }]}>
-                Bugün
+                {t('datePicker.today')}
               </Text>
             </TouchableOpacity>
           </View>

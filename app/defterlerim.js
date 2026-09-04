@@ -1,11 +1,13 @@
-﻿import React from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { COLORS } from '../constants/colors';
 
 export default function DefterlerimScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -16,13 +18,13 @@ export default function DefterlerimScreen() {
           onPress={() => router.back()}
           style={styles.backButton}
         >
-          <Text style={styles.backButtonText}>← Geri</Text>
+          <Text style={styles.backButtonText}>← {t('common.back')}</Text>
         </TouchableOpacity>
       </View>
 
       {/* Sayfa İçeriği */}
       <View style={styles.contentContainer}>
-        <Text style={styles.pageTitle}>defterlerim</Text>
+        <Text style={styles.pageTitle}>{t('subpages.notebooks')}</Text>
         <View style={styles.underline} />
       </View>
     </SafeAreaView>

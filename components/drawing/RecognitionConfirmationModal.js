@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { AVAILABLE_FONTS } from '../../constants/fonts';
 
@@ -29,6 +30,7 @@ export default function RecognitionConfirmationModal({
   onConfirm,
   onCancel,
 }) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
 
   const [text, setText] = useState(initialText);
@@ -98,7 +100,7 @@ export default function RecognitionConfirmationModal({
                 color={colors.accent || '#C2185B'}
               />
               <Text style={[styles.title, { color: colors.textPrimary || '#212121' }]}>
-                El Yazısını Metne Dönüştür
+                {t('recognition.title', 'El Yazısını Metne Dönüştür')}
               </Text>
             </View>
             <TouchableOpacity
@@ -118,7 +120,7 @@ export default function RecognitionConfirmationModal({
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.accent || '#C2185B'} />
               <Text style={[styles.loadingText, { color: colors.textSecondary || '#757575' }]}>
-                El yazınız dijital mürekkep motoruyla taranıyor...
+                {t('recognition.scanning', 'El yazınız dijital mürekkep motoruyla taranıyor...')}
               </Text>
             </View>
           ) : (
@@ -129,7 +131,7 @@ export default function RecognitionConfirmationModal({
             >
               {/* 1. Metin Giriş / Düzeltme Alanı */}
               <Text style={[styles.sectionLabel, { color: colors.textSecondary || '#757575' }]}>
-                Tanınan Metin (Gerekiyorsa düzenleyin):
+                {t('recognition.recognizedLabel', 'Tanınan Metin (Gerekiyorsa düzenleyin):')}
               </Text>
               <View
                 style={[
@@ -144,7 +146,7 @@ export default function RecognitionConfirmationModal({
                   value={text}
                   onChangeText={setText}
                   multiline
-                  placeholder="Metin bulunamadı, buraya yazabilirsiniz..."
+                  placeholder={t('recognition.placeholder', 'Metin bulunamadı, buraya yazabilirsiniz...')}
                   placeholderTextColor={colors.textSecondary + '77'}
                   style={[
                     styles.textInput,
@@ -161,7 +163,7 @@ export default function RecognitionConfirmationModal({
               {candidates && candidates.length > 1 && (
                 <View style={styles.candidatesSection}>
                   <Text style={[styles.subLabel, { color: colors.textSecondary || '#757575' }]}>
-                    Alternatif Okumalar:
+                    {t('recognition.candidates', 'Alternatif Okumalar:')}
                   </Text>
                   <View style={styles.candidateChips}>
                     {candidates.slice(0, 5).map((cand, idx) => (
@@ -200,7 +202,7 @@ export default function RecognitionConfirmationModal({
               {/* 3. Yazı Tipi Seçici (Font Picker) */}
               <View style={styles.fontSection}>
                 <Text style={[styles.sectionLabel, { color: colors.textSecondary || '#757575' }]}>
-                  Yazı Tipi (Font) Seçin:
+                  {t('recognition.selectFont', 'Yazı Tipi (Font) Seçin:')}
                 </Text>
                 <View style={styles.fontsGrid}>
                   {AVAILABLE_FONTS.map((font) => {
@@ -263,7 +265,7 @@ export default function RecognitionConfirmationModal({
               {/* 4. Font Boyutu Ayarlayıcı */}
               <View style={styles.fontSizeRow}>
                 <Text style={[styles.sectionLabel, { color: colors.textSecondary || '#757575', marginBottom: 0 }]}>
-                  Yazı Boyutu:
+                  {t('recognition.fontSize', 'Yazı Boyutu:')}
                 </Text>
                 <View style={styles.fontSizeControls}>
                   <TouchableOpacity
@@ -295,7 +297,7 @@ export default function RecognitionConfirmationModal({
                 style={[styles.footerBtn, styles.cancelBtn, { borderColor: colors.border || '#DDD' }]}
               >
                 <Text style={[styles.cancelBtnText, { color: colors.textSecondary || '#757575' }]}>
-                  Vazgeç
+                  {t('common.cancel', 'Vazgeç')}
                 </Text>
               </TouchableOpacity>
 
@@ -313,7 +315,7 @@ export default function RecognitionConfirmationModal({
                 ]}
               >
                 <MaterialCommunityIcons name="check" size={18} color="#FFFFFF" />
-                <Text style={styles.confirmBtnText}>Dönüştür ve Ekle</Text>
+                <Text style={styles.confirmBtnText}>{t('recognition.confirm', 'Dönüştür ve Ekle')}</Text>
               </TouchableOpacity>
             </View>
           )}

@@ -8,6 +8,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 
 /**
@@ -21,14 +22,17 @@ import { useTheme } from '../../context/ThemeContext';
  */
 export default function UndoToast({
   visible,
-  message = 'Öğe silindi',
+  message,
   onUndo,
   onDismiss,
   duration = 4000,
 }) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const translateY = useSharedValue(100);
   const opacity = useSharedValue(0);
+
+  const displayMessage = message || t('common.emptyItem', 'Öğe silindi');
 
   useEffect(() => {
     if (visible) {
@@ -67,7 +71,7 @@ export default function UndoToast({
       <View style={styles.content}>
         <MaterialCommunityIcons name="delete-outline" size={18} color="#FFF" />
         <Text style={styles.message} numberOfLines={1}>
-          {message}
+          {displayMessage}
         </Text>
       </View>
 
@@ -77,7 +81,7 @@ export default function UndoToast({
         activeOpacity={0.8}
       >
         <MaterialCommunityIcons name="undo" size={16} color="#FFF" />
-        <Text style={styles.undoBtnText}>GERİ AL</Text>
+        <Text style={styles.undoBtnText}>{t('common.undoUpper', 'GERİ AL')}</Text>
       </TouchableOpacity>
     </Animated.View>
   );

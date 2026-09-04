@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ColorPicker, { Panel3, Preview } from 'reanimated-color-picker';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import { getAllThemes, generateCustomTheme } from '../constants/themes';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
@@ -19,6 +20,7 @@ import useResponsiveLayout from '../hooks/useResponsiveLayout';
  * Ekranın altından veya ortasından açılan, global renk paletini değiştiren bileşen.
  */
 export default function ThemePickerModal({ visible, onClose }) {
+  const { t } = useTranslation();
   const { theme, setTheme, colors } = useTheme();
   const { isTablet } = useResponsiveLayout();
   const allThemes = getAllThemes();
@@ -56,7 +58,7 @@ export default function ThemePickerModal({ visible, onClose }) {
 
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors.textPrimary }]}>
-              Uygulama Teması
+              {t('theme.title')}
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <MaterialCommunityIcons
@@ -68,7 +70,7 @@ export default function ThemePickerModal({ visible, onClose }) {
           </View>
 
           <Text style={[styles.subtitle, { color: colors.textSecondary + '99' }]}>
-            AJANDA'nın görünümünü kendi zevkine göre kişiselleştir.
+            {t('theme.subtitle')}
           </Text>
 
           <ScrollView
@@ -135,7 +137,7 @@ export default function ThemePickerModal({ visible, onClose }) {
                 <View style={styles.themeInfo}>
                   <View style={[styles.colorPreview, { backgroundColor: theme.id.startsWith('custom:') ? colors.background : colors.border }]} />
                   <Text style={[styles.themeName, { color: colors.textPrimary }]}>
-                    ✨ Kendi Rengini Seç
+                    {t('theme.customColor')}
                   </Text>
                 </View>
                 <MaterialCommunityIcons
@@ -158,7 +160,7 @@ export default function ThemePickerModal({ visible, onClose }) {
                     <Panel3 style={styles.pickerPanel} centerChannel="saturation" />
                   </ColorPicker>
                   <Text style={[styles.pickerHint, { color: colors.textSecondary }]}>
-                    İstediğin rengi seç, uygulama anında uyum sağlasın.
+                    {t('theme.customHint')}
                   </Text>
                 </View>
               )}

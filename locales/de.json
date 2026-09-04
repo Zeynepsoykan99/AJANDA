@@ -1,0 +1,199 @@
+{
+  "common": {
+    "appName": "AJANDA",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "undo": "Rückgängig",
+    "undoUpper": "RÜCKGÄNGIG",
+    "edit": "Bearbeiten",
+    "close": "Schließen",
+    "search": "Suchen...",
+    "loading": "Laden...",
+    "confirm": "Bestätigen",
+    "back": "Zurück",
+    "today": "Heute",
+    "emptyItem": "Element gelöscht"
+  },
+  "home": {
+    "appTitle": "AJANDA",
+    "searchPlaceholder": "Seiten, Notizen oder Aufgaben suchen...",
+    "menuDiary": "mein tagebuch",
+    "menuAgenda": "mein planer",
+    "menuNotes": "meine notizen",
+    "menuTodoList": "to-do liste",
+    "themeTooltip": "App-Design",
+    "languageTooltip": "Sprachauswahl"
+  },
+  "todo": {
+    "title": "To-Do Liste",
+    "defaultTitle": "Neue Liste",
+    "templateStep": "Vorlage wählen",
+    "titleStep": "Listentitel",
+    "next": "Weiter",
+    "createList": "Liste erstellen",
+    "inputLabel": "Listentitel (optional)",
+    "inputPlaceholder": "Lebensmitteleinkauf, Tägliche Aufgaben...",
+    "emptyFilterTitle": "Keine Liste gefunden",
+    "emptyTitle": "Keine Aufgaben mehr übrig!",
+    "emptyFilterDesc": "Am {{date}} wurde keine Liste erstellt.",
+    "emptyDesc": "Tippe auf das +-Symbol, um eine neue Liste zu erstellen.",
+    "clearFilter": "Filter zurücksetzen",
+    "deletedToast": "\"{{title}}\" gelöscht",
+    "notFound": "Liste nicht gefunden",
+    "goBack": "Zurückgehen",
+    "deleteConfirmTitle": "Liste löschen",
+    "deleteConfirmMessage": "Möchtest du diese Liste wirklich löschen?",
+    "categoryLabel": "To-Do Liste"
+  },
+  "agenda": {
+    "coverTitle": "Planer-Cover",
+    "pagesTitle": "Meine Seiten",
+    "emptyFilterTitle": "Keine Seiten gefunden",
+    "emptyTitle": "Noch keine Seiten hinzugefügt",
+    "emptyFilterDesc": "Am {{date}} wurden keine Seiten erstellt.",
+    "emptyDesc": "Tippe unten auf das +-Symbol, um deine erste Seite hinzuzufügen!",
+    "clearFilter": "Filter zurücksetzen",
+    "deletedToast": "\"{{title}}\" gelöscht",
+    "deleteConfirmTitle": "Seite löschen",
+    "deleteConfirmMessage": "Möchtest du diese Seite wirklich löschen?",
+    "notFound": "Seite nicht gefunden",
+    "typeStep": "Seitentyp wählen",
+    "templateStep": "Vorlage wählen",
+    "finalStep": "Letzte Details",
+    "pageType": "Seitentyp",
+    "pageTitleOptional": "Seitentitel (optional)",
+    "newPageDefault": "Neue Seite",
+    "createPage": "Seite erstellen",
+    "selectCover": "Cover wählen",
+    "categoryTodo": "To-Do Liste",
+    "categoryMonthly": "Monatsplaner",
+    "categoryWeekly": "Wochenplaner"
+  },
+  "pageCards": {
+    "completedSummary": "{{done}}/{{total}} abgeschlossen",
+    "emptyTodo": "Leere Liste",
+    "eventsSummary": "{{count}} Termine",
+    "emptyEvents": "Keine Termine",
+    "tasksSummary": "{{count}} Aufgaben",
+    "emptyWeekly": "Leere Woche",
+    "charsSummary": "{{count}} Zeichen",
+    "emptyBlank": "Leere Seite"
+  },
+  "drawing": {
+    "modeDrawing": "Zeichnen",
+    "modeText": "Tastatur",
+    "strokeThin": "Dünn",
+    "strokeMedium": "Mittel",
+    "strokeThick": "Dick",
+    "fontSmall": "Klein",
+    "fontMedium": "Mittel",
+    "fontLarge": "Groß",
+    "customColorTitle": "Eigene Farbe wählen",
+    "apply": "Anwenden",
+    "strokesDeleted": "{{count}} Zeichnungen gelöscht",
+    "textDeleted": "Text gelöscht",
+    "textsDeleted": "{{count}} Texte gelöscht",
+    "handwritingConverted": "Handschrift in Text umgewandelt",
+    "stickerDeleted": "Sticker gelöscht",
+    "typeNotePlaceholder": "Notiz schreiben..."
+  },
+  "lasso": {
+    "convertToText": "In Text umwandeln",
+    "delete": "Löschen"
+  },
+  "recognition": {
+    "title": "Handschrift in Text umwandeln",
+    "scanning": "Handschrift wird mit Digital-Ink-Engine gescannt...",
+    "recognizedLabel": "Erkannter Text (bei Bedarf bearbeiten):",
+    "placeholder": "Kein Text erkannt, hier tippen...",
+    "candidates": "Alternative Treffer:",
+    "selectFont": "Schriftart wählen:",
+    "fontSize": "Schriftgröße:",
+    "confirm": "Umwandeln und Hinzufügen"
+  },
+  "stickers": {
+    "title": "🎀 Aufkleber",
+    "hearts": "Herzen",
+    "stars": "Sterne",
+    "nature": "Natur",
+    "decorative": "Dekorativ",
+    "food": "Essen",
+    "mood": "Stimmung",
+    "custom_images": "Eigene Bilder"
+  },
+  "datePicker": {
+    "title": "Nach Datum filtern",
+    "today": "Heute",
+    "clearFilter": "Filter zurücksetzen"
+  },
+  "search": {
+    "placeholder": "Seiten, Notizen oder Aufgaben suchen...",
+    "tabAll": "Alle",
+    "tabAgenda": "Planer",
+    "tabTodo": "To-Do",
+    "tabCover": "Cover",
+    "initialTitle": "In allen Seiten suchen",
+    "initialSubtitle": "Suche in Seitentiteln, Notizen, Aufgaben oder Covern.",
+    "noResultsTitle": "Keine Ergebnisse gefunden",
+    "noResultsSubtitle": "Keine Titel oder Notizen stimmen mit \"{{query}}\" überein. Versuche einen anderen Begriff.",
+    "resultsCount": "{{count}} Ergebnisse gefunden",
+    "foundFromHandwriting": "In Handschrift gefunden"
+  },
+  "theme": {
+    "title": "App-Design",
+    "subtitle": "Personalisiere das Aussehen von AJANDA nach deinem Geschmack.",
+    "presetThemes": "Vordefinierte Designs",
+    "customColor": "✨ Eigene Farbe wählen",
+    "currentColor": "Ausgewählte Farbe",
+    "applyColor": "Farbe anwenden",
+    "customHint": "Wähle eine beliebige Farbe, die App passt sich sofort an."
+  },
+  "language": {
+    "title": "Sprache wählen",
+    "subtitle": "Wähle die Sprache der Benutzeroberfläche",
+    "turkish": "Türkçe",
+    "english": "English",
+    "german": "Deutsch",
+    "spanish": "Español",
+    "french": "Français",
+    "systemDefault": "Systemstandard (Automatisch)",
+    "currentLanguage": "Aktuelle Sprache"
+  },
+  "subpages": {
+    "notebooks": "meine notizbücher",
+    "diary": "mein tagebuch"
+  },
+  "templates": {
+    "todoPage": {
+      "priority": "Tagesprioritäten",
+      "study": "Lernen & Hausaufgaben",
+      "personal": "Persönliches & Gewohnheiten",
+      "emptyCategory": "Noch keine Aufgaben in diesem Bereich",
+      "addPlaceholder": "{{name}} hinzufügen...",
+      "reminderTitle": "Tageserinnerung & Prüfungen 🌸",
+      "reminderPlaceholder": "Wichtige Prüfungstermine, Abgabefristen und Motivationszitate...",
+      "importantNoteTitle": "Wichtige Notiz 🎀",
+      "importantNotePlaceholder": "Nicht zu vergessen...",
+      "watermark": "DAILY STUDY & TO-DO 📚",
+      "badgeLabel": "🌸 TAGESZIELE & TO-DO 🌸"
+    },
+    "monthlyPage": {
+      "goalsTitle": "✨ MONATSZIELE ✨",
+      "notesTitle": "{{month}} Notizen & Prüfungen 🎀",
+      "mobileGoalsTitle": "{{month}} Ziele 🌸",
+      "goalsPlaceholder": "Projekte in diesem Monat, Prüfungswochen, Bücher und persönliche Ziele...",
+      "mobileGoalsPlaceholder": "Wichtige Termine und Ziele für diesen Monat...",
+      "eventsTitle": "📅 Termine in diesem Monat",
+      "noEvents": "Tippe auf einen Kalendertag, um einen Termin oder eine Prüfung hinzuzufügen!",
+      "modalPrompt": "Trage Prüfung, Hausaufgabe oder Termin für diesen Tag ein:",
+      "modalInputPlaceholder": "z.B. Matheprüfung, Geburtstagsparty..."
+    },
+    "weeklyPage": {
+      "notesTitle": "Wöchentliche Ziele & Notizen 🎀",
+      "notesPlaceholder": "Welche Prüfungen stehen an? Ziele und Motivationsnotizen...",
+      "addPlaceholder": "Neuen Plan oder Unterricht eintragen...",
+      "badgeLabel": "WOCHENPLAN"
+    }
+  }
+}
