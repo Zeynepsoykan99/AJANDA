@@ -50,7 +50,7 @@ export default function RecognitionConfirmationModal({
   };
 
   const handleIncreaseFontSize = () => {
-    setFontSize((prev) => Math.min(48, prev + 2));
+    setFontSize((prev) => Math.min(64, prev + 2));
   };
 
   const handleDecreaseFontSize = () => {

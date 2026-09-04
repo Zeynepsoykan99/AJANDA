@@ -200,29 +200,93 @@ export function getMultiStrokeBounds(strokes) {
 }
 
 /**
+ * Orijinal el yazısı çizimlerinin fiziksel sınırlarına (X genişliği ve Y yüksekliği)
+ * ve tanınan metnin karakter/satır yapısına göre akıllı dijital başlangıç puntosunu belirler.
+ *
+ * @param {{ width: number, height: number }} bounds - El yazısı sınırlayıcı kutusu
+ * @param {string} text - Dönüştürülecek metin
+ * @returns {number} - Önerilen font puntosu (px)
+ */
+export function calculateAutoFontSize(bounds, text = '') {
+  if (!bounds) return 18;
+
+  const boundHeight =
+    bounds.height != null
+      ? bounds.height
+      : (bounds.maxY != null && bounds.minY != null ? bounds.maxY - bounds.minY : 0);
+
+  const boundWidth =
+    bounds.width != null
+      ? bounds.width
+      : (bounds.maxX != null && bounds.minX != null ? bounds.maxX - bounds.minX : 0);
+
+  if (boundHeight <= 0) return 18;
+
+  const cleanText = (text || '').trim();
+  if (!cleanText) return 18;
+
+  const lines = cleanText.split('\n');
+  const lineCount = Math.max(1, lines.length);
+  const longestLineLength = Math.max(
+    1,
+    ...lines.map((l) => l.trim().length)
+  );
+
+  // 1. Yükseklik bazlı hedef: x-height ve satır aralığı oranı (~%42-%46)
+  const lineHeight = boundHeight / lineCount;
+  const fontFromHeight = lineHeight * 0.44;
+
+  // 2. Genişlik bazlı hedef: Karakter başına düşen ortalama genişlik
+  let fontFromWidth = fontFromHeight;
+  if (longestLineLength > 2 && boundWidth > 20) {
+    const avgCharWidthRatio = 0.52;
+    fontFromWidth = boundWidth / (longestLineLength * avgCharWidthRatio);
+  }
+
+  // 3. Orantısal Dengeleme:
+  // Kısa kelimelerde (<= 3 karakter) doğrudan yükseklik esas alınır.
+  // Uzun kelimelerde ve cümlelerde metnin el yazısı alanından taşmasını önleyen denge kurulur.
+  let optimalFont;
+  if (longestLineLength <= 3) {
+    optimalFont = fontFromHeight;
+  } else {
+    optimalFont = Math.min(fontFromHeight, fontFromWidth * 1.15);
+  }
+
+  // Doğal el yazısı okunabilirlik aralığı (14px - 38px, çok büyük başlıklar için max 42px)
+  const finalFontSize = Math.round(Math.min(38, Math.max(14, optimalFont)));
+
+  return finalFontSize;
+}
+
+/**
  * Orijinal el yazısı boyutuna göre otomatik yazı boyutu (font size) kestirimi yapar.
  *
- * @param {{ width: number, height: number }} bounds - Çizgilerin sınırlayıcı kutusu
+ * @param {{ width?: number, height?: number, minX?: number, maxX?: number, minY?: number, maxY?: number }} bounds - Çizgilerin sınırlayıcı kutusu
  * @param {string} text - Dönüştürülecek metin
  * @returns {{ fontSize: number, width: number, height: number }}
  */
 export function fitTextToBounds(bounds, text = '') {
-  const lineCount = Math.max(1, (text || '').split('\n').length);
-  const estimatedLineHeight = (bounds.height || 30) / lineCount;
+  const calculatedFontSize = calculateAutoFontSize(bounds, text);
 
-  // Çizgi yüksekliğinin yaklaşık %65-70'i tipik yazı büyüklüğüne karşılık gelir
-  let calculatedFontSize = Math.round(estimatedLineHeight * 0.68);
+  const boundWidth =
+    bounds?.width != null
+      ? bounds.width
+      : (bounds?.maxX != null && bounds?.minX != null ? bounds.maxX - bounds.minX : 100);
 
-  // Aşırı küçük veya aşırı büyük yazı boyutlarını engelle
-  calculatedFontSize = Math.min(48, Math.max(13, calculatedFontSize));
+  const boundHeight =
+    bounds?.height != null
+      ? bounds.height
+      : (bounds?.maxY != null && bounds?.minY != null ? bounds.maxY - bounds.minY : 40);
 
   // Metin kutusu genişliği (orijinal el yazısı genişliğinden biraz pay bırakılır)
-  const calculatedWidth = Math.max(120, Math.round((bounds.width || 100) + 16));
+  const calculatedWidth = Math.max(120, Math.round(boundWidth + 16));
+  const calculatedHeight = Math.max(40, Math.round(boundHeight));
 
   return {
     fontSize: calculatedFontSize,
     width: calculatedWidth,
-    height: Math.max(40, bounds.height || 40),
+    height: calculatedHeight,
   };
 }
 

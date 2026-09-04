@@ -8,6 +8,7 @@ import {
   Pressable,
   Platform,
   PanResponder,
+  Animated,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -32,31 +33,40 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
   canvasWidth = 0,
   canvasHeight = 0,
   onSnapChange,
+  isEraserActive = false,
 }) {
-  const [pos, setPos] = useState({ x: block.x, y: block.y });
+  const pan = useRef(new Animated.ValueXY({ x: block.x, y: block.y })).current;
+  const initialDragPosRef = useRef({ x: block.x, y: block.y });
+  const [isDragging, setIsDragging] = useState(false);
   const [boxWidth, setBoxWidth] = useState(block.width || 120);
-  const currentPosRef = useRef({ x: block.x, y: block.y });
   const isSnappedVRef = useRef(false);
   const isSnappedHRef = useRef(false);
 
   useEffect(() => {
-    setPos({ x: block.x, y: block.y });
-    currentPosRef.current = { x: block.x, y: block.y };
+    pan.setValue({ x: block.x, y: block.y });
+    initialDragPosRef.current = { x: block.x, y: block.y };
   }, [block.x, block.y]);
 
   useEffect(() => {
     if (block.width) setBoxWidth(block.width);
   }, [block.width]);
 
-  // Sürükle (Taşı) PanResponder + Akıllı Hizalama (Snapping)
+  // Sürükle (Taşı) PanResponder + Akıllı Hizalama (Snapping) — Doğrudan Animated ile 0 Re-render
   const dragPanResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => !isEditing,
+      onStartShouldSetPanResponder: () => !isEditing && !isEraserActive,
       onMoveShouldSetPanResponder: (_, gestureState) =>
-        !isEditing && (Math.abs(gestureState.dx) > 3 || Math.abs(gestureState.dy) > 3),
+        !isEditing && !isEraserActive && (Math.abs(gestureState.dx) > 3 || Math.abs(gestureState.dy) > 3),
+      onPanResponderGrant: () => {
+        initialDragPosRef.current = {
+          x: pan.x._value !== undefined ? pan.x._value : block.x,
+          y: pan.y._value !== undefined ? pan.y._value : block.y,
+        };
+        setIsDragging(true);
+      },
       onPanResponderMove: (_, gestureState) => {
-        let rawX = block.x + gestureState.dx;
-        let rawY = block.y + gestureState.dy;
+        let rawX = initialDragPosRef.current.x + gestureState.dx;
+        let rawY = initialDragPosRef.current.y + gestureState.dy;
 
         // Akıllı Hizalama (Snapping)
         if (canvasWidth > 0 && canvasHeight > 0) {
@@ -99,19 +109,29 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
           }
         }
 
-        currentPosRef.current = { x: rawX, y: rawY };
-        setPos({ x: rawX, y: rawY });
+        // Sıfır re-render: doğrudan Animated.ValueXY güncelle
+        pan.setValue({ x: rawX, y: rawY });
       },
       onPanResponderRelease: (_, gestureState) => {
+        setIsDragging(false);
         isSnappedVRef.current = false;
         isSnappedHRef.current = false;
         if (onSnapChange) onSnapChange({ v: false, h: false });
 
-        if (Math.abs(gestureState.dx) < 3 && Math.abs(gestureState.dy) < 3) {
+        const finalX = pan.x._value !== undefined ? pan.x._value : initialDragPosRef.current.x;
+        const finalY = pan.y._value !== undefined ? pan.y._value : initialDragPosRef.current.y;
+
+        if (Math.abs(gestureState.dx) < 4 && Math.abs(gestureState.dy) < 4) {
           onEdit(block.id);
         } else {
-          onMoveEnd(block.id, currentPosRef.current.x, currentPosRef.current.y);
+          onMoveEnd(block.id, Math.round(finalX), Math.round(finalY));
         }
+      },
+      onPanResponderTerminate: () => {
+        setIsDragging(false);
+        isSnappedVRef.current = false;
+        isSnappedHRef.current = false;
+        if (onSnapChange) onSnapChange({ v: false, h: false });
       },
     })
   ).current;
@@ -137,13 +157,19 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
   ).current;
 
   return (
-    <View
+    <Animated.View
       style={[
         styles.blockContainer,
-        { left: pos.x, top: pos.y, width: boxWidth },
+        {
+          left: pan.x,
+          top: pan.y,
+          width: boxWidth,
+        },
+        Platform.OS === 'web' && { cursor: isEditing ? 'text' : 'grab', userSelect: 'none' },
         isEditing && styles.blockEditing,
+        isDragging && styles.blockDragging,
       ]}
-      {...(!isEditing ? dragPanResponder.panHandlers : {})}
+      {...(!isEditing && !isEraserActive ? dragPanResponder.panHandlers : {})}
     >
       {isEditing ? (
         <View style={styles.inputWrapper}>
@@ -195,7 +221,7 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
           </Text>
         </View>
       )}
-    </View>
+    </Animated.View>
   );
 });
 
@@ -206,6 +232,7 @@ export default function TextCanvas({
   activeColor = '#4E342E',
   activeFontSize = 15,
   activeFontFamily,
+  isEraserActive = false,
 }) {
   const [editingId, setEditingId] = useState(null);
   const [canvasLayout, setCanvasLayout] = useState({ width: 0, height: 0 });
@@ -316,6 +343,7 @@ export default function TextCanvas({
           canvasWidth={canvasLayout.width}
           canvasHeight={canvasLayout.height}
           onSnapChange={handleSnapChange}
+          isEraserActive={isEraserActive}
         />
       ))}
     </View>
@@ -341,6 +369,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  blockDragging: {
+    zIndex: 100,
+    opacity: 0.94,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: '#E91E63AA',
+    backgroundColor: '#FFFFFF99',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 6,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -381,6 +423,7 @@ const styles = StyleSheet.create({
   savedText: {
     fontWeight: '600',
     fontFamily: Platform.OS === 'ios' ? 'Avenir' : 'normal',
+    ...(Platform.OS === 'web' ? { userSelect: 'none' } : {}),
   },
   guideLineVertical: {
     position: 'absolute',

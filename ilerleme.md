@@ -4,6 +4,44 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-04] - Serbest Sürükle & Bırak (Drag & Drop) ve Akıllı Punto Algılama (Auto-Font Sizing) Eklendi
+
+### 🚀 Eklenen Özellikler & Geliştirmeler
+- **Akıllı Punto Algılama (Auto-Font Sizing):**
+  - El yazısını metne dönüştürürken kullanılan sabit 48 punto sınırlandırılması kaldırıldı.
+  - Orijinal el yazısı çizgilerinin kapsadığı alanın fiziksel sınırları ($W_{ink}$ ve $H_{ink}$), satır adedi ve karakter sayısı matematiksel bir modelle analiz edilerek dijital metin için en ideal başlangıç font boyutu (14px - 38px doğal aralığında) otomatik olarak belirlenir.
+  - Kullanıcı dönüştürme onay penceresinde (`RecognitionConfirmationModal`) veya sonrasında metin kutusu kontrollerinden 12px ile 64px arasında puntoyu manuel olarak serbestçe değiştirebilir.
+- **Sıfır Gecikmeli Sürükle & Bırak (Zero-Lag Drag & Drop):**
+  - Dönüştürülen veya yeni eklenen tüm dijital metin kutuları (`TextCanvas`), sayfa üzerinde istenilen noktaya serbestçe sürüklenip bırakılabilir hale getirildi.
+  - **Sıfır Re-Render Mimarisi:** Sürükleme hareketi `react-native` `Animated.ValueXY` doğrudan `Animated.View` ile eşleştirilerek React `useState` re-render döngüsünden tamamen ayrıştırıldı; 60/120 FPS akıcı performans sağlandı.
+  - Sürükleme esnasında görsel geribildirim (hafif gölge, saydamlık ve kesikli kenarlık) eklendi; web ortamı için `cursor: 'grab' / 'grabbing'` ve `userSelect: 'none'` eklendi.
+  - Sürükleme bittiğinde nihai $(X, Y)$ koordinatları AsyncStorage'a debounced olarak güvenle kaydedilir.
+- **Silgi ve Mod Çakışmalarının Önlenmesi:**
+  - Silgi aracı aktifken metin kutularının sürüklenmesi devre dışı bırakılarak parçalı harf silme motoruyla hiçbir çakışma yaşanmaması sağlandı.
+  - Dönüştürme tamamlandığında `activeMode` otomatik olarak `'none'` durumuna çekilerek çizim katmanının dokunmaları engellemesi önlendi ve metin kutusunun anında taşınabilir olması sağlandı.
+
+### ✅ Yapılan Değişiklikler
+#### `utils/lassoGeometry.js`
+- `calculateAutoFontSize(bounds, text)`: Çizim boyutları ($W, H$) ve metin yapısına göre otomatik orantısal punto hesaplama algoritması eklendi.
+- `fitTextToBounds(bounds, text)`: `calculateAutoFontSize` entegre edilerek hem `width/height` hem `min/max` koordinat formatlarına tam uyumlu hale getirildi.
+
+#### `components/text/TextCanvas.js`
+- `DraggableTextBlock` bileşeni `Animated.ValueXY` ve `initialDragPosRef` ile sıfır re-render sürükleme mekanizmasına geçirildi.
+- `isEraserActive` prop'u eklenerek silgi modunda sürüklemenin devre dışı kalması sağlandı.
+- Sürükleme anında görsel stil ve web imleç özellikleri (`grab`/`grabbing`) eklendi.
+
+#### `components/drawing/RecognitionConfirmationModal.js`
+- Manuel punto seçim aralığı 64px'e kadar genişletildi.
+
+#### `app/ajandam/[pageId].js` & `app/todolist/[pageId].js`
+- `handleConfirmConversion`: Dönüştürme sonrası `setActiveMode('none')` yapılarak metin kutusunun anında sürüklemeye hazır olması sağlandı.
+- `<TextCanvas>` bileşenine `isEraserActive={activeMode === 'drawing' && drawingTool === 'eraser'}` prop'u aktarıldı.
+
+#### `app/ajandam/index.js`
+- Kapak sayfası `<TextCanvas>` bileşenine `isEraserActive` aktarıldı.
+
+---
+
 ## 📅 [2026-09-04] - Silgi (Eraser) Aracına Harf/Kelime Düzeyinde Parçalı Silme (Doğal Kağıt Hissi) Yeteneği Eklendi
 
 ### 🚀 Eklenen Özellikler & Geliştirmeler

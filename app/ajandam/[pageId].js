@@ -389,8 +389,9 @@ export default function PageViewScreen() {
 
       setIsRecognitionModalVisible(false);
       handleCloseLassoSelection();
+      setActiveMode('none');
     },
-    [selectionBounds, selectedStrokes, selectedStrokeIds, textColor, page?.id, handleCloseLassoSelection]
+    [selectionBounds, selectedStrokes, selectedStrokeIds, textColor, page?.id, handleCloseLassoSelection, setActiveMode]
   );
 
   // Sticker ekle
@@ -856,6 +857,7 @@ export default function PageViewScreen() {
           onTextBlocksChange={handleTextBlocksChange}
           activeColor={textColor}
           activeFontSize={textFontSize}
+          isEraserActive={activeMode === 'drawing' && drawingTool === 'eraser'}
         />
 
         {/* Apple Pencil & Çizim Katmanı - Uçtan uca tam hizalı */}

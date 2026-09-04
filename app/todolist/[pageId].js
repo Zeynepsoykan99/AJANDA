@@ -364,8 +364,9 @@ export default function TodoViewScreen() {
 
       setIsRecognitionModalVisible(false);
       handleCloseLassoSelection();
+      setActiveMode('none');
     },
-    [selectionBounds, selectedStrokes, selectedStrokeIds, textColor, page?.id, handleCloseLassoSelection]
+    [selectionBounds, selectedStrokes, selectedStrokeIds, textColor, page?.id, handleCloseLassoSelection, setActiveMode]
   );
 
   const handleAddSticker = useCallback((sticker) => {
@@ -739,6 +740,7 @@ export default function TodoViewScreen() {
           onTextBlocksChange={handleTextBlocksChange}
           activeColor={textColor}
           activeFontSize={textFontSize}
+          isEraserActive={activeMode === 'drawing' && drawingTool === 'eraser'}
         />
 
         {/* Apple Pencil & Çizim Katmanı - Uçtan uca tam hizalı */}

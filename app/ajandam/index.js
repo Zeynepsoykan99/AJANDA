@@ -273,6 +273,7 @@ export default function AjandamScreen() {
               onTextBlocksChange={handleTextBlocksChange}
               activeColor={textColor}
               activeFontSize={textFontSize}
+              isEraserActive={activeMode === 'drawing' && drawingTool === 'eraser'}
             />
 
             {/* Çizim Katmanı */}
