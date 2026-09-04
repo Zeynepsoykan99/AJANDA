@@ -32,7 +32,7 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
   canvasWidth = 0,
   canvasHeight = 0,
   onSnapChange,
-}) => {
+}) {
   const [pos, setPos] = useState({ x: block.x, y: block.y });
   const [boxWidth, setBoxWidth] = useState(block.width || 120);
   const currentPosRef = useRef({ x: block.x, y: block.y });

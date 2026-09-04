@@ -4,6 +4,21 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-04] - Beyaz Ekran (White Screen of Death) & TextCanvas Sözdizimi Onarımı
+
+### 🐛 Giderilen Sorunlar
+- **Beyaz Ekran (White Screen of Death):** Metro Bundler hem Expo Web hem Expo Go için derleme yaparken `components/text/TextCanvas.js` dosyasında `HTTP 500 TransformError (SyntaxError)` veriyordu. JS bundle yüklenemediği için arayüzde hiçbir hata mesajı görünmüyor ve ekran tamamen beyaz kalıyordu.
+
+### 🔍 Kök Neden (Root Cause)
+- `DraggableTextBlock` bileşeni `React.memo(function DraggableTextBlock({ ... }) => {` şeklinde tanımlanmıştı. Standart `function` sözdizimi ile ok (`=>`) işareti bir arada kaldığı için Babel/Metro `SyntaxError: Unexpected token, expected "{"` hatası üretiyordu.
+
+### ✅ Yapılan Değişiklikler
+#### `components/text/TextCanvas.js`
+- 35. satırdaki `}) => {` ifadesi `}) {` olarak düzeltildi.
+- `@babel/parser` ile projedeki tüm JS/JSX dosyaları tarandı (0 hata) ve Metro Bundler web (8.9 MB) ile iOS (11.6 MB) bundle'ları HTTP 200 OK ile doğrulanarak beyaz ekran sorunu tamamen çözüldü.
+
+---
+
 ## 📅 [2026-09-04] - Kement (Lasso) Aracı Onarımı & TextInput Yazma Kesintisi Düzeltmesi
 
 ### 🐛 Giderilen Sorunlar
