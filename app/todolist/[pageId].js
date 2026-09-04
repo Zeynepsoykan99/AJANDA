@@ -21,7 +21,10 @@ import TextCanvas from '../../components/text/TextCanvas';
 import StickerCanvas from '../../components/stickers/StickerCanvas';
 import StickerMenu from '../../components/stickers/StickerMenu';
 import UndoToast from '../../components/ui/UndoToast';
-import { recognizeHandwriting } from '../../services/handwritingService';
+import { recognizeHandwriting, recognizeSelectedStrokes } from '../../services/handwritingService';
+import LassoActionMenu from '../../components/drawing/LassoActionMenu';
+import RecognitionConfirmationModal from '../../components/drawing/RecognitionConfirmationModal';
+import { fitTextToBounds } from '../../utils/lassoGeometry';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 
 /**
@@ -40,6 +43,21 @@ export default function TodoViewScreen() {
   const pendingStickerDeleteRef = useRef(null);
   const saveTimeoutRef = useRef(null);
   const recognitionTimeoutRef = useRef(null);
+
+  // Kement (Lasso) Seçim Durumu
+  const [selectedStrokeIds, setSelectedStrokeIds] = useState([]);
+  const [selectionBounds, setSelectionBounds] = useState(null);
+  const [selectedStrokes, setSelectedStrokes] = useState([]);
+  const [isRecognizingSelected, setIsRecognizingSelected] = useState(false);
+  const [isRecognitionModalVisible, setIsRecognitionModalVisible] = useState(false);
+  const [recognizedData, setRecognizedData] = useState({
+    text: '',
+    candidates: [],
+    estimatedFontSize: 16,
+  });
+
+  // Atomik El Yazısı Dönüşüm Geçmişi (Undo/Redo)
+  const conversionHistoryRef = useRef([]);
 
   // Çizim Ayarları
   const [activeMode, setActiveMode] = useState('none');
@@ -167,6 +185,126 @@ export default function TodoViewScreen() {
     });
   }, []);
 
+  // ─── Kement (Lasso) Seçim ve Dönüştürme İşlemleri ───
+  const handleSelectionChange = useCallback(({ selectedStrokeIds: ids, bounds, selectedStrokes: strokes }) => {
+    setSelectedStrokeIds(ids || []);
+    setSelectionBounds(bounds || null);
+    setSelectedStrokes(strokes || []);
+  }, []);
+
+  const handleCloseLassoSelection = useCallback(() => {
+    setSelectedStrokeIds([]);
+    setSelectionBounds(null);
+    setSelectedStrokes([]);
+  }, []);
+
+  // Kementle seçilen çizgileri sil
+  const handleLassoDelete = useCallback(() => {
+    if (selectedStrokeIds.length === 0) return;
+    const toDelete = [...selectedStrokes];
+
+    setPage((prev) => {
+      const current = prev.drawings || [];
+      const updatedDrawings = current.filter((s) => !selectedStrokeIds.includes(s.id));
+      StorageService.updatePage(prev.id, { drawings: updatedDrawings });
+      return { ...prev, drawings: updatedDrawings };
+    });
+
+    pendingStickerDeleteRef.current = {
+      type: 'strokes_delete',
+      removedStrokes: toDelete,
+      pageId: page?.id,
+      timer: setTimeout(() => {
+        pendingStickerDeleteRef.current = null;
+        setUndoToast({ visible: false, message: '' });
+      }, 4500),
+    };
+    setUndoToast({ visible: true, message: `${toDelete.length} çizim silindi` });
+    handleCloseLassoSelection();
+  }, [selectedStrokeIds, selectedStrokes, page?.id, handleCloseLassoSelection]);
+
+  // Kementle seçilen el yazısını metne dönüştürme başlat
+  const handleLassoConvertToText = useCallback(async () => {
+    if (selectedStrokes.length === 0) return;
+
+    setIsRecognizingSelected(true);
+    setIsRecognitionModalVisible(true);
+
+    const result = await recognizeSelectedStrokes(selectedStrokes, { language: 'tr' });
+
+    const fitted = fitTextToBounds(selectionBounds, result.text || '');
+    setRecognizedData({
+      text: result.text || '',
+      candidates: result.candidates || [],
+      estimatedFontSize: fitted.fontSize,
+    });
+    setIsRecognizingSelected(false);
+  }, [selectedStrokes, selectionBounds]);
+
+  // Modal üzerinden onaylanan metni gerçek TextElement olarak ekle
+  const handleConfirmConversion = useCallback(
+    ({ text, fontFamily, fontSize }) => {
+      if (!text.trim() || !selectionBounds) return;
+
+      const fitted = fitTextToBounds(selectionBounds, text);
+      const newBlockId = `text_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      const newBlock = {
+        id: newBlockId,
+        x: Math.max(8, selectionBounds.minX),
+        y: Math.max(8, selectionBounds.minY),
+        width: Math.max(120, fitted.width),
+        text,
+        color: selectedStrokes[0]?.color || textColor,
+        fontSize: fontSize || fitted.fontSize,
+        fontFamily,
+      };
+
+      const removedStrokesList = [...selectedStrokes];
+
+      setPage((prev) => {
+        const remainingDrawings = (prev.drawings || []).filter(
+          (s) => !selectedStrokeIds.includes(s.id)
+        );
+        const updatedTextBlocks = [...(prev.textBlocks || []), newBlock];
+
+        StorageService.updatePage(prev.id, {
+          drawings: remainingDrawings,
+          textBlocks: updatedTextBlocks,
+        });
+
+        return {
+          ...prev,
+          drawings: remainingDrawings,
+          textBlocks: updatedTextBlocks,
+        };
+      });
+
+      // Atomik İşlem Kaydı (Undo / Redo için)
+      conversionHistoryRef.current.push({
+        type: 'CONVERT_HANDWRITING_TO_TEXT',
+        removedStrokes: removedStrokesList,
+        createdTextId: newBlockId,
+      });
+
+      // Geri al bildirimi göster
+      pendingStickerDeleteRef.current = {
+        type: 'handwriting_convert',
+        removedStrokes: removedStrokesList,
+        createdTextId: newBlockId,
+        pageId: page?.id,
+        timer: setTimeout(() => {
+          pendingStickerDeleteRef.current = null;
+          setUndoToast({ visible: false, message: '' });
+        }, 5500),
+      };
+      setUndoToast({ visible: true, message: 'El yazısı metne dönüştürüldü' });
+
+      setIsRecognitionModalVisible(false);
+      handleCloseLassoSelection();
+    },
+    [selectionBounds, selectedStrokes, selectedStrokeIds, textColor, page?.id, handleCloseLassoSelection]
+  );
+
   const handleAddSticker = useCallback((sticker) => {
     setPage((prev) => {
       const newSticker = {
@@ -237,28 +375,82 @@ export default function TodoViewScreen() {
     });
   }, []);
 
-  const handleUndoStickerDelete = useCallback(() => {
+  // Genel Geri Al (Undo) İşlemi - Çıkartma, Çizim ve Dönüştürmeyi Kapsar
+  const handleUndo = useCallback(() => {
+    // 1. Bekleyen toast işlemi var mı?
     if (pendingStickerDeleteRef.current) {
       clearTimeout(pendingStickerDeleteRef.current.timer);
-      const restored = pendingStickerDeleteRef.current.sticker;
+      const pending = pendingStickerDeleteRef.current;
       pendingStickerDeleteRef.current = null;
-      setPage((prev) => {
-        const updatedStickers = [...(prev.stickers || []), restored];
-        return { ...prev, stickers: updatedStickers };
-      });
       setUndoToast({ visible: false, message: '' });
-    }
-  }, []);
 
-  const handleDismissStickerUndo = useCallback(() => {
+      if (pending.type === 'handwriting_convert') {
+        setPage((prev) => {
+          const updatedTextBlocks = (prev.textBlocks || []).filter(
+            (b) => b.id !== pending.createdTextId
+          );
+          const updatedDrawings = [...(prev.drawings || []), ...pending.removedStrokes];
+          StorageService.updatePage(prev.id, {
+            drawings: updatedDrawings,
+            textBlocks: updatedTextBlocks,
+          });
+          return { ...prev, drawings: updatedDrawings, textBlocks: updatedTextBlocks };
+        });
+        return;
+      }
+
+      if (pending.type === 'strokes_delete') {
+        setPage((prev) => {
+          const updatedDrawings = [...(prev.drawings || []), ...pending.removedStrokes];
+          StorageService.updatePage(prev.id, { drawings: updatedDrawings });
+          return { ...prev, drawings: updatedDrawings };
+        });
+        return;
+      }
+
+      if (pending.sticker) {
+        setPage((prev) => {
+          const updatedStickers = [...(prev.stickers || []), pending.sticker];
+          StorageService.updatePage(prev.id, { stickers: updatedStickers });
+          return { ...prev, stickers: updatedStickers };
+        });
+        return;
+      }
+    }
+
+    // 2. Bekleyen toast yoksa geçmiş dönüşümlere bak
+    if (conversionHistoryRef.current.length > 0) {
+      const lastConversion = conversionHistoryRef.current.pop();
+      setPage((prev) => {
+        const updatedTextBlocks = (prev.textBlocks || []).filter(
+          (b) => b.id !== lastConversion.createdTextId
+        );
+        const updatedDrawings = [...(prev.drawings || []), ...lastConversion.removedStrokes];
+        StorageService.updatePage(prev.id, {
+          drawings: updatedDrawings,
+          textBlocks: updatedTextBlocks,
+        });
+        return { ...prev, drawings: updatedDrawings, textBlocks: updatedTextBlocks };
+      });
+      return;
+    }
+
+    // 3. Normal çizgi geri alma
+    handleUndoDrawing();
+  }, [handleUndoDrawing]);
+
+  // Toast süresi dolunca veya kapanınca kalıcı güncelle
+  const handleDismissUndoToast = useCallback(() => {
     if (pendingStickerDeleteRef.current) {
       clearTimeout(pendingStickerDeleteRef.current.timer);
-      const { pageId: pid } = pendingStickerDeleteRef.current;
+      const pending = pendingStickerDeleteRef.current;
       pendingStickerDeleteRef.current = null;
-      setPage((prev) => {
-        StorageService.updatePage(pid, { stickers: prev.stickers || [] });
-        return prev;
-      });
+      if (pending.type === 'sticker_delete' && pending.sticker) {
+        setPage((prev) => {
+          StorageService.updatePage(prev.id, { stickers: prev.stickers || [] });
+          return prev;
+        });
+      }
       setUndoToast({ visible: false, message: '' });
     }
   }, []);
@@ -401,8 +593,12 @@ export default function TodoViewScreen() {
             onChangeTextColor={setTextColor}
             textFontSize={textFontSize}
             onChangeTextFontSize={setTextFontSize}
-            onUndo={handleUndoDrawing}
-            canUndo={(page.drawings || []).length > 0}
+            onUndo={handleUndo}
+            canUndo={
+              (page.drawings || []).length > 0 ||
+              conversionHistoryRef.current.length > 0 ||
+              !!pendingStickerDeleteRef.current
+            }
           />
           <TouchableOpacity
             activeOpacity={0.7}
@@ -466,7 +662,25 @@ export default function TodoViewScreen() {
           strokeWidth={drawingWidth}
           drawings={page.drawings || []}
           onDrawingsChange={handleDrawingsChange}
+          selectedStrokeIds={selectedStrokeIds}
+          selectionBounds={selectionBounds}
+          onSelectionChange={handleSelectionChange}
           style={styles.fullBleedCanvas}
+        />
+
+        {/* Kement (Lasso) Bağlamsal Eylem Menüsü */}
+        <LassoActionMenu
+          visible={
+            activeMode === 'drawing' &&
+            drawingTool === 'lasso' &&
+            selectedStrokeIds.length > 0 &&
+            !!selectionBounds
+          }
+          bounds={selectionBounds}
+          onConvertToText={handleLassoConvertToText}
+          onDelete={handleLassoDelete}
+          onClose={handleCloseLassoSelection}
+          isLoading={isRecognizingSelected}
         />
 
         {/* Sticker Katmanı */}
@@ -485,13 +699,24 @@ export default function TodoViewScreen() {
         onSelectSticker={handleAddSticker}
       />
 
+      {/* El Yazısı Tanıma ve Yazı Tipi (Font) Seçici Modalı */}
+      <RecognitionConfirmationModal
+        visible={isRecognitionModalVisible}
+        isLoading={isRecognizingSelected}
+        initialText={recognizedData.text}
+        candidates={recognizedData.candidates}
+        estimatedFontSize={recognizedData.estimatedFontSize}
+        onConfirm={handleConfirmConversion}
+        onCancel={() => setIsRecognitionModalVisible(false)}
+      />
+
       {/* Geri Al (Undo) Bildirimi */}
       <UndoToast
         visible={undoToast.visible}
         message={undoToast.message}
-        onUndo={handleUndoStickerDelete}
-        onDismiss={handleDismissStickerUndo}
-        duration={4500}
+        onUndo={handleUndo}
+        onDismiss={handleDismissUndoToast}
+        duration={5000}
       />
     </SafeAreaView>
   );

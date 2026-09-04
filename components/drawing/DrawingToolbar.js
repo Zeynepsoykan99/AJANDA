@@ -183,6 +183,21 @@ export default function DrawingToolbar({
             />
           </TouchableOpacity>
 
+          {/* Kement / Seçim Aracı (Lasso) */}
+          <TouchableOpacity
+            onPress={() => onChangeTool('lasso')}
+            style={[
+              styles.toolBtn,
+              currentTool === 'lasso' && [styles.activeToolBtn, { backgroundColor: colors.accent + '20' }],
+            ]}
+          >
+            <MaterialCommunityIcons
+              name="lasso"
+              size={18}
+              color={currentTool === 'lasso' ? colors.accent : colors.textSecondary}
+            />
+          </TouchableOpacity>
+
           <View style={styles.dockDivider} />
 
           {/* Renk Seçici Buton */}

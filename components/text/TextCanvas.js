@@ -160,6 +160,7 @@ const DraggableTextBlock = ({
               {
                 color: block.color || activeColor,
                 fontSize: block.fontSize || activeFontSize,
+                fontFamily: block.fontFamily || undefined,
               },
             ]}
           />
@@ -186,6 +187,7 @@ const DraggableTextBlock = ({
               {
                 color: block.color || activeColor,
                 fontSize: block.fontSize || activeFontSize,
+                fontFamily: block.fontFamily || undefined,
               },
             ]}
           >
@@ -203,6 +205,7 @@ export default function TextCanvas({
   onTextBlocksChange,
   activeColor = '#4E342E',
   activeFontSize = 15,
+  activeFontFamily,
 }) {
   const [editingId, setEditingId] = useState(null);
   const [canvasLayout, setCanvasLayout] = useState({ width: 0, height: 0 });
@@ -228,6 +231,7 @@ export default function TextCanvas({
       text: '',
       color: activeColor,
       fontSize: activeFontSize,
+      fontFamily: activeFontFamily || undefined,
       width: 120,
     };
 

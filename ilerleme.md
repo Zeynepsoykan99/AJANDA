@@ -746,6 +746,44 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
   - Arama sorguları sayfa başlığı ve klavye metinlerinin yanı sıra `page.recognizedText` ve `cover.recognizedText` alanlarını da tarayacak şekilde genişletildi.
   - El yazısından bulunan sonuçlarda `✍️ El Yazısından Bulundu` rozeti ve eşleşen metin pasajı (snippet) eklendi; tıklandığında doğrudan ilgili sayfaya gidilmesi sağlandı.
 
+### 🪄 28. El Yazısı Kement Seçimi → Metne Dönüştürme → Yazı Tipi (Font) Seçici (Handwriting Selection → Text → Font Conversion)
+- **Kement (Lasso) Seçim Geometrisi & Çokgen Kesişim Motoru (`utils/lassoGeometry.js`):**
+  - Stylus veya parmakla serbest çizilen kement alanını yakalayan Ray-Casting (Işın Gönderme) `isPointInPolygon` ve doğru parçası kesişim testi `isStrokeInsidePolygon` geliştirildi.
+  - Seçilen çoklu çizgilerin tam geometrik sınırlayıcı kutusunu (`getMultiStrokeBounds`) hesaplayan yardımcılar yazıldı.
+  - Orijinal el yazısı yüksekliği ve satır sayısına göre estetik font boyutu kestiren `fitTextToBounds` geliştirildi (aşırı büyük/küçük boyutları 13px - 48px arasına sınırlar).
+- **Merkezi Yazı Tipi Kataloğu (`constants/fonts.js`):**
+  - iPadOS/iOS, Android ve Web platformlarında ek yerel paket derlemesi gerektirmeden doğal olarak çalışan zengin font kataloğu oluşturuldu:
+    - *Varsayılan (System / Sans-Serif)*
+    - *El Yazısı (Snell Roundhand / Caveat / Cursive)*
+    - *Serbest Not (Chalkboard SE / Casual)*
+    - *Zarif Kitap (Georgia / Serif)*
+    - *Daktilo (Courier New / Monospace)*
+    - *Modern Düz (Helvetica Neue / Sans-Serif-Medium)*
+- **Çizim Katmanı & Kement Çizimi (`components/drawing/DrawingCanvas.js`):**
+  - `tool === 'lasso'` modu eklendi. Kullanıcı seçim yaparken kesikli pembe çizgi (`strokeDasharray="6, 4"`) ve yarı saydam pembe dolgu ile seçim hattı gösterilir.
+  - Seçilen el yazılarının etrafında GoodNotes / Notability benzeri şık kesikli sınırlayıcı kutu (`Bounding Box`) ve 4 köşe tutamacı render edilir.
+- **Araç Çubuğu Entegrasyonu (`components/drawing/DrawingToolbar.js`):**
+  - Çizim araçlarına (Kalem, Fosforlu Kalem, Silgi) Kement (`lasso`) butonu eklendi; aktif kement seçim stili entegre edildi.
+- **Yüzen Bağlamsal Eylem Menüsü (`components/drawing/LassoActionMenu.js`):**
+  - Kementle el yazısı seçildiğinde seçimin hemen üstünde/altında beliren yüzen eylem balonu eklendi:
+    - `✍️ Metne Dönüştür`: El yazısını tanıma ve font seçici modülünü tetikler.
+    - `🗑️ Sil`: Seçili çizgileri kaldırır.
+    - `✕`: Seçimi iptal eder.
+- **El Yazısı Doğrulama ve Font Seçici Modalı (`components/drawing/RecognitionConfirmationModal.js`):**
+  - Yükleme durumunda kullanıcı dostu animasyon gösterir.
+  - Tanınan metnin doğruluğunu denetleyip düzeltebilmesi için düzenlenebilir `TextInput` sağlar.
+  - Alternatif okuma adaylarını tek dokunuşla seçilebilen çipler (`candidate chips`) olarak listeler.
+  - Canlı font önizlemeli kartlarla font seçimi ve font boyutu artırma/azaltma (`-` / `+`) kontrolleri sunar.
+- **Gerçek Düzenlenebilir Metin Katmanı (`components/text/TextCanvas.js`):**
+  - Metin kutusu modeline `fontFamily` desteği eklendi.
+  - Dönüştürülen el yazısı salt bir resim değil; sürüklenebilen, boyutu değiştirilebilen, düzenlenebilen gerçek bir `DraggableTextBlock` metin kutusuna dönüşür.
+  - Orijinal el yazısının tam bulunduğu koordinata (`bounds.minX`, `bounds.minY`) yerleştirilir.
+- **Atomik Geri Al / İleri Al (Undo / Redo) & Kalıcılık (`app/ajandam/[pageId].js` & `app/todolist/[pageId].js`):**
+  - El yazısından metne dönüşüm tek bir atomik işlem olarak kaydedilir (`{ type: 'CONVERT_HANDWRITING_TO_TEXT', removedStrokes, createdTextId }`).
+  - Geri al (Undo) tetiklendiğinde: Üretilen metin kutusu silinir ve orijinal el yazısı çizgileri (tüm ID'leri, renkleri, kalınlıkları, Bézier path'leri ve noktalarıyla) 100% eksiksiz geri yüklenir.
+  - Yapılan tüm değişiklikler `AsyncStorage` ile kalıcı hale getirildi.
+
+
 
 
 

@@ -204,3 +204,93 @@ export async function recognizeHandwriting(drawings, options = { language: 'tr' 
     return { text: '', words: [], success: false, error: error.message };
   }
 }
+
+/**
+ * Seçilen el yazısı çizgilerini doğrudan metne dönüştürmek için tanıma yapar.
+ * Arka plan arama indekslemesi ile çakışmaması için izole bir AbortController kullanır.
+ *
+ * @param {Array} selectedStrokes - Seçili çizgiler dizisi
+ * @param {object} options - Seçenekler ({ language: 'tr' | 'en' })
+ * @returns {Promise<{ text: string, candidates: string[], success: boolean, error?: string }>}
+ */
+export async function recognizeSelectedStrokes(selectedStrokes, options = { language: 'tr' }) {
+  if (!Array.isArray(selectedStrokes) || selectedStrokes.length === 0) {
+    return { text: '', candidates: [], success: false, error: 'Seçili çizgi bulunamadı' };
+  }
+
+  const ink = formatStrokesForDigitalInk(selectedStrokes);
+  if (ink.length === 0) {
+    return { text: '', candidates: [], success: false, error: 'Çizgi noktaları geçersiz' };
+  }
+
+  const area = calculateWritingArea(selectedStrokes);
+  const lang = options.language || 'tr';
+  const itc = lang === 'tr' ? 'tr-t-i0-handwrit' : 'en-t-i0-handwrit';
+  const controller = new AbortController();
+
+  try {
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, 10000); // 10 saniye zaman aşımı
+
+    const response = await fetch(
+      `https://inputtools.google.com/request?itc=${itc}&app=autonotebook`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          app_version: 0.4,
+          api_level: '537.36',
+          device: '537.36',
+          input_type: '0',
+          options: 'enable_pre_space',
+          requests: [
+            {
+              writing_guide: {
+                writing_area_width: Math.round(area.width),
+                writing_area_height: Math.round(area.height),
+              },
+              ink,
+              language: lang,
+            },
+          ],
+        }),
+        signal: controller.signal,
+      }
+    );
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      return { text: '', candidates: [], success: false, error: `Sunucu yanıtı: ${response.status}` };
+    }
+
+    const data = await response.json();
+
+    if (Array.isArray(data) && data[0] === 'SUCCESS' && data[1]?.[0]?.[1]) {
+      const candidates = data[1][0][1];
+      const topResult = (candidates[0] || '').trim();
+
+      return {
+        text: topResult,
+        candidates: candidates.slice(0, 6),
+        success: true,
+      };
+    }
+
+    return { text: '', candidates: [], success: false, error: 'El yazısı tespit edilemedi' };
+  } catch (error) {
+    if (__DEV__) {
+      console.warn('[HandwritingService] Seçili el yazısı tanıma hatası:', error.message);
+    }
+    return {
+      text: '',
+      candidates: [],
+      success: false,
+      error: error.name === 'AbortError' ? 'Zaman aşımı' : 'Bağlantı hatası veya çevrimdışı',
+    };
+  }
+}
+
