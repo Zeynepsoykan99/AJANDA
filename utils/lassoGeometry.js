@@ -225,3 +225,84 @@ export function fitTextToBounds(bounds, text = '') {
     height: Math.max(40, bounds.height || 40),
   };
 }
+
+/**
+ * Metin kutusunun (textBlock) ekrandaki sınırlayıcı kutusunu (Bounding Box) hesaplar.
+ *
+ * @param {object} block - Metin kutusu nesnesi ({ x, y, width, height, text, fontSize })
+ * @returns {{ x: number, y: number, width: number, height: number, minX: number, minY: number, maxX: number, maxY: number }}
+ */
+export function getTextBlockBounds(block) {
+  if (!block) return { x: 0, y: 0, width: 0, height: 0, minX: 0, minY: 0, maxX: 0, maxY: 0 };
+
+  const x = typeof block.x === 'number' ? block.x : 0;
+  const y = typeof block.y === 'number' ? block.y : 0;
+  const width = Math.max(60, typeof block.width === 'number' ? block.width : 120);
+
+  let height = 40;
+  if (typeof block.height === 'number' && block.height > 0) {
+    height = block.height;
+  } else {
+    // Dinamik yükseklik tahmini: satır sayısı + font boyutu + padding
+    const fontSize = typeof block.fontSize === 'number' ? block.fontSize : 16;
+    const text = block.text || '';
+    const rawLines = text.split('\n');
+    const avgCharWidth = fontSize * 0.55;
+    const usableWidth = Math.max(40, width - 16);
+    const charsPerLine = Math.max(1, Math.floor(usableWidth / avgCharWidth));
+
+    let lineCount = 0;
+    for (const line of rawLines) {
+      lineCount += Math.max(1, Math.ceil(line.length / charsPerLine));
+    }
+
+    const lineHeight = fontSize * 1.35;
+    const padding = 16; // 8 top + 8 bottom
+    height = Math.max(40, Math.round(padding + lineCount * lineHeight));
+  }
+
+  return {
+    x,
+    y,
+    width,
+    height,
+    minX: x,
+    minY: y,
+    maxX: x + width,
+    maxY: y + height,
+  };
+}
+
+/**
+ * Silgi dairesi ile bir metin kutusunun sınırlayıcı kutusu arasında temas (çarpışma) olup olmadığını belirler.
+ * Hem doğrudan tıklamaları (nokta kutunun içinde mi) hem de sürükleme hareketlerini (çember kutuya teğet mi/kesiyor mu)
+ * O(1) sürede kontrol eder.
+ *
+ * @param {number} eraserX - Silginin merkez X koordinatı
+ * @param {number} eraserY - Silginin merkez Y koordinatı
+ * @param {number} radius - Silgi yarıçapı (varsayılan: 25px)
+ * @param {object} block - Metin kutusu nesnesi
+ * @returns {boolean}
+ */
+export function isEraserHittingTextBlock(eraserX, eraserY, radius = 25, block) {
+  if (!block) return false;
+
+  const bounds = getTextBlockBounds(block);
+  const { minX, minY, maxX, maxY } = bounds;
+
+  // 1. Tıklama Kontrolü: Silgi merkezi doğrudan kutunun içinde mi?
+  if (eraserX >= minX && eraserX <= maxX && eraserY >= minY && eraserY <= maxY) {
+    return true;
+  }
+
+  // 2. Sürükleme / Çember Kesişim Kontrolü:
+  // Çember merkezine kutu üzerindeki en yakın noktayı bul
+  const closestX = Math.max(minX, Math.min(eraserX, maxX));
+  const closestY = Math.max(minY, Math.min(eraserY, maxY));
+
+  const distX = eraserX - closestX;
+  const distY = eraserY - closestY;
+
+  return (distX * distX + distY * distY) <= (radius * radius);
+}
+

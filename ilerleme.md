@@ -4,6 +4,42 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-04] - Silgi (Eraser) Aracına Dijital Metin (Text/TextInput) Silme Yeteneği Eklendi
+
+### 🚀 Eklenen Özellikler & Geliştirmeler
+- **Silgi ile Dijital Metin Silme:** Silgi aracı aktifken hem el yazısı çizgileri (strokes) hem de dijital metin kutuları (`textBlocks`) doğrudan algılanıp silinebilir hale getirildi.
+- **Hibrit Etkileşim (Dokunma + Sürükleme):**
+  - Kullanıcı silgiyle metin kutusuna doğrudan dokunduğunda (`onPanResponderGrant`) 0 gecikmeyle anında silme gerçekleşir.
+  - Silgiyi ekranda gezdirerek/sürükleyerek (`onPanResponderMove`) metin kutusunun üzerinden geçtiğinde sınır kutusu (Bounding Box) kesişimiyle kesintisiz silme sağlanır.
+- **Performans Optimizasyonu (RAF & Zero-Render):**
+  - Silgi boş alanda gezinirken hiçbir `setState` çağrılmaz, 0 re-render maliyeti sağlanır.
+  - Sürükleme koordinatları `requestAnimationFrame` (RAF) ile ekran yenileme hızına senkronize edildi; CPU/GPU yükü ve dokunma gecikmesi engellendi.
+  - Silinen metin kutusu anında yerel `stateRef`'ten düşürülerek aynı sürükleme içinde mükerrer silme tetiklemeleri engellendi.
+- **Kazara Silmelere Karşı Geri Al (UndoToast) & Haptic:**
+  - Metin silindiğinde kullanıcıya hafif dokunsal titreşim (`Haptics.impactAsync`) verilir.
+  - Ekranda 5 saniyelik "Metin silindi — Geri Al" bildirimi (`UndoToast`) gösterilir ve butona tıklandığında silinen metin kutusu eski koordinatlarına geri yüklenir.
+- **Debounced AsyncStorage Güvenliği:** Metin silme işlemi mevcut 400ms debounced auto-save mekanizmasıyla güvenli bir şekilde saklanır.
+
+### ✅ Yapılan Değişiklikler
+#### `utils/lassoGeometry.js`
+- `getTextBlockBounds(block)`: Metin kutusunun x, y, width ve dinamik satır/font/padding yüksekliğini hesaplayan fonksiyon eklendi.
+- `isEraserHittingTextBlock(eraserX, eraserY, radius, block)`: Silgi dairesi ile metin kutusu dikdörtgeni arasındaki kesişimi $O(1)$ sürede hesaplayan hit-test fonksiyonu eklendi.
+
+#### `components/drawing/DrawingCanvas.js`
+- `textBlocks`, `onTextBlocksChange`, `onTextBlockDeleted` propları eklendi.
+- `eraseNearPoint(x, y)` fonksiyonuna metin kutuları için çarpışma kontrolü, anlık yerel ref güncellemesi ve haptic feedback entegre edildi.
+- `onPanResponderMove` silgi akışı `requestAnimationFrame` ile optimize edildi.
+
+#### `app/ajandam/[pageId].js` & `app/todolist/[pageId].js`
+- `<DrawingCanvas>` bileşenine `textBlocks`, `onTextBlocksChange` ve `handleTextBlockDeleted` propları aktarıldı.
+- `handleTextBlockDeleted` fonksiyonu ile `UndoToast`'a `text_delete` türü eklendi.
+- `handleUndo` içine `pending.type === 'text_delete'` geri alma desteği eklendi.
+
+#### `app/ajandam/index.js`
+- Kapak ekranındaki `<DrawingCanvas>` bileşenine `textBlocks` ve `onTextBlocksChange` propları bağlandı.
+
+---
+
 ## 📅 [2026-09-04] - Beyaz Ekran (White Screen of Death) & TextCanvas Sözdizimi Onarımı
 
 ### 🐛 Giderilen Sorunlar

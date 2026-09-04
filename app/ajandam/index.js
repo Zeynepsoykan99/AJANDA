@@ -283,6 +283,8 @@ export default function AjandamScreen() {
               strokeWidth={drawingWidth}
               drawings={coverData?.drawings || []}
               onDrawingsChange={handleDrawingsChange}
+              textBlocks={coverData?.textBlocks || []}
+              onTextBlocksChange={handleTextBlocksChange}
               style={styles.fullBleedCanvas}
             />
           </ImageWithSkeleton>

@@ -248,6 +248,30 @@ export default function PageViewScreen() {
     handleCloseLassoSelection();
   }, [selectedStrokeIds, selectedStrokes, page?.id, handleCloseLassoSelection]);
 
+  // Silgiyle metin kutusu silindiğinde UndoToast göster
+  const handleTextBlockDeleted = useCallback(
+    (deletedBlocks) => {
+      if (!deletedBlocks || deletedBlocks.length === 0) return;
+      if (pendingStickerDeleteRef.current?.timer) {
+        clearTimeout(pendingStickerDeleteRef.current.timer);
+      }
+      pendingStickerDeleteRef.current = {
+        type: 'text_delete',
+        deletedBlocks,
+        pageId: page?.id,
+        timer: setTimeout(() => {
+          pendingStickerDeleteRef.current = null;
+          setUndoToast({ visible: false, message: '' });
+        }, 5000),
+      };
+      setUndoToast({
+        visible: true,
+        message: deletedBlocks.length === 1 ? 'Metin silindi' : `${deletedBlocks.length} metin silindi`,
+      });
+    },
+    [page?.id]
+  );
+
   // Kementle seçilen el yazısını metne dönüştürme başlat
   const handleLassoConvertToText = useCallback(async () => {
     if (selectedStrokes.length === 0) return;
@@ -448,6 +472,15 @@ export default function PageViewScreen() {
           const updatedDrawings = [...(prev.drawings || []), ...pending.removedStrokes];
           StorageService.updatePage(prev.id, { drawings: updatedDrawings });
           return { ...prev, drawings: updatedDrawings };
+        });
+        return;
+      }
+
+      if (pending.type === 'text_delete' && pending.deletedBlocks) {
+        setPage((prev) => {
+          const updatedTextBlocks = [...(prev.textBlocks || []), ...pending.deletedBlocks];
+          StorageService.updatePage(prev.id, { textBlocks: updatedTextBlocks });
+          return { ...prev, textBlocks: updatedTextBlocks };
         });
         return;
       }
@@ -779,6 +812,9 @@ export default function PageViewScreen() {
           strokeWidth={drawingWidth}
           drawings={page.drawings || []}
           onDrawingsChange={handleDrawingsChange}
+          textBlocks={page.textBlocks || []}
+          onTextBlocksChange={handleTextBlocksChange}
+          onTextBlockDeleted={handleTextBlockDeleted}
           selectedStrokeIds={selectedStrokeIds}
           selectionBounds={selectionBounds}
           onSelectionChange={handleSelectionChange}
