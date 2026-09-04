@@ -4,6 +4,42 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-04] - Silgi (Eraser) Aracına Harf/Kelime Düzeyinde Parçalı Silme (Doğal Kağıt Hissi) Yeteneği Eklendi
+
+### 🚀 Eklenen Özellikler & Geliştirmeler
+- **Harf/Kelime Düzeyinde Kısmi Silme (Parçalı Hit-Testing):**
+  - Silgi metne temas ettiğinde tüm bloğu tek seferde silmek yerine, **yalnızca temas ettiği spesifik harfleri/kelimeleri** siler.
+  - Tıpkı kağıt üzerindeki bir silgi gibi, kelimenin ortasından silgi geçtiğinde arkadaki harflerin sola kayıp zıplamasını engellemek için silinen harfler boşlukla (`' '`) yer değiştirir.
+  - Tüm harfler silindiğinde (`text.trim() === ''`) metin kutusu state'ten tamamen temizlenir.
+- **Deterministik Tipografi Koordinat Motoru (Zero-Layout Overhead):**
+  - Her harfe ayrı `<View onLayout>` koymak yerine; kutu konumu, font boyutu, satır yüksekliği (`1.35 * F`), word-wrap ve Türkçe/Latin karakter genişlik oranları tablosu ile her bir harfin ekrandaki kesin sınırlayıcı kutusu (`charBoxes`) $O(N)$ sürede önbelleğe alınarak hesaplanır.
+- **Gelişmiş Performans Optimizasyonu:**
+  - **Karakter Önbelleği (`charBoxesCacheRef`):** Metin kutusu veya koordinatları değişmedikçe harf sınırları baştan hesaplanmaz, sürükleme anında önbellekten okunur.
+  - **İki Kademeli Çarpışma Testi:** Önce $O(1)$ geniş kutu testi yapılır; silgi kutuya yakın değilse harf kontrolü yapılmaz. Yaklaştığında dar kademe harf testi devreye girer.
+  - **requestAnimationFrame (RAF):** Tüm sürükleme hareketleri 60/120 FPS ekran frekansına kilitlenerek tek frame'de silinen tüm harfler tek bir React state güncellemesiyle işlenir.
+- **Harf Düzeyinde Geri Al (UndoToast) & Haptic Desteği:**
+  - Harfler silindiğinde kullanıcıya anlık dokunsal geri bildirim verilir.
+  - 5 saniyelik "Metin silindi — Geri Al" tost bildirimine tıklandığında silinen harfler eski orijinal haline geri döndürülür.
+  - Kalan metin saf `string` olarak kalmaya devam eder; kullanıcı çift tıklayarak `TextInput` ile düzenleyebilir ve arama motoru (`GlobalSearchModal`) metni indekslemeye devam eder.
+
+### ✅ Yapılan Değişiklikler
+#### `utils/lassoGeometry.js`
+- `calculateCharacterBoxes(block)`: Metin kutusundaki her karakterin (satır kaydırma kurallarıyla) ekrandaki sınırlayıcı kutusunu çıkaran fonksiyon eklendi.
+- `getErasedCharacterIndices(eraserX, eraserY, radius, charBoxes)`: Silgi dairesine temas eden karakter indekslerini bulan fonksiyon eklendi.
+- `eraseCharactersFromBlock(block, erasedIndices)`: Temas eden harfleri boşlukla yer değiştirerek silen ve tam boşalınca bloğu temizleyen fonksiyon eklendi.
+
+#### `components/drawing/DrawingCanvas.js`
+- `charBoxesCacheRef` önbelleği eklendi.
+- `eraseNearPoint`: Metin kutusunu toptan silmek yerine iki kademeli harf düzeyinde silme algoritmasına dönüştürüldü.
+- `onTextBlockEdited` callback desteği eklendi.
+
+#### `app/ajandam/[pageId].js` & `app/todolist/[pageId].js`
+- `handleTextBlockEdited` callback'i tanımlandı; `text_edit` türü ile `UndoToast` desteği sağlandı.
+- `handleUndo` içine `pending.type === 'text_edit'` durumunda silinen harfleri eski haline geri yükleme mantığı eklendi.
+- `<DrawingCanvas>` bileşenine `onTextBlockEdited` prop'u aktarıldı.
+
+---
+
 ## 📅 [2026-09-04] - Silgi (Eraser) Aracına Dijital Metin (Text/TextInput) Silme Yeteneği Eklendi
 
 ### 🚀 Eklenen Özellikler & Geliştirmeler

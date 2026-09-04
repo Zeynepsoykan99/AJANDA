@@ -247,6 +247,45 @@ export default function TodoViewScreen() {
     [page?.id]
   );
 
+  // Silgiyle metin içinden harf/kelime silindiğinde UndoToast göster
+  const handleTextBlockEdited = useCallback(
+    (edits) => {
+      if (!edits || edits.length === 0) return;
+      if (pendingStickerDeleteRef.current?.timer) {
+        clearTimeout(pendingStickerDeleteRef.current.timer);
+      }
+
+      const prevEdits = pendingStickerDeleteRef.current?.type === 'text_edit'
+        ? pendingStickerDeleteRef.current.edits
+        : [];
+
+      const mergedEdits = [...prevEdits];
+      for (const edit of edits) {
+        const existing = mergedEdits.find((e) => e.blockId === edit.blockId);
+        if (existing) {
+          existing.newText = edit.newText;
+        } else {
+          mergedEdits.push({ ...edit });
+        }
+      }
+
+      pendingStickerDeleteRef.current = {
+        type: 'text_edit',
+        edits: mergedEdits,
+        pageId: page?.id,
+        timer: setTimeout(() => {
+          pendingStickerDeleteRef.current = null;
+          setUndoToast({ visible: false, message: '' });
+        }, 5000),
+      };
+      setUndoToast({
+        visible: true,
+        message: 'Metin silindi',
+      });
+    },
+    [page?.id]
+  );
+
   // Kementle seçilen el yazısını metne dönüştürme başlat
   const handleLassoConvertToText = useCallback(async () => {
     if (selectedStrokes.length === 0) return;
@@ -435,6 +474,21 @@ export default function TodoViewScreen() {
       if (pending.type === 'text_delete' && pending.deletedBlocks) {
         setPage((prev) => {
           const updatedTextBlocks = [...(prev.textBlocks || []), ...pending.deletedBlocks];
+          StorageService.updatePage(prev.id, { textBlocks: updatedTextBlocks });
+          return { ...prev, textBlocks: updatedTextBlocks };
+        });
+        return;
+      }
+
+      if (pending.type === 'text_edit' && pending.edits) {
+        setPage((prev) => {
+          const editMap = new Map(pending.edits.map((e) => [e.blockId, e.previousText]));
+          const updatedTextBlocks = (prev.textBlocks || []).map((b) => {
+            if (editMap.has(b.id)) {
+              return { ...b, text: editMap.get(b.id) };
+            }
+            return b;
+          });
           StorageService.updatePage(prev.id, { textBlocks: updatedTextBlocks });
           return { ...prev, textBlocks: updatedTextBlocks };
         });
@@ -698,6 +752,7 @@ export default function TodoViewScreen() {
           textBlocks={page.textBlocks || []}
           onTextBlocksChange={handleTextBlocksChange}
           onTextBlockDeleted={handleTextBlockDeleted}
+          onTextBlockEdited={handleTextBlockEdited}
           selectedStrokeIds={selectedStrokeIds}
           selectionBounds={selectionBounds}
           onSelectionChange={handleSelectionChange}

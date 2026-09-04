@@ -6,6 +6,9 @@ import {
   isStrokeInsidePolygon,
   getMultiStrokeBounds,
   isEraserHittingTextBlock,
+  calculateCharacterBoxes,
+  getErasedCharacterIndices,
+  eraseCharactersFromBlock,
 } from '../../utils/lassoGeometry';
 
 const triggerHaptic = () => {
@@ -31,6 +34,7 @@ export default function DrawingCanvas({
   textBlocks = [],
   onTextBlocksChange,
   onTextBlockDeleted,
+  onTextBlockEdited,
   selectedStrokeIds = [],
   selectionBounds = null,
   onSelectionChange,
@@ -45,6 +49,33 @@ export default function DrawingCanvas({
   const lastEraseCoordRef = useRef(null);
   const eraseRafIdRef = useRef(null);
 
+  // Karakter koordinatları önbelleği (gereksiz re-calculation yükünü önler)
+  const charBoxesCacheRef = useRef(new Map());
+
+  const getCachedCharBoxes = useCallback((block) => {
+    const cache = charBoxesCacheRef.current.get(block.id);
+    if (
+      cache &&
+      cache.text === block.text &&
+      cache.x === block.x &&
+      cache.y === block.y &&
+      cache.width === block.width &&
+      cache.fontSize === block.fontSize
+    ) {
+      return cache.boxes;
+    }
+    const boxes = calculateCharacterBoxes(block);
+    charBoxesCacheRef.current.set(block.id, {
+      text: block.text,
+      x: block.x,
+      y: block.y,
+      width: block.width,
+      fontSize: block.fontSize,
+      boxes,
+    });
+    return boxes;
+  }, []);
+
   // Stale Closure problemini çözmek için en güncel propları bir ref'te tutuyoruz
   const stateRef = useRef({
     isDrawingMode,
@@ -56,6 +87,7 @@ export default function DrawingCanvas({
     textBlocks,
     onTextBlocksChange,
     onTextBlockDeleted,
+    onTextBlockEdited,
     selectedStrokeIds,
     selectionBounds,
     onSelectionChange,
@@ -73,6 +105,7 @@ export default function DrawingCanvas({
       textBlocks,
       onTextBlocksChange,
       onTextBlockDeleted,
+      onTextBlockEdited,
       selectedStrokeIds,
       selectionBounds,
       onSelectionChange,
@@ -87,6 +120,7 @@ export default function DrawingCanvas({
     textBlocks,
     onTextBlocksChange,
     onTextBlockDeleted,
+    onTextBlockEdited,
     selectedStrokeIds,
     selectionBounds,
     onSelectionChange,
@@ -160,26 +194,65 @@ export default function DrawingCanvas({
       }
     }
 
-    // 2. Dijital metin kutularını (textBlocks) silme kontrolü
+    // 2. Dijital metin kutularını (textBlocks) harf harf kısmi silme kontrolü
     if (state.onTextBlocksChange && state.textBlocks && state.textBlocks.length > 0) {
-      const erasedBlocks = [];
-      const remainingBlocks = [];
+      let anyTextChanged = false;
+      const updatedTextBlocks = [];
+      const completelyDeletedBlocks = [];
+      const editedBlocksInfo = [];
 
       for (const block of state.textBlocks) {
-        if (isEraserHittingTextBlock(x, y, radius, block)) {
-          erasedBlocks.push(block);
+        // Hızlı geniş filtreleme: silgi bu bloğun sınırlarına yakın bile değilse harfleri hesaplama
+        if (!isEraserHittingTextBlock(x, y, radius, block)) {
+          updatedTextBlocks.push(block);
+          continue;
+        }
+
+        // Bloğa ait harf kutularını önbellekten al veya hesapla
+        const charBoxes = getCachedCharBoxes(block);
+        const erasedIndices = getErasedCharacterIndices(x, y, radius, charBoxes);
+
+        if (erasedIndices.length > 0) {
+          const result = eraseCharactersFromBlock(block, erasedIndices);
+          if (result.changed) {
+            anyTextChanged = true;
+            if (result.shouldDeleteBlock) {
+              completelyDeletedBlocks.push(block);
+              charBoxesCacheRef.current.delete(block.id);
+            } else {
+              updatedTextBlocks.push(result.updatedBlock);
+              editedBlocksInfo.push({
+                blockId: block.id,
+                previousText: result.previousText,
+                newText: result.updatedBlock.text,
+              });
+              // Önbelleği yeni metinle güncelle
+              charBoxesCacheRef.current.set(block.id, {
+                text: result.updatedBlock.text,
+                x: result.updatedBlock.x,
+                y: result.updatedBlock.y,
+                width: result.updatedBlock.width,
+                fontSize: result.updatedBlock.fontSize,
+                boxes: calculateCharacterBoxes(result.updatedBlock),
+              });
+            }
+          } else {
+            updatedTextBlocks.push(block);
+          }
         } else {
-          remainingBlocks.push(block);
+          updatedTextBlocks.push(block);
         }
       }
 
-      if (erasedBlocks.length > 0) {
-        // Mükerrer tetiklemeyi önlemek için ref'i hemen güncelle
-        stateRef.current.textBlocks = remainingBlocks;
-        state.onTextBlocksChange(remainingBlocks);
+      if (anyTextChanged) {
+        stateRef.current.textBlocks = updatedTextBlocks;
+        state.onTextBlocksChange(updatedTextBlocks);
         triggerHaptic();
-        if (state.onTextBlockDeleted) {
-          state.onTextBlockDeleted(erasedBlocks);
+        if (completelyDeletedBlocks.length > 0 && state.onTextBlockDeleted) {
+          state.onTextBlockDeleted(completelyDeletedBlocks);
+        }
+        if (editedBlocksInfo.length > 0 && state.onTextBlockEdited) {
+          state.onTextBlockEdited(editedBlocksInfo);
         }
       }
     }

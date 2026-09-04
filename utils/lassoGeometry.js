@@ -306,3 +306,190 @@ export function isEraserHittingTextBlock(eraserX, eraserY, radius = 25, block) {
   return (distX * distX + distY * distY) <= (radius * radius);
 }
 
+/**
+ * Bir karakterin yaklaşık genişlik oranını döndürür (fontSize katsayısı).
+ */
+function getCharWidthRatio(char) {
+  if (!char) return 0.54;
+  if (char === ' ' || char === '\t') return 0.32;
+  // Çok dar karakterler
+  if (/[ijlI!.,:;|\/'`\(\)\[\]\{\}]/.test(char)) return 0.28;
+  // Dar karakterler
+  if (/[frt1\-]/.test(char)) return 0.38;
+  // Çok geniş karakterler
+  if (/[mwMW%@#~]/.test(char)) return 0.85;
+  // Geniş karakterler (büyük harfler)
+  if (/[A-ZĞÜŞİÖÇ]/.test(char)) return 0.68;
+  // Standart harfler ve rakamlar
+  return 0.54;
+}
+
+/**
+ * Metin kutusu içindeki her karakterin ekrandaki sınırlayıcı kutusunu (Bounding Box) hesaplar.
+ * Satır kaydırma (word wrap) ve yeni satır (\n) kurallarını işletir.
+ *
+ * @param {object} block - Metin kutusu nesnesi
+ * @returns {Array<{ index: number, char: string, minX: number, minY: number, maxX: number, maxY: number }>}
+ */
+export function calculateCharacterBoxes(block) {
+  if (!block || !block.text) return [];
+
+  const text = block.text;
+  const fontSize = typeof block.fontSize === 'number' ? block.fontSize : 16;
+  const lineHeight = Math.round(fontSize * 1.35);
+  const paddingX = 8;
+  const paddingY = 8;
+  const startX = (typeof block.x === 'number' ? block.x : 0) + paddingX;
+  const startY = (typeof block.y === 'number' ? block.y : 0) + paddingY;
+  const blockWidth = Math.max(60, typeof block.width === 'number' ? block.width : 120);
+  const usableWidth = Math.max(40, blockWidth - paddingX * 2);
+
+  const boxes = [];
+  let currentX = startX;
+  let currentY = startY;
+
+  // Metni kelimelere ve boşluklara ayırırken indeksleri koruyalım
+  const tokens = [];
+  const tokenRegex = /\S+|\s/g;
+  let match;
+  while ((match = tokenRegex.exec(text)) !== null) {
+    tokens.push({ text: match[0], startIndex: match.index });
+  }
+
+  for (const token of tokens) {
+    const tokenStr = token.text;
+    const isWhitespace = /^\s+$/.test(tokenStr);
+
+    // Eğer kelime ise (boşluk değilse), satıra sığıp sığmadığını önceden ölç
+    if (!isWhitespace) {
+      let tokenWidth = 0;
+      for (const ch of tokenStr) {
+        tokenWidth += getCharWidthRatio(ch) * fontSize;
+      }
+
+      // Satıra sığmıyorsa ve satırın başında değilsek alt satıra geç
+      if (currentX + tokenWidth > startX + usableWidth && currentX > startX) {
+        currentX = startX;
+        currentY += lineHeight;
+      }
+    }
+
+    // Kelimenin içindeki her harfin kutusunu hesapla
+    for (let i = 0; i < tokenStr.length; i++) {
+      const ch = tokenStr[i];
+      const charIndex = token.startIndex + i;
+
+      if (ch === '\n') {
+        currentX = startX;
+        currentY += lineHeight;
+        continue;
+      }
+
+      const charWidth = Math.max(3, Math.round(getCharWidthRatio(ch) * fontSize));
+
+      // Tek bir kelime satır genişliğinden büyükse harf harf alt satıra kaydır
+      if (currentX + charWidth > startX + usableWidth && currentX > startX && !isWhitespace) {
+        currentX = startX;
+        currentY += lineHeight;
+      }
+
+      boxes.push({
+        index: charIndex,
+        char: ch,
+        minX: Math.round(currentX),
+        minY: Math.round(currentY),
+        maxX: Math.round(currentX + charWidth),
+        maxY: Math.round(currentY + lineHeight),
+      });
+
+      currentX += charWidth;
+    }
+  }
+
+  return boxes;
+}
+
+/**
+ * Silgi dairesine temas eden karakterlerin indekslerini tespit eder.
+ *
+ * @param {number} eraserX - Silginin merkez X koordinatı
+ * @param {number} eraserY - Silginin merkez Y koordinatı
+ * @param {number} radius - Silgi yarıçapı
+ * @param {Array<object>} charBoxes - Karakter sınır kutuları
+ * @returns {Array<number>} - Silinen karakter indeksleri
+ */
+export function getErasedCharacterIndices(eraserX, eraserY, radius = 25, charBoxes = []) {
+  if (!Array.isArray(charBoxes) || charBoxes.length === 0) return [];
+
+  const erasedIndices = [];
+  const rSquared = radius * radius;
+
+  for (const box of charBoxes) {
+    // Boşluk karakterlerini kontrol etmeye gerek yok
+    if (box.char === ' ' || box.char === '\t' || box.char === '\n') continue;
+
+    // Çember-dikdörtgen temas testi
+    const closestX = Math.max(box.minX, Math.min(eraserX, box.maxX));
+    const closestY = Math.max(box.minY, Math.min(eraserY, box.maxY));
+
+    const distX = eraserX - closestX;
+    const distY = eraserY - closestY;
+
+    if ((distX * distX + distY * distY) <= rSquared) {
+      erasedIndices.push(box.index);
+    }
+  }
+
+  return erasedIndices;
+}
+
+/**
+ * Belirtilen karakter indekslerini metin kutusundan siler (boşlukla yer değiştirerek doğal kağıt hissi sağlar).
+ *
+ * @param {object} block - Metin kutusu nesnesi
+ * @param {Array<number>} erasedIndices - Silinecek karakterlerin indeksleri
+ * @returns {{ updatedBlock: object, shouldDeleteBlock: boolean, changed: boolean, previousText?: string }}
+ */
+export function eraseCharactersFromBlock(block, erasedIndices = []) {
+  if (!block || !block.text || !Array.isArray(erasedIndices) || erasedIndices.length === 0) {
+    return { updatedBlock: block, shouldDeleteBlock: false, changed: false };
+  }
+
+  const indicesSet = new Set(erasedIndices);
+  const chars = Array.from(block.text);
+  let hasChanged = false;
+
+  for (let i = 0; i < chars.length; i++) {
+    if (indicesSet.has(i)) {
+      if (chars[i] !== ' ' && chars[i] !== '\n') {
+        chars[i] = ' '; // Boşlukla yer değiştir: metin sola kaymaz, doğal kağıt hissi
+        hasChanged = true;
+      }
+    }
+  }
+
+  if (!hasChanged) {
+    return { updatedBlock: block, shouldDeleteBlock: false, changed: false };
+  }
+
+  const newText = chars.join('');
+
+  // Eğer tüm metin sadece boşluklardan ibaret kaldıysa, bloğu tamamen temizle
+  if (newText.trim() === '') {
+    return {
+      updatedBlock: { ...block, text: '' },
+      shouldDeleteBlock: true,
+      changed: true,
+      previousText: block.text,
+    };
+  }
+
+  return {
+    updatedBlock: { ...block, text: newText },
+    shouldDeleteBlock: false,
+    changed: true,
+    previousText: block.text,
+  };
+}
+
+
