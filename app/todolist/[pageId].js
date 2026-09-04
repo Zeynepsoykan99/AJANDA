@@ -670,32 +670,6 @@ export default function TodoViewScreen() {
         </View>
 
         <View style={styles.headerRightGroup}>
-          <DrawingToolbar
-            isDrawingMode={activeMode === 'drawing'}
-            onToggleDrawingMode={() =>
-              setActiveMode((prev) => (prev === 'drawing' ? 'none' : 'drawing'))
-            }
-            isTextMode={activeMode === 'text'}
-            onToggleTextMode={() =>
-              setActiveMode((prev) => (prev === 'text' ? 'none' : 'text'))
-            }
-            currentTool={drawingTool}
-            onChangeTool={setDrawingTool}
-            currentColor={drawingColor}
-            onChangeColor={setDrawingColor}
-            currentWidth={drawingWidth}
-            onChangeWidth={setDrawingWidth}
-            textColor={textColor}
-            onChangeTextColor={setTextColor}
-            textFontSize={textFontSize}
-            onChangeTextFontSize={setTextFontSize}
-            onUndo={handleUndo}
-            canUndo={
-              (page.drawings || []).length > 0 ||
-              conversionHistoryRef.current.length > 0 ||
-              !!pendingStickerDeleteRef.current
-            }
-          />
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => setIsStickerMenuVisible(true)}
@@ -831,6 +805,36 @@ export default function TodoViewScreen() {
         onDismiss={handleDismissUndoToast}
         duration={5000}
       />
+
+      {/* Yüzen, Sürüklenebilir ve Katlanabilir Araç Çubuğu */}
+      <View style={styles.floatingToolbarContainer} pointerEvents="box-none">
+        <DrawingToolbar
+          isDrawingMode={activeMode === 'drawing'}
+          onToggleDrawingMode={() =>
+            setActiveMode((prev) => (prev === 'drawing' ? 'none' : 'drawing'))
+          }
+          isTextMode={activeMode === 'text'}
+          onToggleTextMode={() =>
+            setActiveMode((prev) => (prev === 'text' ? 'none' : 'text'))
+          }
+          currentTool={drawingTool}
+          onChangeTool={setDrawingTool}
+          currentColor={drawingColor}
+          onChangeColor={setDrawingColor}
+          currentWidth={drawingWidth}
+          onChangeWidth={setDrawingWidth}
+          textColor={textColor}
+          onChangeTextColor={setTextColor}
+          textFontSize={textFontSize}
+          onChangeTextFontSize={setTextFontSize}
+          onUndo={handleUndo}
+          canUndo={
+            (page.drawings || []).length > 0 ||
+            conversionHistoryRef.current.length > 0 ||
+            !!pendingStickerDeleteRef.current
+          }
+        />
+      </View>
     </SafeAreaView>
   );
 }
@@ -838,6 +842,11 @@ export default function TodoViewScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+  },
+  floatingToolbarContainer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 990,
+    elevation: 15,
   },
   headerBar: {
     height: 56,

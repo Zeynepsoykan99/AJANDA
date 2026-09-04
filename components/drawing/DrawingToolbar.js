@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,11 +6,23 @@ import {
   TouchableOpacity,
   Modal,
   Dimensions,
+  Platform,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import ColorPicker, { Panel3, Preview } from 'reanimated-color-picker';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const INK_COLORS = [
   { id: 'rose', color: '#C2185B', name: 'Gül Kurusu' },
@@ -34,9 +46,20 @@ const FONT_SIZES = [
   { id: 'lg', size: 21, label: 'Büyük' },
 ];
 
+const triggerHaptic = () => {
+  try {
+    Haptics.selectionAsync();
+  } catch (e) {}
+};
+
 /**
- * DrawingToolbar - Kalemlik & Klavye Araç Çubuğu
- * Çizim ve serbest Klavye metin modları arasında geçiş sağlar.
+ * DrawingToolbar - Yüzen, Sürüklenebilir ve Katlanabilir Araç Çubuğu
+ * 
+ * - Kapalıyken (FAB): 50x50 boyutunda dairesel, aktif aracın ikonunu ve rengini gösteren yüzen buton.
+ * - Açıkken: Tüm çizim ve klavye araçlarını barındıran lüks kapsül çubuk.
+ * - Sürükle ve Bırak: react-native-gesture-handler (Gesture.Pan) ile ekranın her yerine taşınabilir.
+ * - Ekran Sınırları: Bounding box kısıtlaması ile ekran dışına çıkması engellenir.
+ * - Çakışma Önleme: Yalnızca kendi sınırları içinde touch event alır, tuvali bloke etmez.
  */
 export default function DrawingToolbar({
   isDrawingMode,
@@ -59,309 +82,511 @@ export default function DrawingToolbar({
 }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
+
+  // Katlanabilirlik State'i (Varsayılan olarak çizim/metin aktifse açık, değilse kapalı başlar)
+  const [isExpanded, setIsExpanded] = useState(isDrawingMode || isTextMode);
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
   const [isCustomColorModalVisible, setIsCustomColorModalVisible] = useState(false);
   const [customColors, setCustomColors] = useState([]);
-  const [tempColor, setTempColor] = useState('#FF0000'); // Modal içindeki geçici renk
+  const [tempColor, setTempColor] = useState('#FF0000');
+
+  // Sürükleme Koordinatları (Başlangıçta ekranın sağ üst-orta kenarında)
+  const INITIAL_X = SCREEN_WIDTH - 66;
+  const INITIAL_Y = 110;
+
+  const translateX = useSharedValue(INITIAL_X);
+  const translateY = useSharedValue(INITIAL_Y);
+  const startX = useSharedValue(0);
+  const startY = useSharedValue(0);
+  const isDragging = useSharedValue(false);
+
+  // Sınır Sabitleri (Safe Bounding Box)
+  const MIN_X = 12;
+  const MIN_Y = 50;
+  const MAX_Y = SCREEN_HEIGHT - 120;
+
+  // Açılıp kapanma fonksiyonu
+  const toggleExpanded = useCallback(() => {
+    triggerHaptic();
+    setIsExpanded((prev) => {
+      const next = !prev;
+      // Eğer açılıyorsa ve sağ kenara çok yakınsa ekran içine doğru yaylandır
+      if (next && translateX.value > SCREEN_WIDTH - 330) {
+        translateX.value = withSpring(Math.max(MIN_X, SCREEN_WIDTH - 340), {
+          damping: 18,
+          stiffness: 150,
+        });
+      }
+      return next;
+    });
+    setIsColorPickerOpen(false);
+  }, [translateX]);
+
+  // Pan Gesture (react-native-gesture-handler)
+  const panGesture = Gesture.Pan()
+    .activeOffsetX([-6, 6])
+    .activeOffsetY([-6, 6])
+    .onStart(() => {
+      'worklet';
+      isDragging.value = true;
+      startX.value = translateX.value;
+      startY.value = translateY.value;
+    })
+    .onUpdate((event) => {
+      'worklet';
+      const rawX = startX.value + event.translationX;
+      const rawY = startY.value + event.translationY;
+
+      // Genişliğe göre sınır hesaplama (Kapalıyken ~52px, açıkken ~320px)
+      const currentWidgetWidth = isExpanded ? 320 : 52;
+      const maxX = SCREEN_WIDTH - currentWidgetWidth - MIN_X;
+
+      translateX.value = Math.max(MIN_X, Math.min(maxX, rawX));
+      translateY.value = Math.max(MIN_Y, Math.min(MAX_Y, rawY));
+    })
+    .onEnd(() => {
+      'worklet';
+      isDragging.value = false;
+    });
+
+  // Reanimated Animasyonlu Stil
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+      { scale: withSpring(isDragging.value ? 1.05 : 1, { damping: 15, stiffness: 200 }) },
+    ],
+  }));
 
   const onSelectColor = (colorHex) => {
     setTempColor(colorHex);
   };
 
   const applyCustomColor = () => {
-    // Aynı rengi tekrar eklememek için kontrol
     if (!customColors.includes(tempColor)) {
-      setCustomColors((prev) => [...prev, tempColor].slice(-5)); // Son 5 özel rengi sakla
+      setCustomColors((prev) => [...prev, tempColor].slice(-5));
     }
-    
     if (isDrawingMode) onChangeColor(tempColor);
     if (isTextMode) onChangeTextColor(tempColor);
-    
     setIsCustomColorModalVisible(false);
     setIsColorPickerOpen(false);
   };
 
+  // FAB Üzerindeki Aktif İkon ve Renk Belirleme
+  const getFabIcon = () => {
+    if (isDrawingMode) {
+      switch (currentTool) {
+        case 'highlighter':
+          return 'marker';
+        case 'eraser':
+          return 'eraser';
+        case 'lasso':
+          return 'lasso';
+        default:
+          return 'fountain-pen-tip';
+      }
+    }
+    if (isTextMode) return 'keyboard-outline';
+    return 'draw-pen';
+  };
+
+  const getFabBadgeColor = () => {
+    if (isDrawingMode) return currentColor || colors.accent;
+    if (isTextMode) return textColor || colors.textPrimary;
+    return colors.accent;
+  };
+
   return (
-    <View style={[styles.dockContainer, { backgroundColor: colors.card, borderColor: colors.border }, style]}>
-      {/* 1. Çizim Modu Butonu */}
-      <TouchableOpacity
-        activeOpacity={0.7}
-        onPress={onToggleDrawingMode}
-        style={[
-          styles.modeBtn,
-          isDrawingMode
-            ? { backgroundColor: colors.accent }
-            : { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 },
-        ]}
-      >
-        <MaterialCommunityIcons
-          name="draw-pen"
-          size={16}
-          color={isDrawingMode ? '#FFFFFF' : colors.textSecondary}
-        />
-        <Text
+    <>
+      <GestureDetector gesture={panGesture}>
+        <Animated.View
           style={[
-            styles.modeBtnText,
-            { color: isDrawingMode ? '#FFFFFF' : colors.textSecondary },
+            styles.floatingWrapper,
+            animatedStyle,
+            style,
           ]}
+          pointerEvents="box-none"
         >
-          {t('drawing.modeDrawing', 'Çizim')}
-        </Text>
-      </TouchableOpacity>
-
-      {/* 2. Klavye / Metin Modu Butonu */}
-      <TouchableOpacity
-        activeOpacity={0.7}
-        onPress={onToggleTextMode}
-        style={[
-          styles.modeBtn,
-          isTextMode
-            ? { backgroundColor: colors.accent }
-            : { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 },
-        ]}
-      >
-        <MaterialCommunityIcons
-          name="keyboard-outline"
-          size={16}
-          color={isTextMode ? '#FFFFFF' : colors.textSecondary}
-        />
-        <Text
-          style={[
-            styles.modeBtnText,
-            { color: isTextMode ? '#FFFFFF' : colors.textSecondary },
-          ]}
-        >
-          {t('drawing.modeText', 'Klavye')}
-        </Text>
-      </TouchableOpacity>
-
-      {/* ─── Çizim Araçları (Yalnızca Çizim Modu Aktifken) ─── */}
-      {isDrawingMode && (
-        <>
-          <View style={styles.dockDivider} />
-
-          {/* Kalem Seçimi */}
-          <TouchableOpacity
-            onPress={() => onChangeTool('pen')}
-            style={[
-              styles.toolBtn,
-              currentTool === 'pen' && [styles.activeToolBtn, { backgroundColor: colors.accent + '20' }],
-            ]}
-          >
-            <MaterialCommunityIcons
-              name="fountain-pen-tip"
-              size={18}
-              color={currentTool === 'pen' ? colors.accent : colors.textSecondary}
-            />
-          </TouchableOpacity>
-
-          {/* Fosforlu Kalem Seçimi */}
-          <TouchableOpacity
-            onPress={() => onChangeTool('highlighter')}
-            style={[
-              styles.toolBtn,
-              currentTool === 'highlighter' && [styles.activeToolBtn, { backgroundColor: colors.accent + '20' }],
-            ]}
-          >
-            <MaterialCommunityIcons
-              name="marker"
-              size={18}
-              color={currentTool === 'highlighter' ? colors.accent : colors.textSecondary}
-            />
-          </TouchableOpacity>
-
-          {/* Silgi Seçimi */}
-          <TouchableOpacity
-            onPress={() => onChangeTool('eraser')}
-            style={[
-              styles.toolBtn,
-              currentTool === 'eraser' && [styles.activeToolBtn, { backgroundColor: colors.accent + '20' }],
-            ]}
-          >
-            <MaterialCommunityIcons
-              name="eraser"
-              size={18}
-              color={currentTool === 'eraser' ? colors.accent : colors.textSecondary}
-            />
-          </TouchableOpacity>
-
-          {/* Kement / Seçim Aracı (Lasso) */}
-          <TouchableOpacity
-            onPress={() => onChangeTool('lasso')}
-            style={[
-              styles.toolBtn,
-              currentTool === 'lasso' && [styles.activeToolBtn, { backgroundColor: colors.accent + '20' }],
-            ]}
-          >
-            <MaterialCommunityIcons
-              name="lasso"
-              size={18}
-              color={currentTool === 'lasso' ? colors.accent : colors.textSecondary}
-            />
-          </TouchableOpacity>
-
-          <View style={styles.dockDivider} />
-
-          {/* Renk Seçici Buton */}
-          <TouchableOpacity
-            onPress={() => setIsColorPickerOpen(!isColorPickerOpen)}
-            style={styles.colorTriggerBtn}
-          >
+          {/* ─── DURUM 1: KAPALI HAL (FLOATING ACTION BUTTON - FAB) ─── */}
+          {!isExpanded ? (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={toggleExpanded}
+              style={[
+                styles.fabCircle,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: (isDrawingMode || isTextMode) ? colors.accent : colors.border,
+                },
+              ]}
+            >
+              <MaterialCommunityIcons
+                name={getFabIcon()}
+                size={22}
+                color={(isDrawingMode || isTextMode) ? colors.accent : colors.textSecondary}
+              />
+              {/* Aktif Renk Rozeti */}
+              <View
+                style={[
+                  styles.fabColorDot,
+                  {
+                    backgroundColor: getFabBadgeColor(),
+                    borderColor: colors.card,
+                  },
+                ]}
+              />
+            </TouchableOpacity>
+          ) : (
+            /* ─── DURUM 2: AÇIK HAL (GENİŞLETİLMİŞ ARAÇ ÇUBUĞU) ─── */
             <View
               style={[
-                styles.activeColorCircle,
-                { backgroundColor: currentColor, borderColor: colors.border },
+                styles.dockContainer,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                },
               ]}
-            />
-          </TouchableOpacity>
+              pointerEvents="auto"
+            >
+              {/* Sürükleme Tutamacı (Drag Handle Grip) */}
+              <View style={styles.dragGripArea}>
+                <MaterialCommunityIcons
+                  name="drag-vertical"
+                  size={20}
+                  color={colors.textSecondary + '70'}
+                />
+              </View>
 
-          {/* Geri Al (Undo) */}
-          <TouchableOpacity
-            onPress={onUndo}
-            disabled={!canUndo}
-            style={[styles.toolBtn, !canUndo && { opacity: 0.35 }]}
-          >
-            <MaterialCommunityIcons
-              name="undo"
-              size={18}
-              color={colors.textSecondary}
-            />
-          </TouchableOpacity>
-        </>
-      )}
-
-      {/* ─── Klavye / Metin Araçları (Yalnızca Metin Modu Aktifken) ─── */}
-      {isTextMode && (
-        <>
-          <View style={styles.dockDivider} />
-
-          {/* Yazı Boyutu Seçimi */}
-          <View style={styles.fontSizeGroup}>
-            {FONT_SIZES.map((f) => (
+              {/* 1. Çizim Modu Butonu */}
               <TouchableOpacity
-                key={f.id}
-                onPress={() => onChangeTextFontSize(f.size)}
+                activeOpacity={0.7}
+                onPress={() => {
+                  triggerHaptic();
+                  onToggleDrawingMode();
+                }}
                 style={[
-                  styles.fontSizeBtn,
-                  textFontSize === f.size && { backgroundColor: colors.accent + '25', borderColor: colors.accent },
+                  styles.modeBtn,
+                  isDrawingMode
+                    ? { backgroundColor: colors.accent }
+                    : { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 },
                 ]}
               >
+                <MaterialCommunityIcons
+                  name="draw-pen"
+                  size={15}
+                  color={isDrawingMode ? '#FFFFFF' : colors.textSecondary}
+                />
                 <Text
                   style={[
-                    styles.fontSizeText,
-                    { color: textFontSize === f.size ? colors.accent : colors.textSecondary },
+                    styles.modeBtnText,
+                    { color: isDrawingMode ? '#FFFFFF' : colors.textSecondary },
                   ]}
                 >
-                  {f.id.toUpperCase()}
+                  {t('drawing.modeDrawing', 'Çizim')}
                 </Text>
               </TouchableOpacity>
-            ))}
-          </View>
 
-          <View style={styles.dockDivider} />
-
-          {/* Yazı Rengi Seçici */}
-          <TouchableOpacity
-            onPress={() => setIsColorPickerOpen(!isColorPickerOpen)}
-            style={styles.colorTriggerBtn}
-          >
-            <View
-              style={[
-                styles.activeColorCircle,
-                { backgroundColor: textColor || '#4E342E', borderColor: colors.border },
-              ]}
-            />
-          </TouchableOpacity>
-        </>
-      )}
-
-      {/* Açılır Renk Paleti (Dropdown) */}
-      {isColorPickerOpen && (
-        <View
-          style={[
-            styles.palettePopup,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}
-        >
-          <View style={styles.colorsRow}>
-            {INK_COLORS.map((item) => (
+              {/* 2. Klavye / Metin Modu Butonu */}
               <TouchableOpacity
-                key={item.id}
+                activeOpacity={0.7}
                 onPress={() => {
-                  if (isDrawingMode) onChangeColor(item.color);
-                  if (isTextMode) onChangeTextColor(item.color);
-                  setIsColorPickerOpen(false);
+                  triggerHaptic();
+                  onToggleTextMode();
                 }}
                 style={[
-                  styles.swatchBtn,
-                  { backgroundColor: item.color },
-                  (isDrawingMode ? currentColor === item.color : textColor === item.color) && styles.selectedSwatch,
+                  styles.modeBtn,
+                  isTextMode
+                    ? { backgroundColor: colors.accent }
+                    : { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 },
                 ]}
-              />
-            ))}
-
-            {/* Eklenen Özel Renkler */}
-            {customColors.map((customColor, index) => (
-              <TouchableOpacity
-                key={`custom_${index}`}
-                onPress={() => {
-                  if (isDrawingMode) onChangeColor(customColor);
-                  if (isTextMode) onChangeTextColor(customColor);
-                  setIsColorPickerOpen(false);
-                }}
-                style={[
-                  styles.swatchBtn,
-                  { backgroundColor: customColor },
-                  (isDrawingMode ? currentColor === customColor : textColor === customColor) && styles.selectedSwatch,
-                ]}
-              />
-            ))}
-
-            {/* Yeni Özel Renk Ekle Butonu */}
-            <TouchableOpacity
-              onPress={() => {
-                setTempColor(isDrawingMode ? currentColor : textColor);
-                setIsCustomColorModalVisible(true);
-              }}
-              style={styles.addCustomColorBtn}
-            >
-              <MaterialCommunityIcons name="plus" size={16} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Çizim modundaysa kalınlık seçimi */}
-          {isDrawingMode && (
-            <View style={styles.widthsRow}>
-              {STROKE_WIDTHS.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  onPress={() => {
-                    onChangeWidth(item.width);
-                    setIsColorPickerOpen(false);
-                  }}
+              >
+                <MaterialCommunityIcons
+                  name="keyboard-outline"
+                  size={15}
+                  color={isTextMode ? '#FFFFFF' : colors.textSecondary}
+                />
+                <Text
                   style={[
-                    styles.widthBtn,
-                    currentWidth === item.width && {
-                      backgroundColor: colors.accent + '20',
-                      borderColor: colors.accent,
-                    },
+                    styles.modeBtnText,
+                    { color: isTextMode ? '#FFFFFF' : colors.textSecondary },
                   ]}
                 >
-                  <View
+                  {t('drawing.modeText', 'Klavye')}
+                </Text>
+              </TouchableOpacity>
+
+              {/* ─── Çizim Araçları (Yalnızca Çizim Modu Aktifken) ─── */}
+              {isDrawingMode && (
+                <>
+                  <View style={styles.dockDivider} />
+
+                  {/* Kalem Seçimi */}
+                  <TouchableOpacity
+                    onPress={() => {
+                      triggerHaptic();
+                      onChangeTool('pen');
+                    }}
                     style={[
-                      styles.widthIndicator,
-                      { height: item.width, backgroundColor: currentColor },
+                      styles.toolBtn,
+                      currentTool === 'pen' && [styles.activeToolBtn, { backgroundColor: colors.accent + '20' }],
                     ]}
-                  />
-                  <Text style={[styles.widthText, { color: colors.textSecondary }]}>
-                    {item.id === 'thin' ? t('drawing.strokeThin', item.label) : item.id === 'medium' ? t('drawing.strokeMedium', item.label) : t('drawing.strokeThick', item.label)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                  >
+                    <MaterialCommunityIcons
+                      name="fountain-pen-tip"
+                      size={17}
+                      color={currentTool === 'pen' ? colors.accent : colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+
+                  {/* Fosforlu Kalem Seçimi */}
+                  <TouchableOpacity
+                    onPress={() => {
+                      triggerHaptic();
+                      onChangeTool('highlighter');
+                    }}
+                    style={[
+                      styles.toolBtn,
+                      currentTool === 'highlighter' && [styles.activeToolBtn, { backgroundColor: colors.accent + '20' }],
+                    ]}
+                  >
+                    <MaterialCommunityIcons
+                      name="marker"
+                      size={17}
+                      color={currentTool === 'highlighter' ? colors.accent : colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+
+                  {/* Silgi Seçimi */}
+                  <TouchableOpacity
+                    onPress={() => {
+                      triggerHaptic();
+                      onChangeTool('eraser');
+                    }}
+                    style={[
+                      styles.toolBtn,
+                      currentTool === 'eraser' && [styles.activeToolBtn, { backgroundColor: colors.accent + '20' }],
+                    ]}
+                  >
+                    <MaterialCommunityIcons
+                      name="eraser"
+                      size={17}
+                      color={currentTool === 'eraser' ? colors.accent : colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+
+                  {/* Kement / Seçim Aracı (Lasso) */}
+                  <TouchableOpacity
+                    onPress={() => {
+                      triggerHaptic();
+                      onChangeTool('lasso');
+                    }}
+                    style={[
+                      styles.toolBtn,
+                      currentTool === 'lasso' && [styles.activeToolBtn, { backgroundColor: colors.accent + '20' }],
+                    ]}
+                  >
+                    <MaterialCommunityIcons
+                      name="lasso"
+                      size={17}
+                      color={currentTool === 'lasso' ? colors.accent : colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+
+                  <View style={styles.dockDivider} />
+
+                  {/* Renk Seçici Buton */}
+                  <TouchableOpacity
+                    onPress={() => {
+                      triggerHaptic();
+                      setIsColorPickerOpen(!isColorPickerOpen);
+                    }}
+                    style={styles.colorTriggerBtn}
+                  >
+                    <View
+                      style={[
+                        styles.activeColorCircle,
+                        { backgroundColor: currentColor, borderColor: colors.border },
+                      ]}
+                    />
+                  </TouchableOpacity>
+
+                  {/* Geri Al (Undo) */}
+                  <TouchableOpacity
+                    onPress={() => {
+                      triggerHaptic();
+                      onUndo();
+                    }}
+                    disabled={!canUndo}
+                    style={[styles.toolBtn, !canUndo && { opacity: 0.35 }]}
+                  >
+                    <MaterialCommunityIcons
+                      name="undo"
+                      size={17}
+                      color={colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+                </>
+              )}
+
+              {/* ─── Klavye / Metin Araçları (Yalnızca Metin Modu Aktifken) ─── */}
+              {isTextMode && (
+                <>
+                  <View style={styles.dockDivider} />
+
+                  {/* Yazı Boyutu Seçimi */}
+                  <View style={styles.fontSizeGroup}>
+                    {FONT_SIZES.map((f) => (
+                      <TouchableOpacity
+                        key={f.id}
+                        onPress={() => {
+                          triggerHaptic();
+                          onChangeTextFontSize(f.size);
+                        }}
+                        style={[
+                          styles.fontSizeBtn,
+                          textFontSize === f.size && { backgroundColor: colors.accent + '25', borderColor: colors.accent },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.fontSizeText,
+                            { color: textFontSize === f.size ? colors.accent : colors.textSecondary },
+                          ]}
+                        >
+                          {f.id.toUpperCase()}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <View style={styles.dockDivider} />
+
+                  {/* Yazı Rengi Seçici */}
+                  <TouchableOpacity
+                    onPress={() => {
+                      triggerHaptic();
+                      setIsColorPickerOpen(!isColorPickerOpen);
+                    }}
+                    style={styles.colorTriggerBtn}
+                  >
+                    <View
+                      style={[
+                        styles.activeColorCircle,
+                        { backgroundColor: textColor || '#4E342E', borderColor: colors.border },
+                      ]}
+                    />
+                  </TouchableOpacity>
+                </>
+              )}
+
+              {/* ─── Katlama / Küçültme Butonu (Collapse Button) ─── */}
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={toggleExpanded}
+                style={[styles.collapseBtn, { backgroundColor: colors.border + '30' }]}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <MaterialCommunityIcons
+                  name="chevron-right"
+                  size={18}
+                  color={colors.textSecondary}
+                />
+              </TouchableOpacity>
+
+              {/* Açılır Renk Paleti (Dropdown Popup) */}
+              {isColorPickerOpen && (
+                <View
+                  style={[
+                    styles.palettePopup,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                  ]}
+                >
+                  <View style={styles.colorsRow}>
+                    {INK_COLORS.map((item) => (
+                      <TouchableOpacity
+                        key={item.id}
+                        onPress={() => {
+                          triggerHaptic();
+                          if (isDrawingMode) onChangeColor(item.color);
+                          if (isTextMode) onChangeTextColor(item.color);
+                          setIsColorPickerOpen(false);
+                        }}
+                        style={[
+                          styles.swatchBtn,
+                          { backgroundColor: item.color },
+                          (isDrawingMode ? currentColor === item.color : textColor === item.color) && styles.selectedSwatch,
+                        ]}
+                      />
+                    ))}
+
+                    {/* Eklenen Özel Renkler */}
+                    {customColors.map((customColor, index) => (
+                      <TouchableOpacity
+                        key={`custom_${index}`}
+                        onPress={() => {
+                          triggerHaptic();
+                          if (isDrawingMode) onChangeColor(customColor);
+                          if (isTextMode) onChangeTextColor(customColor);
+                          setIsColorPickerOpen(false);
+                        }}
+                        style={[
+                          styles.swatchBtn,
+                          { backgroundColor: customColor },
+                          (isDrawingMode ? currentColor === customColor : textColor === customColor) && styles.selectedSwatch,
+                        ]}
+                      />
+                    ))}
+
+                    {/* Yeni Özel Renk Ekle Butonu */}
+                    <TouchableOpacity
+                      onPress={() => {
+                        setTempColor(isDrawingMode ? currentColor : textColor);
+                        setIsCustomColorModalVisible(true);
+                      }}
+                      style={styles.addCustomColorBtn}
+                    >
+                      <MaterialCommunityIcons name="plus" size={16} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Çizim modundaysa kalınlık seçimi */}
+                  {isDrawingMode && (
+                    <View style={styles.widthsRow}>
+                      {STROKE_WIDTHS.map((item) => (
+                        <TouchableOpacity
+                          key={item.id}
+                          onPress={() => {
+                            triggerHaptic();
+                            onChangeWidth(item.width);
+                            setIsColorPickerOpen(false);
+                          }}
+                          style={[
+                            styles.widthBtn,
+                            currentWidth === item.width && {
+                              backgroundColor: colors.accent + '20',
+                              borderColor: colors.accent,
+                            },
+                          ]}
+                        >
+                          <View
+                            style={[
+                              styles.widthIndicator,
+                              { height: item.width, backgroundColor: currentColor },
+                            ]}
+                          />
+                          <Text style={[styles.widthText, { color: colors.textSecondary }]}>
+                            {item.id === 'thin' ? t('drawing.strokeThin', item.label) : item.id === 'medium' ? t('drawing.strokeMedium', item.label) : t('drawing.strokeThick', item.label)}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )}
             </View>
           )}
-        </View>
-      )}
+        </Animated.View>
+      </GestureDetector>
 
       {/* Sınırsız Renk Seçici (Color Picker) Modalı */}
       <Modal
@@ -372,10 +597,16 @@ export default function DrawingToolbar({
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>{t('drawing.customColorTitle', 'Özel Renk Seç')}</Text>
-            
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
+              {t('drawing.customColorTitle', 'Özel Renk Seç')}
+            </Text>
+
             <View style={styles.colorPickerContainer}>
-              <ColorPicker style={{ width: '100%', alignItems: 'center', gap: 20 }} value={tempColor} onComplete={(c) => onSelectColor(c.hex)}>
+              <ColorPicker
+                style={{ width: '100%', alignItems: 'center', gap: 20 }}
+                value={tempColor}
+                onComplete={(c) => onSelectColor(c.hex)}
+              >
                 <Panel3 style={styles.panel3Style} thumbSize={28} />
                 <Preview style={styles.previewStyle} hideInitialColor />
               </ColorPicker>
@@ -386,46 +617,83 @@ export default function DrawingToolbar({
                 style={[styles.modalBtn, { backgroundColor: colors.border }]}
                 onPress={() => setIsCustomColorModalVisible(false)}
               >
-                <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>{t('common.cancel', 'İptal')}</Text>
+                <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>
+                  {t('common.cancel', 'İptal')}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.modalBtn, { backgroundColor: colors.accent }]}
                 onPress={applyCustomColor}
               >
-                <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>{t('drawing.apply', 'Uygula')}</Text>
+                <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>
+                  {t('drawing.apply', 'Uygula')}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
-    </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
+  floatingWrapper: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    zIndex: 999,
+  },
+  fabCircle: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  fabColorDot: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    width: 13,
+    height: 13,
+    borderRadius: 6.5,
+    borderWidth: 2,
+  },
   dockContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    borderRadius: 20,
+    paddingLeft: 4,
+    paddingRight: 6,
+    paddingVertical: 5,
+    borderRadius: 25,
     borderWidth: 1,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 4,
-    position: 'relative',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
+    elevation: 10,
     zIndex: 100,
+  },
+  dragGripArea: {
+    paddingHorizontal: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 5,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
     borderRadius: 14,
-    gap: 4,
+    gap: 3,
     marginHorizontal: 2,
   },
   modeBtnText: {
@@ -436,7 +704,7 @@ const styles = StyleSheet.create({
     width: 1,
     height: 16,
     backgroundColor: '#00000015',
-    marginHorizontal: 4,
+    marginHorizontal: 3,
   },
   toolBtn: {
     padding: 5,
@@ -450,17 +718,17 @@ const styles = StyleSheet.create({
   fontSizeGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 2,
   },
   fontSizeBtn: {
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
     paddingVertical: 3,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: 'transparent',
   },
   fontSizeText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
   },
   colorTriggerBtn: {
@@ -474,9 +742,17 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     borderWidth: 1.5,
   },
+  collapseBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 3,
+  },
   palettePopup: {
     position: 'absolute',
-    top: 40,
+    top: 48,
     right: 0,
     borderRadius: 16,
     padding: 10,
@@ -485,7 +761,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 6,
+    elevation: 8,
     zIndex: 120,
     width: 230,
   },

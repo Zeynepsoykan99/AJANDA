@@ -225,25 +225,6 @@ export default function AjandamScreen() {
         </View>
 
         <View style={styles.headerRightGroup}>
-          <DrawingToolbar
-            isDrawingMode={activeMode === 'drawing'}
-            onToggleDrawingMode={() => setActiveMode((prev) => (prev === 'drawing' ? 'none' : 'drawing'))}
-            isTextMode={activeMode === 'text'}
-            onToggleTextMode={() => setActiveMode((prev) => (prev === 'text' ? 'none' : 'text'))}
-            currentTool={drawingTool}
-            onChangeTool={setDrawingTool}
-            currentColor={drawingColor}
-            onChangeColor={setDrawingColor}
-            currentWidth={drawingWidth}
-            onChangeWidth={setDrawingWidth}
-            textColor={textColor}
-            onChangeTextColor={setTextColor}
-            textFontSize={textFontSize}
-            onChangeTextFontSize={setTextFontSize}
-            onUndo={handleUndoDrawing}
-            canUndo={(coverData?.drawings || []).length > 0}
-          />
-
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => setIsEditorVisible(true)}
@@ -312,6 +293,28 @@ export default function AjandamScreen() {
         coverData={coverData}
         onSave={handleSaveCover}
       />
+
+      {/* Yüzen, Sürüklenebilir ve Katlanabilir Araç Çubuğu */}
+      <View style={styles.floatingToolbarContainer} pointerEvents="box-none">
+        <DrawingToolbar
+          isDrawingMode={activeMode === 'drawing'}
+          onToggleDrawingMode={() => setActiveMode((prev) => (prev === 'drawing' ? 'none' : 'drawing'))}
+          isTextMode={activeMode === 'text'}
+          onToggleTextMode={() => setActiveMode((prev) => (prev === 'text' ? 'none' : 'text'))}
+          currentTool={drawingTool}
+          onChangeTool={setDrawingTool}
+          currentColor={drawingColor}
+          onChangeColor={setDrawingColor}
+          currentWidth={drawingWidth}
+          onChangeWidth={setDrawingWidth}
+          textColor={textColor}
+          onChangeTextColor={setTextColor}
+          textFontSize={textFontSize}
+          onChangeTextFontSize={setTextFontSize}
+          onUndo={handleUndoDrawing}
+          canUndo={(coverData?.drawings || []).length > 0}
+        />
+      </View>
     </SafeAreaView>
   );
 }
@@ -319,6 +322,11 @@ export default function AjandamScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+  },
+  floatingToolbarContainer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 990,
+    elevation: 15,
   },
   headerBar: {
     height: 56,

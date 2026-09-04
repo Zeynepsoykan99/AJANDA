@@ -4,6 +4,37 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-04] - Çizim ve Metin Araç Çubuğunun Yüzen, Sürüklenebilir ve Katlanabilir (Floating, Draggable & Collapsible) Bir Widget'a Dönüştürülmesi
+
+### 🚀 Eklenen Özellikler & Tasarım İyileştirmeleri
+- **Yüzen Widget (Floating Widget) Mimarisi (`DrawingToolbar.js`):**
+  - Araç çubuğu üst başlık çubuğundan (`headerRightGroup`) tamamen çıkarıldı; sayfa üzerinde serbestçe yüzebilen bağımsız bir katmana taşındı.
+  - Başlık çubuğu ferahlatıldı ve simetrik, şık bir düzene kavuştu.
+- **Katlanabilir Tasarım (Collapsible FAB & Toolbar):**
+  - **Kapalı Durum (FAB):** Ekranı kaplamayan 50x50 dairesel Floating Action Button haline gelir. Üzerinde aktif seçili aracın ikonu (`fountain-pen-tip`, `marker`, `eraser`, `lasso`, `keyboard-outline` vb.) ve aktif rengin minik rozet noktası (color dot) dinamik gösterilir.
+  - **Açık Durum:** Dokunulduğunda tüm kalemleri, kementi, silgiyi, renk seçimini, geri al (undo) butonunu ve font boyutlarını barındıran lüks bir kapsüle dönüşür.
+  - **Katlama Butonu:** Çubuğun sağ ucundaki küçültme oku ile tek dokunuşta tekrar küçük FAB dairesine döner.
+- **Sürükle ve Bırak (Draggable / PanGesture):**
+  - `react-native-gesture-handler` (`Gesture.Pan()`) ile hem FAB hem de açık araç çubuğu parmakla ekranın istenen noktasına pürüzsüzce sürüklenebilir.
+  - `Math.max` ve `Math.min` bounding box kısıtlaması ile widget'ın ekranın veya durum çubuğunun dışına çıkması engellendi.
+  - Sağ kenara çok yakınken açıldığında ekran içine doğru otomatik yaylanarak taşma önlendi.
+- **Akıcı Animasyonlar (`react-native-reanimated`):**
+  - Sürükleme anında `scale: 1.05` mikro animasyonu, bırakıldığında yumuşak `withSpring` yaylanması.
+  - Açılış ve kapanış geçişlerinde sıfır takılma.
+- **Çakışma Önleme ve Dokunmatik İzolasyon (Pointer Events):**
+  - Widget kapsayıcısı `pointerEvents="box-none"` ile donatıldı; toolbar dışındaki tüm ekran alanı arkadaki çizim tuvaline (`DrawingCanvas`), kısmi silgiye ve serbest metin kutularına (`TextCanvas`) dokunmatik olayları sıfır kayıpla iletir.
+  - Sürükleme jesti için 6px aktivasyon eşiği konularak araç butonlarına basıldığında istenmeyen sürükleme tetiklenmesi önlendi.
+- **Tüm Ekranlara Entegrasyon:**
+  - `app/todolist/[pageId].js` (Yapılacaklar listesi detay ekranı)
+  - `app/ajandam/[pageId].js` (Ajanda şablon detay ekranı)
+  - `app/ajandam/index.js` (Ajanda kapağı ekranı)
+
+### ✅ Doğrulama & Testler
+- Android ve iOS Metro bundle derlemeleri (`HTTP 200 OK`) hatasız tamamlandı.
+- Sürükleme, ekran sınırları (clamping), katlanma/açılma ve tuval etkileşimleri doğrulandı.
+
+---
+
 ## 📅 [2026-09-04] - Ana Ekran Renk Seçici Menüsünün Yenilenmesi (Lüks Reanimated Bottom Sheet)
 
 ### 🚀 Eklenen Özellikler & Tasarım İyileştirmeleri
