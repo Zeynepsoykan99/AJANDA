@@ -113,6 +113,7 @@
     "candidates": "Lectures Alternatives :",
     "selectFont": "Choisir la Police :",
     "fontSize": "Taille de Police :",
+    "fontSizeScale": "Taille de Police Globale (Échelle) :",
     "confirm": "Convertir et Ajouter"
   },
   "stickers": {

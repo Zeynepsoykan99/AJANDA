@@ -273,6 +273,14 @@ export function clusterStrokesByColorAndProximity(strokes) {
         Math.max(a.bounds.minY, b.bounds.minY) - Math.min(a.bounds.maxY, b.bounds.maxY)
       );
 
+      // Boyut farkı kontrolü: Biri büyük başlık diğeri küçük alt not ise (>2.0 kat) ve Y ekseninde ayrık iseler (gapY > 15) birleştirme!
+      const heightRatio =
+        Math.max(a.bounds.height, b.bounds.height) /
+        Math.max(1, Math.min(a.bounds.height, b.bounds.height));
+      if (gapY > 15 && heightRatio > 2.0) {
+        return false;
+      }
+
       const refHeight = Math.max(
         18,
         Math.min(90, (a.bounds.height + b.bounds.height) / 2)
@@ -343,46 +351,22 @@ export function calculateAutoFontSize(bounds, text = '') {
       ? bounds.height
       : (bounds.maxY != null && bounds.minY != null ? bounds.maxY - bounds.minY : 0);
 
-  const boundWidth =
-    bounds.width != null
-      ? bounds.width
-      : (bounds.maxX != null && bounds.minX != null ? bounds.maxX - bounds.minX : 0);
-
   if (boundHeight <= 0) return 18;
 
   const cleanText = (text || '').trim();
-  if (!cleanText) return 18;
-
-  const lines = cleanText.split('\n');
+  const lines = cleanText ? cleanText.split('\n').filter((l) => l.trim().length > 0) : [];
   const lineCount = Math.max(1, lines.length);
-  const longestLineLength = Math.max(
-    1,
-    ...lines.map((l) => l.trim().length)
-  );
 
-  // 1. Yükseklik bazlı hedef: x-height ve satır aralığı oranı (~%42-%46)
+  // 1. Satır Başına Düşen Fiziksel Çizim Yüksekliği:
   const lineHeight = boundHeight / lineCount;
-  const fontFromHeight = lineHeight * 0.44;
 
-  // 2. Genişlik bazlı hedef: Karakter başına düşen ortalama genişlik
-  let fontFromWidth = fontFromHeight;
-  if (longestLineLength > 2 && boundWidth > 20) {
-    const avgCharWidthRatio = 0.52;
-    fontFromWidth = boundWidth / (longestLineLength * avgCharWidthRatio);
-  }
+  // 2. Tipografik Orantı (Em-Square Glif Oranı ~%70):
+  // Fiziksel çizim yüksekliğinin %70'i doğrudan dijital font puntosuna çevrilir
+  const optimalFont = lineHeight * 0.70;
 
-  // 3. Orantısal Dengeleme:
-  // Kısa kelimelerde (<= 3 karakter) doğrudan yükseklik esas alınır.
-  // Uzun kelimelerde ve cümlelerde metnin el yazısı alanından taşmasını önleyen denge kurulur.
-  let optimalFont;
-  if (longestLineLength <= 3) {
-    optimalFont = fontFromHeight;
-  } else {
-    optimalFont = Math.min(fontFromHeight, fontFromWidth * 1.15);
-  }
-
-  // Doğal el yazısı okunabilirlik aralığı (14px - 38px, çok büyük başlıklar için max 42px)
-  const finalFontSize = Math.round(Math.min(38, Math.max(14, optimalFont)));
+  // 3. Geniş Dinamik Aralık (12px - 72px):
+  // Küçük notlar: 12-18px, standart el yazısı: 20-28px, başlıklar: 32-50px, devasa başlıklar: 52-72px
+  const finalFontSize = Math.round(Math.min(72, Math.max(12, optimalFont)));
 
   return finalFontSize;
 }
@@ -407,9 +391,14 @@ export function fitTextToBounds(bounds, text = '') {
       ? bounds.height
       : (bounds?.maxY != null && bounds?.minY != null ? bounds.maxY - bounds.minY : 40);
 
-  // Metin kutusu genişliği (orijinal el yazısı genişliğinden biraz pay bırakılır)
-  const calculatedWidth = Math.max(120, Math.round(boundWidth + 16));
-  const calculatedHeight = Math.max(40, Math.round(boundHeight));
+  const cleanText = (text || '').trim();
+  const lines = cleanText ? cleanText.split('\n').filter((l) => l.trim().length > 0) : [];
+  const longestLineLength = Math.max(1, ...lines.map((l) => l.trim().length));
+
+  // Metin kutusu genişliği: Orijinal çizim genişliği ve metnin tahmini uzunluğunun maksimumu
+  const estimatedTextWidth = Math.round(longestLineLength * calculatedFontSize * 0.58 + 24);
+  const calculatedWidth = Math.max(100, Math.max(boundWidth + 16, estimatedTextWidth));
+  const calculatedHeight = Math.max(30, Math.round(boundHeight));
 
   return {
     fontSize: calculatedFontSize,

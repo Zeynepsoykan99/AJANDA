@@ -4,6 +4,38 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-05] - El Yazısını Metne Dönüştürmede Bireysel Boyut Algılama (Per-Cluster Size Mapping) ve Dinamik Punto Eşleştirmesi (Dynamic Font Sizing)
+
+### 🚀 Eklenen Özellikler & UI/UX İyileştirmeleri
+- **Fiziksel Çizim Yüksekliğinden Dinamik Punto Üretimi (`calculateAutoFontSize` & `fitTextToBounds` in `utils/lassoGeometry.js`):**
+  - Tuvalde büyük çizilen yazıların devasa başlık fontlarına (52px - 72px), küçük çizilen notların ise kompakt fontlara (14px - 22px) otomatik dönüşmesini sağlayan tipografik oranlama algoritması kuruldu.
+  - Formül: Satır başına düşen fiziksel kutu yüksekliğinin %70'i (`lineHeight * 0.70`), glifin em-square alanını doğrudan karşılayacak şekilde hesaplanır ve 12px - 72px aralığında sınırlandırılır.
+  - Örnek: 100px el yazısı $\rightarrow$ 70px punto, 80px el yazısı $\rightarrow$ 56px punto, 30px el yazısı $\rightarrow$ 21px punto, 20px el yazısı $\rightarrow$ 14px punto.
+- **Tipografik Hiyerarşi Ayrıştırması (`heightRatio` in `shouldConnect`):**
+  - Aynı renkli bir başlık (örneğin 100px) ve hemen altındaki gövde notları (örneğin 25px - 30px) arasındaki yükseklik oranı $2.0\times$'dan büyük olduğunda, aynı kümede birleştirilip tek bir kutuya sıkıştırılması engellendi. Başlık ve notlar iki ayrı bağımsız metin bloğuna ayrıştırıldı.
+- **Çoklu Onay Modalı İyileştirmeleri (`RecognitionConfirmationModal.js`):**
+  - Çoklu küme görünümünde her küme kartının üst sağ köşesine, tespit edilen puntosunu gösteren ve bağımsız olarak $\pm 2\text{px}$ değiştirilebilen minik punto rozeti ve butonları eklendi (`X: 20, Y: 30 • 70 px`).
+  - Kart içindeki metin önizleme alanının puntosu da dinamik olarak ölçeklenerek kullanıcıya anlık görsel geri bildirim sağlandı.
+  - Modal altındaki genel font boyutu kontrolü çoklu küme modunda orantıyı bozmadan tüm kümeleri göreceli olarak ölçekleyecek (`Genel Yazı Boyutu (Ölçek)`) şekilde güncellendi.
+- **State ve AsyncStorage Kalıcılığı:**
+  - `app/todolist/[pageId].js` ve `app/ajandam/[pageId].js` içinde, oluşturulan her bağımsız `TextBlock` objesine kendi `individualFontSize` değeri (`style={{ fontSize: block.fontSize }}`) atandı.
+  - AsyncStorage'a kaydedildi ve `TextCanvas` üzerinde başlıklar devasa, notlar küçük olarak anında render edildi.
+- **Çok Dilli Çeviri (i18n):**
+  - `fontSizeScale` anahtarı Türkçe (TR), İngilizce (EN), Almanca (DE), İspanyolca (ES) ve Fransızca (FR) dillerine eklendi.
+
+### 📁 Değiştirilen Dosyalar
+- `utils/lassoGeometry.js`: `calculateAutoFontSize`, `fitTextToBounds` ve `shouldConnect` (heightRatio) güncellemeleri.
+- `components/drawing/RecognitionConfirmationModal.js`: Bireysel punto state'i, kart üstü punto rozetleri/kontrolleri ve göreceli ölçekleme.
+- `app/todolist/[pageId].js`: Çoklu bloklarda `individualFontSize` mirası.
+- `app/ajandam/[pageId].js`: Ajanda şablon ekranında To-Do ile eşdeğer dinamik punto entegrasyonu.
+- `locales/tr.json`, `en.json`, `de.json`, `es.json`, `fr.json`: `fontSizeScale` çevirileri.
+
+### ✅ Doğrulama & Testler
+- Otomatik birim testleri (`test_dynamic_font_sizing.mjs`) ile 100px devasa başlık (70px), 80px büyük başlık (56px), 30px standart not (21px), çok satırlı paragraf analizi ve simülasyon %100 doğrulandı.
+- Metro Android ve iOS canlı bundle derlemeleri (`HTTP 200 OK`) hatasız tamamlandı.
+
+---
+
 ## 📅 [2026-09-05] - El Yazısını Metne Dönüştürmede Konum Mirası (Spatial Mapping), Renk Mirası (Color Inheritance) ve Akıllı Kümeleme (Clustering)
 
 ### 🚀 Eklenen Özellikler & UI/UX İyileştirmeleri

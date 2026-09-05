@@ -46,6 +46,7 @@ export default function RecognitionConfirmationModal({
           clusters.map((c) => ({
             ...c,
             text: c.text != null ? c.text : '',
+            fontSize: c.fontSize || c.estimatedFontSize || 18,
           }))
         );
         const combined = clusters.map((c) => c.text || '').filter(Boolean).join(' ');
@@ -54,7 +55,7 @@ export default function RecognitionConfirmationModal({
         setClusterList([]);
         setText(initialText || '');
       }
-      setFontSize(estimatedFontSize || 16);
+      setFontSize(estimatedFontSize || 18);
       setSelectedFont(AVAILABLE_FONTS[0].id);
     }
   }, [visible, initialText, estimatedFontSize, clusters]);
@@ -77,11 +78,38 @@ export default function RecognitionConfirmationModal({
     );
   };
 
+  const handleClusterFontSizeChange = (index, delta) => {
+    setClusterList((prev) =>
+      prev.map((item, i) => {
+        if (i !== index) return item;
+        const current = item.fontSize || item.estimatedFontSize || 18;
+        const next = Math.max(12, Math.min(72, current + delta));
+        return { ...item, fontSize: next };
+      })
+    );
+  };
+
   const handleIncreaseFontSize = () => {
-    setFontSize((prev) => Math.min(64, prev + 2));
+    if (isMultiCluster) {
+      setClusterList((prev) =>
+        prev.map((item) => {
+          const current = item.fontSize || item.estimatedFontSize || 18;
+          return { ...item, fontSize: Math.min(72, current + 2) };
+        })
+      );
+    }
+    setFontSize((prev) => Math.min(72, prev + 2));
   };
 
   const handleDecreaseFontSize = () => {
+    if (isMultiCluster) {
+      setClusterList((prev) =>
+        prev.map((item) => {
+          const current = item.fontSize || item.estimatedFontSize || 18;
+          return { ...item, fontSize: Math.max(12, current - 2) };
+        })
+      );
+    }
     setFontSize((prev) => Math.max(12, prev - 2));
   };
 
@@ -98,7 +126,10 @@ export default function RecognitionConfirmationModal({
         fontFamily: activeFontObj.fontFamily,
         fontId: activeFontObj.id,
         fontSize,
-        clusters: clusterList,
+        clusters: clusterList.map((c) => ({
+          ...c,
+          fontSize: c.fontSize || c.estimatedFontSize || fontSize,
+        })),
       });
     } else {
       onConfirm({
@@ -107,7 +138,9 @@ export default function RecognitionConfirmationModal({
         fontId: activeFontObj.id,
         fontSize,
         clusters:
-          clusterList.length === 1 ? [{ ...clusterList[0], text: text.trim() }] : undefined,
+          clusterList.length === 1
+            ? [{ ...clusterList[0], text: text.trim(), fontSize }]
+            : undefined,
       });
     }
   };
@@ -232,14 +265,56 @@ export default function RecognitionConfirmationModal({
                               })}
                             </Text>
                           </View>
-                          <Text
-                            style={[
-                              styles.clusterCoord,
-                              { color: colors.textSecondary || '#888888' },
-                            ]}
-                          >
-                            X: {cluster.bounds?.minX ?? 0}, Y: {cluster.bounds?.minY ?? 0}
-                          </Text>
+                          <View style={styles.clusterHeaderRight}>
+                            <Text
+                              style={[
+                                styles.clusterCoord,
+                                { color: colors.textSecondary || '#888888' },
+                              ]}
+                            >
+                              X: {cluster.bounds?.minX ?? 0}, Y: {cluster.bounds?.minY ?? 0}
+                            </Text>
+                            <View
+                              style={[
+                                styles.clusterFontSizeBadge,
+                                {
+                                  backgroundColor: colors.card || '#FFFFFF',
+                                  borderColor: colors.border || '#E0E0E0',
+                                },
+                              ]}
+                            >
+                              <TouchableOpacity
+                                onPress={() => handleClusterFontSizeChange(index, -2)}
+                                style={styles.clusterMiniBtn}
+                                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                              >
+                                <MaterialCommunityIcons
+                                  name="minus"
+                                  size={12}
+                                  color={colors.textSecondary || '#666'}
+                                />
+                              </TouchableOpacity>
+                              <Text
+                                style={[
+                                  styles.clusterFontSizeText,
+                                  { color: colors.textPrimary || '#212121' },
+                                ]}
+                              >
+                                {cluster.fontSize || cluster.estimatedFontSize || 18} px
+                              </Text>
+                              <TouchableOpacity
+                                onPress={() => handleClusterFontSizeChange(index, +2)}
+                                style={styles.clusterMiniBtn}
+                                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                              >
+                                <MaterialCommunityIcons
+                                  name="plus"
+                                  size={12}
+                                  color={colors.textSecondary || '#666'}
+                                />
+                              </TouchableOpacity>
+                            </View>
+                          </View>
                         </View>
 
                         <View
@@ -265,7 +340,13 @@ export default function RecognitionConfirmationModal({
                               {
                                 color: strokeColor,
                                 fontFamily: activeFontObj.fontFamily,
-                                fontSize: Math.min(22, Math.max(15, fontSize)),
+                                fontSize: Math.min(
+                                  32,
+                                  Math.max(
+                                    14,
+                                    cluster.fontSize || cluster.estimatedFontSize || 18
+                                  )
+                                ),
                               },
                             ]}
                           />
@@ -482,7 +563,9 @@ export default function RecognitionConfirmationModal({
               {/* 4. Font Boyutu Ayarlayıcı */}
               <View style={styles.fontSizeRow}>
                 <Text style={[styles.sectionLabel, { color: colors.textSecondary || '#757575', marginBottom: 0 }]}>
-                  {t('recognition.fontSize', 'Yazı Boyutu:')}
+                  {isMultiCluster
+                    ? t('recognition.fontSizeScale', 'Genel Yazı Boyutu (Ölçek):')
+                    : t('recognition.fontSize', 'Yazı Boyutu:')}
                 </Text>
                 <View style={styles.fontSizeControls}>
                   <TouchableOpacity
@@ -777,6 +860,31 @@ const styles = StyleSheet.create({
   },
   candidatesSectionSmall: {
     marginTop: 2,
+  },
+  clusterHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  clusterFontSizeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    gap: 4,
+  },
+  clusterMiniBtn: {
+    padding: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  clusterFontSizeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    minWidth: 32,
+    textAlign: 'center',
   },
   subLabelSmall: {
     fontSize: 11,

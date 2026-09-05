@@ -113,6 +113,7 @@
     "candidates": "Alternatif Okumalar:",
     "selectFont": "Yazı Tipi (Font) Seçin:",
     "fontSize": "Yazı Boyutu:",
+    "fontSizeScale": "Genel Yazı Boyutu (Ölçek):",
     "confirm": "Dönüştür ve Ekle"
   },
   "stickers": {

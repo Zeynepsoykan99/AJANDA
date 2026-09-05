@@ -113,6 +113,7 @@
     "candidates": "Lecturas Alternativas:",
     "selectFont": "Elegir Fuente:",
     "fontSize": "Tamaño de Fuente:",
+    "fontSizeScale": "Tamaño de Fuente General (Escala):",
     "confirm": "Convertir y Añadir"
   },
   "stickers": {

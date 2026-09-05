@@ -113,6 +113,7 @@
     "candidates": "Alternative Readings:",
     "selectFont": "Select Font:",
     "fontSize": "Font Size:",
+    "fontSizeScale": "Overall Font Size (Scale):",
     "confirm": "Convert and Add"
   },
   "stickers": {

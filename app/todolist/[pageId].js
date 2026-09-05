@@ -320,6 +320,7 @@ export default function TodoViewScreen() {
           text: result.text || '',
           candidates: result.candidates || [],
           estimatedFontSize: fitted.fontSize,
+          fontSize: fitted.fontSize,
           fittedWidth: fitted.width,
         };
       })
@@ -328,18 +329,18 @@ export default function TodoViewScreen() {
     const combinedText = clusterResults.map((c) => c.text).filter(Boolean).join(' ');
     const firstFitted = clusterResults[0]
       ? fitTextToBounds(clusterResults[0].bounds, clusterResults[0].text)
-      : { fontSize: 16 };
+      : { fontSize: 18 };
 
     setRecognizedData({
       text: combinedText,
       candidates: clusterResults[0]?.candidates || [],
-      estimatedFontSize: firstFitted.fontSize || 16,
+      estimatedFontSize: firstFitted.fontSize || 18,
       clusters: clusterResults,
     });
     setIsRecognizingSelected(false);
   }, [selectedStrokes, i18n.language]);
 
-  // Modal üzerinden onaylanan metni gerçek TextElement olarak ekle (Konum & Renk Mirası)
+  // Modal üzerinden onaylanan metni gerçek TextElement olarak ekle (Konum, Renk & Bireysel Boyut Mirası)
   const handleConfirmConversion = useCallback(
     ({ text, fontFamily, fontSize, clusters: confirmedClusters }) => {
       const activeClusters =
@@ -355,6 +356,10 @@ export default function TodoViewScreen() {
           .map((c, idx) => {
             const fitted = fitTextToBounds(c.bounds, c.text);
             const blockId = `text_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 6)}`;
+            // Bireysel Dinamik Punto: Her bloğun fiziksel çizim yüksekliğinden üretilen kendi font boyutu
+            const individualFontSize =
+              c.fontSize || c.estimatedFontSize || fitted.fontSize || fontSize || 18;
+
             return {
               id: blockId,
               x: Math.max(8, c.bounds.minX), // 1. Konum Mirası: Orijinal X koordinatı
@@ -362,7 +367,7 @@ export default function TodoViewScreen() {
               width: Math.max(100, fitted.width),
               text: c.text,
               color: c.color || textColor,   // 2. Renk Mirası: Orijinal el yazısı çizim rengi
-              fontSize: fontSize || c.estimatedFontSize || fitted.fontSize,
+              fontSize: individualFontSize,  // 3. Bireysel Boyut: Dinamik Punto
               fontFamily,
             };
           });
