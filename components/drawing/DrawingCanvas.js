@@ -10,6 +10,7 @@ import {
   getErasedCharacterIndices,
   eraseCharactersFromBlock,
 } from '../../utils/lassoGeometry';
+import { useZoomableCanvas } from './ZoomableCanvas';
 
 const triggerHaptic = () => {
   try {
@@ -72,6 +73,7 @@ export default function DrawingCanvas({
   onSelectionChange,
   style,
 }) {
+  const { scale: zoomScale, pageToCanvas, screenToCanvas } = useZoomableCanvas();
   const [currentPath, setCurrentPath] = useState('');
   const [lassoPath, setLassoPath] = useState('');
   const [hiddenStrokeIds, setHiddenStrokeIds] = useState(new Set());
@@ -160,6 +162,9 @@ export default function DrawingCanvas({
     selectedStrokeIds,
     selectionBounds,
     onSelectionChange,
+    zoomScale,
+    pageToCanvas,
+    screenToCanvas,
   });
 
   // Her render'da ref'i güncelliyoruz
@@ -178,6 +183,9 @@ export default function DrawingCanvas({
       selectedStrokeIds,
       selectionBounds,
       onSelectionChange,
+      zoomScale,
+      pageToCanvas,
+      screenToCanvas,
     };
   }, [
     isDrawingMode,
@@ -193,6 +201,9 @@ export default function DrawingCanvas({
     selectedStrokeIds,
     selectionBounds,
     onSelectionChange,
+    zoomScale,
+    pageToCanvas,
+    screenToCanvas,
   ]);
 
   // Unmount anında bekleyen RAF varsa temizle
@@ -250,7 +261,9 @@ export default function DrawingCanvas({
     const session = eraserSessionRef.current;
     if (!session) return;
 
-    const radius = 25; // Silgi etki alanı yarıçapı
+    // Silgi etki alanı yarıçapı tuval büyütme katsayısına göre dinamik dengelenir
+    const currentScale = stateRef.current.zoomScale?.value || 1.0;
+    const radius = Math.max(8, 25 / currentScale);
     const rSquared = radius * radius;
     let newStrokesHidden = false;
 
@@ -410,12 +423,38 @@ export default function DrawingCanvas({
   // PanResponder yalnızca bir kez oluşturulur ve her zaman güncel ref değerlerini okur
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => stateRef.current.isDrawingMode,
-      onMoveShouldSetPanResponder: () => stateRef.current.isDrawingMode,
+      onStartShouldSetPanResponder: (evt) => {
+        if (!stateRef.current.isDrawingMode) return false;
+        // İki veya daha fazla parmak dokunduysa çizimi başlatma, ZoomableCanvas'a bırak
+        if (evt.nativeEvent.touches && evt.nativeEvent.touches.length > 1) return false;
+        return true;
+      },
+      onMoveShouldSetPanResponder: (evt) => {
+        if (!stateRef.current.isDrawingMode) return false;
+        if (evt.nativeEvent.touches && evt.nativeEvent.touches.length > 1) return false;
+        return true;
+      },
 
       onPanResponderGrant: (evt) => {
+        if (evt.nativeEvent.touches && evt.nativeEvent.touches.length > 1) {
+          return;
+        }
+
         const state = stateRef.current;
-        const { locationX, locationY } = evt.nativeEvent;
+        const { locationX, locationY, pageX, pageY } = evt.nativeEvent;
+
+        // Koordinat Dönüşümü:
+        let coordX = locationX;
+        let coordY = locationY;
+        if (pageX !== undefined && pageY !== undefined && state.pageToCanvas) {
+          const pt = state.pageToCanvas(pageX, pageY);
+          coordX = pt.x;
+          coordY = pt.y;
+        } else if (state.screenToCanvas) {
+          const pt = state.screenToCanvas(locationX, locationY);
+          coordX = pt.x;
+          coordY = pt.y;
+        }
 
         if (state.tool === 'eraser') {
           // Yeni bir silgi oturumu başlat
@@ -429,9 +468,9 @@ export default function DrawingCanvas({
             textBlocksChanged: false,
             hasChanges: false,
           };
-          prevEraseCoordRef.current = { x: locationX, y: locationY };
-          lastEraseCoordRef.current = { x: locationX, y: locationY };
-          processEraseAt(locationX, locationY);
+          prevEraseCoordRef.current = { x: coordX, y: coordY };
+          lastEraseCoordRef.current = { x: coordX, y: coordY };
+          processEraseAt(coordX, coordY);
           return;
         }
 
@@ -439,22 +478,42 @@ export default function DrawingCanvas({
           if (state.selectedStrokeIds.length > 0 && state.onSelectionChange) {
             state.onSelectionChange({ selectedStrokeIds: [], bounds: null, selectedStrokes: [] });
           }
-          pointsRef.current = [{ x: locationX, y: locationY }];
-          setLassoPath(`M ${locationX} ${locationY}`);
+          pointsRef.current = [{ x: coordX, y: coordY }];
+          setLassoPath(`M ${coordX} ${coordY}`);
           return;
         }
 
         strokeStartTimeRef.current = Date.now();
-        pointsRef.current = [{ x: locationX, y: locationY, timestamp: 0 }];
-        setCurrentPath(`M ${locationX} ${locationY}`);
+        pointsRef.current = [{ x: coordX, y: coordY, timestamp: 0 }];
+        setCurrentPath(`M ${coordX} ${coordY}`);
       },
 
       onPanResponderMove: (evt) => {
+        // İki parmak algılandığında çizimi anında iptal et (çapraz leke çizgisini önler)
+        if (evt.nativeEvent.touches && evt.nativeEvent.touches.length > 1) {
+          pointsRef.current = [];
+          setCurrentPath('');
+          setLassoPath('');
+          return;
+        }
+
         const state = stateRef.current;
-        const { locationX, locationY } = evt.nativeEvent;
+        const { locationX, locationY, pageX, pageY } = evt.nativeEvent;
+
+        let coordX = locationX;
+        let coordY = locationY;
+        if (pageX !== undefined && pageY !== undefined && state.pageToCanvas) {
+          const pt = state.pageToCanvas(pageX, pageY);
+          coordX = pt.x;
+          coordY = pt.y;
+        } else if (state.screenToCanvas) {
+          const pt = state.screenToCanvas(locationX, locationY);
+          coordX = pt.x;
+          coordY = pt.y;
+        }
 
         if (state.tool === 'eraser') {
-          lastEraseCoordRef.current = { x: locationX, y: locationY };
+          lastEraseCoordRef.current = { x: coordX, y: coordY };
           if (!eraseRafIdRef.current) {
             eraseRafIdRef.current = requestAnimationFrame(() => {
               eraseRafIdRef.current = null;
@@ -468,14 +527,14 @@ export default function DrawingCanvas({
         }
 
         if (state.tool === 'lasso') {
-          pointsRef.current.push({ x: locationX, y: locationY });
+          pointsRef.current.push({ x: coordX, y: coordY });
           const newLasso = pointsToLassoSvgPath(pointsRef.current);
           setLassoPath(newLasso);
           return;
         }
 
         const elapsed = Date.now() - strokeStartTimeRef.current;
-        pointsRef.current.push({ x: locationX, y: locationY, timestamp: elapsed });
+        pointsRef.current.push({ x: coordX, y: coordY, timestamp: elapsed });
         const newPath = pointsToSvgPath(pointsRef.current);
         setCurrentPath(newPath);
       },

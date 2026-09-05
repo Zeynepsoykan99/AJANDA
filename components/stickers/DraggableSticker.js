@@ -10,6 +10,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { useZoomableCanvas } from '../drawing/ZoomableCanvas';
 
 const triggerHaptic = () => {
   try {
@@ -28,6 +29,7 @@ export default function DraggableSticker({
   canvasHeight = 0,
   onSnapChange,
 }) {
+  const { scale: canvasScale } = useZoomableCanvas();
   const translateX = useSharedValue(sticker.x || 0);
   const translateY = useSharedValue(sticker.y || 0);
   const scale = useSharedValue(sticker.scale || 1);
@@ -42,6 +44,7 @@ export default function DraggableSticker({
 
   // Sürükleme gesture'ı + Akıllı Hizalama (Snapping)
   const panGesture = Gesture.Pan()
+    .maxPointers(1)
     .onStart(() => {
       savedTranslateX.value = translateX.value;
       savedTranslateY.value = translateY.value;
@@ -50,8 +53,9 @@ export default function DraggableSticker({
       isSnappedH.value = false;
     })
     .onUpdate((event) => {
-      let nextX = savedTranslateX.value + event.translationX;
-      let nextY = savedTranslateY.value + event.translationY;
+      const s = (canvasScale && canvasScale.value) || 1.0;
+      let nextX = savedTranslateX.value + event.translationX / s;
+      let nextY = savedTranslateY.value + event.translationY / s;
 
       // Akıllı Hizalama (Smart Snapping & Haptics)
       if (canvasWidth > 0 && canvasHeight > 0) {
@@ -124,11 +128,13 @@ export default function DraggableSticker({
 
   // Yeniden boyutlandırma (Resize) gesture'ı
   const resizePanGesture = Gesture.Pan()
+    .maxPointers(1)
     .onStart(() => {
       savedScale.value = scale.value;
     })
     .onUpdate((event) => {
-      const delta = (event.translationX + event.translationY) / 2;
+      const s = (canvasScale && canvasScale.value) || 1.0;
+      const delta = (event.translationX / s + event.translationY / s) / 2;
       const factor = 1 + (delta / 80);
       const newScale = savedScale.value * factor;
       scale.value = Math.max(0.3, Math.min(newScale, 5));

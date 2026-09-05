@@ -4,6 +4,47 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-05] - Zoomable Canvas: Pinch-to-Zoom, İki Parmakla Kaydırma (Pan) ve Hassas Koordinat Transformasyonu
+
+### 🚀 Eklenen Özellikler & UI/UX İyileştirmeleri
+- **GPU Destekli Yakınlaştırma ve Kaydırma Mimarisi (`ZoomableCanvas.js`):**
+  - Özellikle iPad ve tablet kullanıcılarının detaylı not alabilmesi ve çizim yapabilmesi için tuval alanını (`ImageTemplatePage`, `NotebookContainer`, `TextCanvas`, `DrawingCanvas`, `LassoActionMenu`, `StickerCanvas`) sarmalayan yüksek performanslı `ZoomableCanvas` bileşeni geliştirildi.
+  - `react-native-gesture-handler` v2 (`Gesture.Pinch`, `Gesture.Pan`, `Gesture.Tap`, `GestureDetector`) ve `react-native-reanimated` kullanılarak 60/120 FPS akıcılıkta GPU tabanlı matrix dönüşümü (`scale`, `translateX`, `translateY`) sağlandı.
+  - Yakınlaştırma aralığı $1.0\times$ ile $4.0\times$ arasında sınırlandırıldı; sınır aşımlarında rubber-band direnci ve `withSpring` ile yumuşak yaylanma mekanizması eklendi.
+- **Hassas Koordinat Transformasyonu (Coordinate Mapping Matematik Modeli):**
+  - Sayfa kaç kat büyütülürse veya nereye kaydırılırsa kaydırılsın, kullanıcının ekrana dokunduğu $(X_{screen}, Y_{screen})$ noktalarını orijinal tuval uzayına $(X_{canvas}, Y_{canvas})$ 0 piksel sapmayla dönüştüren ters dönüşüm formülü kurgulandı:
+    $$X_{canvas} = \frac{X_{screen} - T_x - \frac{W}{2}}{S} + \frac{W}{2}, \quad Y_{canvas} = \frac{Y_{screen} - T_y - \frac{H}{2}}{S} + \frac{H}{2}$$
+  - `ZoomableCanvasContext` üzerinden `screenToCanvas`, `canvasToScreen` ve `pageToCanvas` fonksiyonları tüm alt bileşenlerin kullanımına sunuldu.
+  - Kalem veya parmakla çizim yaparken çizginin parmak ucundan 1 piksel bile kaymaması garanti altına alındı.
+- **Odak Noktalı Zoom Düzeltmesi (Focal Point Invariance):**
+  - İki parmakla kıstırarak büyütme sırasında iki parmağın arasındaki görsel odak noktası $(F_x, F_y)$ ekranda kilitli kalarak parmakların altından kayması önlendi.
+- **Dinamik Kısmi Silgi Boyutlandırması:**
+  - Silgi yarıçapı tuval büyütme katsayısına göre $R_{canvas} = \frac{25\text{ px}}{S}$ formülüyle dinamik uyarlandı. Kullanıcı 3x büyüttüğünde silgi devasa alanları silmez; ekrandaki fiziksel parmak boyutunu (25px) koruyarak ince harf silme hassasiyeti sunar.
+- **Metin ve Çıkartma Sürükleme Eşitlemesi:**
+  - `TextCanvas` ve `DraggableSticker` içindeki sürükleme deltaleri $\Delta X / S$ ve $\Delta Y / S$ ile dengelendi; büyütülmüş ekranda taşınan nesnelerin parmakla 1:1 kilitli kalması sağlandı.
+- **Gesture Hiyerarşisi ve Çakışma Önleme:**
+  - **Çizim / Metin Modu:** Tek parmak veya stylus serbest çizim yaparken, sayfayı büyütmek/kaydırmak için iki parmak (`.minPointers(2)`) gerekir.
+  - Çizim yaparken ikinci bir parmak dokunduğu anda (`touches.length > 1`) çizgi derhal iptal edilerek çapraz leke oluşumu engellendi ve sayfa kesintisiz biçimde zoom/pan moduna geçirildi.
+  - **Gezinme Modu:** Çizim veya metin modu kapalıyken tek parmakla da serbestçe kaydırma yapılabilir.
+  - **Çift Tıklama (Double Tap) ve Mini Rozet:** Sayfaya çift dokunulduğunda veya sol altta beliren `🔍 %175` rozetine basıldığında sayfa yumuşak bir animasyonla %100 orijinal boyutuna sıfırlanır.
+- **Ekran Entegrasyonu:**
+  - `app/todolist/[pageId].js` ve `app/ajandam/[pageId].js` ekranları `<ZoomableCanvas>` ile donatıldı.
+
+### 📁 Değiştirilen & Eklenen Dosyalar
+- `components/drawing/ZoomableCanvas.js`: [YENİ] Zoom, pan, odak noktası, sınır kontrolleri, rozet ve koordinat dönüşüm context'i.
+- `components/drawing/DrawingCanvas.js`: `useZoomableCanvas` entegrasyonu, dokunma koordinatı dönüştürme, dinamik silgi yarıçapı ve 2 parmak çizim iptali.
+- `components/text/TextCanvas.js`: Zoom altında metin kutusu sürükleme ve tıklayarak ekleme koordinatlarının ölçeklenmesi.
+- `components/stickers/DraggableSticker.js`: Zoom altında çıkartma sürükleme ve yeniden boyutlandırma hareketlerinin 1:1 ölçeklenmesi.
+- `app/todolist/[pageId].js`: İçeriğin `ZoomableCanvas` ile sarmalanması.
+- `app/ajandam/[pageId].js`: Ajanda şablonlarının `ZoomableCanvas` ile sarmalanması.
+- `tests/zoomableCanvas.test.js`: [YENİ] 6 adet kapsamlı matematiksel koordinat ve odak noktası birim testi.
+
+### ✅ Doğrulama & Testler
+- Matematiksel birim testleri (`tests/zoomableCanvas.test.js`) ile Identity, 2x Zoom at Center, Bijective Invertibility (100% exact floats), Focal Point Invariance (0.000px drift), Dynamic Eraser Radius Scaling ve Drag Delta Scaling testlerinin tamamı (6/6) başarıyla geçti.
+- Metro bundler üzerinde Android, iOS ve Web derlemeleri (`HTTP 200 OK`) eksiksiz doğrulandı.
+
+---
+
 ## 📅 [2026-09-05] - El Yazısını Metne Dönüştürmede Bireysel Boyut Algılama (Per-Cluster Size Mapping) ve Dinamik Punto Eşleştirmesi (Dynamic Font Sizing)
 
 ### 🚀 Eklenen Özellikler & UI/UX İyileştirmeleri

@@ -18,6 +18,7 @@ import { getPageTemplate, PAGE_CATEGORIES } from '../../constants/pageTemplates'
 import ImageTemplatePage from '../../components/pages/ImageTemplatePage';
 import DrawingCanvas from '../../components/drawing/DrawingCanvas';
 import DrawingToolbar from '../../components/drawing/DrawingToolbar';
+import ZoomableCanvas from '../../components/drawing/ZoomableCanvas';
 import TextCanvas from '../../components/text/TextCanvas';
 import StickerCanvas from '../../components/stickers/StickerCanvas';
 import StickerMenu from '../../components/stickers/StickerMenu';
@@ -791,8 +792,12 @@ export default function TodoViewScreen() {
         </View>
       </View>
 
-      {/* Liste İçeriği */}
-      <View
+      {/* Liste İçeriği - Pinch-to-Zoom & Pan Destekli Tuval */}
+      <ZoomableCanvas
+        isDrawingMode={activeMode === 'drawing'}
+        isTextMode={activeMode === 'text'}
+        minScale={1.0}
+        maxScale={4.0}
         style={[
           styles.contentArea,
           styles.fullBleedContentArea,
@@ -866,7 +871,7 @@ export default function TodoViewScreen() {
           onStickerDelete={handleStickerDelete}
           isDrawingMode={activeMode === 'drawing'}
         />
-      </View>
+      </ZoomableCanvas>
 
       {/* Sticker Menüsü */}
       <StickerMenu

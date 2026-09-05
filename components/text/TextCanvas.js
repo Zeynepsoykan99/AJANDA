@@ -13,6 +13,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
+import { useZoomableCanvas } from '../drawing/ZoomableCanvas';
 
 const triggerHaptic = () => {
   try {
@@ -38,6 +39,7 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
   isDrawingMode = false,
 }) {
   const { t } = useTranslation();
+  const { scale: zoomScale } = useZoomableCanvas();
   const pan = useRef(new Animated.ValueXY({ x: block.x, y: block.y })).current;
   const initialDragPosRef = useRef({ x: block.x, y: block.y });
   const [isDragging, setIsDragging] = useState(false);
@@ -58,11 +60,16 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
   // Çizim veya silgi modu aktifken dokunma olaylarını dinlemez (kalem çizgisi asla kesilmez)
   const dragPanResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => !isEditing && !isEraserActive && !isDrawingMode,
-      onMoveShouldSetPanResponder: (_, gestureState) =>
+      onStartShouldSetPanResponder: (evt) =>
         !isEditing &&
         !isEraserActive &&
         !isDrawingMode &&
+        (!evt.nativeEvent.touches || evt.nativeEvent.touches.length <= 1),
+      onMoveShouldSetPanResponder: (evt, gestureState) =>
+        !isEditing &&
+        !isEraserActive &&
+        !isDrawingMode &&
+        (!evt.nativeEvent.touches || evt.nativeEvent.touches.length <= 1) &&
         (Math.abs(gestureState.dx) > 3 || Math.abs(gestureState.dy) > 3),
       onPanResponderGrant: () => {
         initialDragPosRef.current = {
@@ -72,8 +79,9 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
         setIsDragging(true);
       },
       onPanResponderMove: (_, gestureState) => {
-        let rawX = initialDragPosRef.current.x + gestureState.dx;
-        let rawY = initialDragPosRef.current.y + gestureState.dy;
+        const currentScale = zoomScale?.value || 1.0;
+        let rawX = initialDragPosRef.current.x + gestureState.dx / currentScale;
+        let rawY = initialDragPosRef.current.y + gestureState.dy / currentScale;
 
         // Akıllı Hizalama (Snapping)
         if (canvasWidth > 0 && canvasHeight > 0) {
@@ -153,11 +161,13 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
         initialWidthRef.current = boxWidth;
       },
       onPanResponderMove: (_, gestureState) => {
-        const newWidth = Math.max(60, initialWidthRef.current + gestureState.dx);
+        const currentScale = zoomScale?.value || 1.0;
+        const newWidth = Math.max(60, initialWidthRef.current + gestureState.dx / currentScale);
         setBoxWidth(newWidth);
       },
       onPanResponderRelease: (_, gestureState) => {
-        const finalWidth = Math.max(60, initialWidthRef.current + gestureState.dx);
+        const currentScale = zoomScale?.value || 1.0;
+        const finalWidth = Math.max(60, initialWidthRef.current + gestureState.dx / currentScale);
         onResizeEnd(block.id, finalWidth);
       },
     })
@@ -243,6 +253,7 @@ export default function TextCanvas({
   isEraserActive = false,
   pointerEvents,
 }) {
+  const { pageToCanvas, screenToCanvas } = useZoomableCanvas();
   const [editingId, setEditingId] = useState(null);
   const [canvasLayout, setCanvasLayout] = useState({ width: 0, height: 0 });
   const [guideLines, setGuideLines] = useState({ v: false, h: false });
@@ -258,12 +269,24 @@ export default function TextCanvas({
       return;
     }
 
-    const { locationX, locationY } = evt.nativeEvent;
+    const { locationX, locationY, pageX, pageY } = evt.nativeEvent;
+    let coordX = locationX;
+    let coordY = locationY;
+    if (pageX !== undefined && pageY !== undefined && pageToCanvas) {
+      const pt = pageToCanvas(pageX, pageY);
+      coordX = pt.x;
+      coordY = pt.y;
+    } else if (screenToCanvas) {
+      const pt = screenToCanvas(locationX, locationY);
+      coordX = pt.x;
+      coordY = pt.y;
+    }
+
     const newId = `text_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
     const newBlock = {
       id: newId,
-      x: Math.max(10, Math.round(locationX)),
-      y: Math.max(10, Math.round(locationY - 15)),
+      x: Math.max(10, Math.round(coordX)),
+      y: Math.max(10, Math.round(coordY - 15)),
       text: '',
       color: activeColor,
       fontSize: activeFontSize,

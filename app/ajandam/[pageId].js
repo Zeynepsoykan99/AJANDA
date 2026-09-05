@@ -26,6 +26,7 @@ import NotebookContainer from '../../components/stationery/NotebookContainer';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 import DrawingCanvas from '../../components/drawing/DrawingCanvas';
 import DrawingToolbar from '../../components/drawing/DrawingToolbar';
+import ZoomableCanvas from '../../components/drawing/ZoomableCanvas';
 import TextCanvas from '../../components/text/TextCanvas';
 import UndoToast from '../../components/ui/UndoToast';
 import { recognizeHandwriting, recognizeSelectedStrokes } from '../../services/handwritingService';
@@ -896,8 +897,12 @@ export default function PageViewScreen() {
         </View>
       </View>
 
-      {/* Sayfa İçeriği + NotebookContainer (normal şablonlar) / Tam Ekran Görsel (image_template) */}
-      <View
+      {/* Sayfa İçeriği + NotebookContainer (normal şablonlar) / Tam Ekran Görsel (image_template) - Zoomable Canvas */}
+      <ZoomableCanvas
+        isDrawingMode={activeMode === 'drawing'}
+        isTextMode={activeMode === 'text'}
+        minScale={1.0}
+        maxScale={4.0}
         style={[
           styles.contentArea,
           isTablet && template?.type !== 'image_template' && {
@@ -982,7 +987,7 @@ export default function PageViewScreen() {
           onStickerDelete={handleStickerDelete}
           isDrawingMode={activeMode === 'drawing'}
         />
-      </View>
+      </ZoomableCanvas>
 
       {/* Sticker Menüsü */}
       <StickerMenu
