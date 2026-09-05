@@ -200,6 +200,134 @@ export function getMultiStrokeBounds(strokes) {
 }
 
 /**
+ * Seçilen el yazısı çizgilerini renk ve mekansal yakınlığa göre bağımsız kümelere ayırır.
+ *
+ * Temel Kurallar:
+ * 1. Renk Ayrımı (Color Inheritance): Farklı renkteki (stroke.color) çizgiler ASLA aynı kümede birleştirilmez.
+ * 2. Mekansal Yakınlık (Spatial Proximity): Aynı renkteki çizgiler harf/kelime/satır mesafesi eşiğine göre taranır.
+ *    Birbirine yakın olanlar tek kümede toplanırken, sayfanın uzak noktalarındaki aynı renkli yazılar ayrı kümelere ayrılır.
+ * 3. Okuma Sırası (Reading Order): Kümeler yukarıdan aşağıya (Y) ve soldan sağa (X) sıralanır.
+ *
+ * @param {Array<object>} strokes - Çizgi nesneleri dizisi
+ * @returns {Array<{
+ *   id: string,
+ *   color: string,
+ *   strokes: Array<object>,
+ *   strokeIds: Array<string>,
+ *   bounds: { minX: number, minY: number, maxX: number, maxY: number, width: number, height: number, centerX: number, centerY: number }
+ * }>}
+ */
+export function clusterStrokesByColorAndProximity(strokes) {
+  if (!Array.isArray(strokes) || strokes.length === 0) {
+    return [];
+  }
+
+  // 1. Çizgileri renge göre ayır (Farklı renkteki çizgiler asla birleştirilemez)
+  const colorMap = new Map();
+
+  for (let i = 0; i < strokes.length; i++) {
+    const stroke = strokes[i];
+    if (!stroke) continue;
+    const rawColor = stroke.color || '#000000';
+    const normColor = typeof rawColor === 'string' ? rawColor.trim().toLowerCase() : '#000000';
+
+    if (!colorMap.has(normColor)) {
+      colorMap.set(normColor, []);
+    }
+
+    const singleBounds = getMultiStrokeBounds([stroke]);
+    colorMap.get(normColor).push({
+      stroke,
+      bounds: singleBounds,
+      originalColor: rawColor,
+      index: i,
+    });
+  }
+
+  const allClusters = [];
+
+  // 2. Her renk grubu içinde mekansal yakınlık analizi yap (Connected Components)
+  for (const [normColor, items] of colorMap.entries()) {
+    if (items.length === 0) continue;
+
+    if (items.length === 1) {
+      const single = items[0];
+      allClusters.push({
+        id: `cluster_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        color: single.originalColor || normColor,
+        strokes: [single.stroke],
+        strokeIds: [single.stroke.id || `stroke_${single.index}`],
+        bounds: single.bounds,
+      });
+      continue;
+    }
+
+    // İki çizginin birbirine yakın olup olmadığını belirleyen fonksiyon
+    const shouldConnect = (a, b) => {
+      const gapX = Math.max(
+        0,
+        Math.max(a.bounds.minX, b.bounds.minX) - Math.min(a.bounds.maxX, b.bounds.maxX)
+      );
+      const gapY = Math.max(
+        0,
+        Math.max(a.bounds.minY, b.bounds.minY) - Math.min(a.bounds.maxY, b.bounds.maxY)
+      );
+
+      const refHeight = Math.max(
+        18,
+        Math.min(90, (a.bounds.height + b.bounds.height) / 2)
+      );
+
+      const thresholdX = Math.min(75, Math.max(45, refHeight * 1.6));
+      const thresholdY = Math.min(55, Math.max(35, refHeight * 1.3));
+
+      return gapX <= thresholdX && gapY <= thresholdY;
+    };
+
+    const visited = new Array(items.length).fill(false);
+
+    for (let i = 0; i < items.length; i++) {
+      if (visited[i]) continue;
+      visited[i] = true;
+
+      const clusterStrokes = [items[i].stroke];
+      const queue = [i];
+
+      while (queue.length > 0) {
+        const curr = queue.shift();
+        for (let j = 0; j < items.length; j++) {
+          if (!visited[j] && shouldConnect(items[curr], items[j])) {
+            visited[j] = true;
+            clusterStrokes.push(items[j].stroke);
+            queue.push(j);
+          }
+        }
+      }
+
+      const clusterBounds = getMultiStrokeBounds(clusterStrokes);
+      allClusters.push({
+        id: `cluster_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        color: items[i].originalColor || normColor,
+        strokes: clusterStrokes,
+        strokeIds: clusterStrokes.map((s, sIdx) => s.id || `stroke_${sIdx}`),
+        bounds: clusterBounds,
+      });
+    }
+  }
+
+  // 3. Kümeleri doğal okuma sırasına göre diz (Yukarıdan aşağıya, aynı satırda soldan sağa)
+  allClusters.sort((a, b) => {
+    const diffY = a.bounds.minY - b.bounds.minY;
+    if (Math.abs(diffY) <= 30) {
+      return a.bounds.minX - b.bounds.minX;
+    }
+    return diffY;
+  });
+
+  return allClusters;
+}
+
+/**
  * Orijinal el yazısı çizimlerinin fiziksel sınırlarına (X genişliği ve Y yüksekliği)
  * ve tanınan metnin karakter/satır yapısına göre akıllı dijital başlangıç puntosunu belirler.
  *

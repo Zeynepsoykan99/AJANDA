@@ -95,6 +95,7 @@
     "textDeleted": "Texto eliminado",
     "textsDeleted": "{{count}} textos eliminados",
     "handwritingConverted": "Escritura convertida a texto",
+    "multipleTextsConverted": "{{count}} textos convertidos",
     "stickerDeleted": "Sticker eliminado",
     "typeNotePlaceholder": "Escribe tu nota..."
   },
@@ -105,6 +106,8 @@
   "recognition": {
     "title": "Convertir Escritura a Texto",
     "scanning": "Escaneando escritura con motor de tinta digital...",
+    "multipleClustersDetected": "{{count}} grupos de escritura detectados",
+    "groupTitle": "Grupo #{{number}}",
     "recognizedLabel": "Texto Reconocido (edita si es necesario):",
     "placeholder": "No se detectó texto, escribe aquí...",
     "candidates": "Lecturas Alternativas:",

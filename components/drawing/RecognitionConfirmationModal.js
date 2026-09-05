@@ -27,6 +27,7 @@ export default function RecognitionConfirmationModal({
   initialText = '',
   candidates = [],
   estimatedFontSize = 16,
+  clusters = [],
   onConfirm,
   onCancel,
 }) {
@@ -34,21 +35,46 @@ export default function RecognitionConfirmationModal({
   const { colors } = useTheme();
 
   const [text, setText] = useState(initialText);
+  const [clusterList, setClusterList] = useState([]);
   const [selectedFont, setSelectedFont] = useState(AVAILABLE_FONTS[0].id);
   const [fontSize, setFontSize] = useState(estimatedFontSize);
 
   useEffect(() => {
     if (visible) {
-      setText(initialText || '');
+      if (Array.isArray(clusters) && clusters.length > 0) {
+        setClusterList(
+          clusters.map((c) => ({
+            ...c,
+            text: c.text != null ? c.text : '',
+          }))
+        );
+        const combined = clusters.map((c) => c.text || '').filter(Boolean).join(' ');
+        setText(combined || initialText || '');
+      } else {
+        setClusterList([]);
+        setText(initialText || '');
+      }
       setFontSize(estimatedFontSize || 16);
       setSelectedFont(AVAILABLE_FONTS[0].id);
     }
-  }, [visible, initialText, estimatedFontSize]);
+  }, [visible, initialText, estimatedFontSize, clusters]);
 
   const activeFontObj = AVAILABLE_FONTS.find((f) => f.id === selectedFont) || AVAILABLE_FONTS[0];
 
   const handleSelectCandidate = (candidate) => {
     setText(candidate);
+  };
+
+  const handleClusterTextChange = (index, newText) => {
+    setClusterList((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, text: newText } : item))
+    );
+  };
+
+  const handleSelectClusterCandidate = (index, candidate) => {
+    setClusterList((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, text: candidate } : item))
+    );
   };
 
   const handleIncreaseFontSize = () => {
@@ -59,14 +85,31 @@ export default function RecognitionConfirmationModal({
     setFontSize((prev) => Math.max(12, prev - 2));
   };
 
+  const isMultiCluster = clusterList.length > 1;
+  const hasValidText = isMultiCluster
+    ? clusterList.some((c) => (c.text || '').trim().length > 0)
+    : text.trim().length > 0;
+
   const handleConfirm = () => {
-    if (!text.trim()) return;
-    onConfirm({
-      text: text.trim(),
-      fontFamily: activeFontObj.fontFamily,
-      fontId: activeFontObj.id,
-      fontSize,
-    });
+    if (!hasValidText) return;
+    if (isMultiCluster) {
+      onConfirm({
+        text: clusterList.map((c) => c.text).filter(Boolean).join(' '),
+        fontFamily: activeFontObj.fontFamily,
+        fontId: activeFontObj.id,
+        fontSize,
+        clusters: clusterList,
+      });
+    } else {
+      onConfirm({
+        text: text.trim(),
+        fontFamily: activeFontObj.fontFamily,
+        fontId: activeFontObj.id,
+        fontSize,
+        clusters:
+          clusterList.length === 1 ? [{ ...clusterList[0], text: text.trim() }] : undefined,
+      });
+    }
   };
 
   if (!visible) return null;
@@ -129,74 +172,248 @@ export default function RecognitionConfirmationModal({
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              {/* 1. Metin Giriş / Düzeltme Alanı */}
-              <Text style={[styles.sectionLabel, { color: colors.textSecondary || '#757575' }]}>
-                {t('recognition.recognizedLabel', 'Tanınan Metin (Gerekiyorsa düzenleyin):')}
-              </Text>
-              <View
-                style={[
-                  styles.inputContainer,
-                  {
-                    backgroundColor: colors.background || '#F5F5F5',
-                    borderColor: colors.border || '#E0E0E0',
-                  },
-                ]}
-              >
-                <TextInput
-                  value={text}
-                  onChangeText={setText}
-                  multiline
-                  placeholder={t('recognition.placeholder', 'Metin bulunamadı, buraya yazabilirsiniz...')}
-                  placeholderTextColor={colors.textSecondary + '77'}
-                  style={[
-                    styles.textInput,
-                    {
-                      color: colors.textPrimary || '#212121',
-                      fontFamily: activeFontObj.fontFamily,
-                      fontSize: Math.min(22, Math.max(15, fontSize)),
-                    },
-                  ]}
-                />
-              </View>
+              {isMultiCluster ? (
+                /* Çoklu Küme (Multi-Cluster) Görünümü */
+                <View style={styles.multiClusterContainer}>
+                  <View
+                    style={[
+                      styles.clustersBadge,
+                      {
+                        backgroundColor: (colors.accent || '#C2185B') + '15',
+                        borderColor: (colors.accent || '#C2185B') + '35',
+                      },
+                    ]}
+                  >
+                    <MaterialCommunityIcons
+                      name="layers-triple-outline"
+                      size={18}
+                      color={colors.accent || '#C2185B'}
+                    />
+                    <Text
+                      style={[styles.clustersBadgeText, { color: colors.accent || '#C2185B' }]}
+                    >
+                      {t('recognition.multipleClustersDetected', {
+                        count: clusterList.length,
+                        defaultValue: `${clusterList.length} el yazısı grubu tespit edildi`,
+                      })}
+                    </Text>
+                  </View>
 
-              {/* 2. Alternatif Adaylar (Candidates) */}
-              {candidates && candidates.length > 1 && (
-                <View style={styles.candidatesSection}>
-                  <Text style={[styles.subLabel, { color: colors.textSecondary || '#757575' }]}>
-                    {t('recognition.candidates', 'Alternatif Okumalar:')}
-                  </Text>
-                  <View style={styles.candidateChips}>
-                    {candidates.slice(0, 5).map((cand, idx) => (
-                      <TouchableOpacity
-                        key={idx}
-                        onPress={() => handleSelectCandidate(cand)}
+                  {clusterList.map((cluster, index) => {
+                    const strokeColor = cluster.color || colors.textPrimary || '#212121';
+                    return (
+                      <View
+                        key={cluster.id || index}
                         style={[
-                          styles.chip,
+                          styles.clusterCard,
                           {
-                            backgroundColor:
-                              text === cand ? colors.accent + '20' : colors.card,
-                            borderColor:
-                              text === cand ? colors.accent : colors.border || '#DDD',
+                            backgroundColor: colors.background || '#F8F9FA',
+                            borderColor: colors.border || '#E0E0E0',
                           },
                         ]}
                       >
-                        <Text
+                        <View style={styles.clusterCardHeader}>
+                          <View style={styles.clusterColorRow}>
+                            <View
+                              style={[
+                                styles.colorDot,
+                                { backgroundColor: strokeColor },
+                              ]}
+                            />
+                            <Text
+                              style={[
+                                styles.clusterTitle,
+                                { color: colors.textPrimary || '#212121' },
+                              ]}
+                            >
+                              {t('recognition.groupTitle', {
+                                number: index + 1,
+                                defaultValue: `Grup #${index + 1}`,
+                              })}
+                            </Text>
+                          </View>
+                          <Text
+                            style={[
+                              styles.clusterCoord,
+                              { color: colors.textSecondary || '#888888' },
+                            ]}
+                          >
+                            X: {cluster.bounds?.minX ?? 0}, Y: {cluster.bounds?.minY ?? 0}
+                          </Text>
+                        </View>
+
+                        <View
                           style={[
-                            styles.chipText,
+                            styles.clusterInputContainer,
                             {
-                              color:
-                                text === cand
-                                  ? colors.accent || '#C2185B'
-                                  : colors.textPrimary || '#333',
+                              backgroundColor: colors.card || '#FFFFFF',
+                              borderColor: colors.border || '#E0E0E0',
                             },
                           ]}
                         >
-                          {cand}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
+                          <TextInput
+                            value={cluster.text}
+                            onChangeText={(val) => handleClusterTextChange(index, val)}
+                            multiline
+                            placeholder={t(
+                              'recognition.placeholder',
+                              'Metin bulunamadı...'
+                            )}
+                            placeholderTextColor={colors.textSecondary + '77'}
+                            style={[
+                              styles.textInput,
+                              {
+                                color: strokeColor,
+                                fontFamily: activeFontObj.fontFamily,
+                                fontSize: Math.min(22, Math.max(15, fontSize)),
+                              },
+                            ]}
+                          />
+                        </View>
+
+                        {cluster.candidates && cluster.candidates.length > 1 && (
+                          <View style={styles.candidatesSectionSmall}>
+                            <Text
+                              style={[
+                                styles.subLabelSmall,
+                                { color: colors.textSecondary || '#757575' },
+                              ]}
+                            >
+                              {t('recognition.candidates', 'Alternatif Okumalar:')}
+                            </Text>
+                            <View style={styles.candidateChips}>
+                              {cluster.candidates.slice(0, 4).map((cand, cIdx) => (
+                                <TouchableOpacity
+                                  key={cIdx}
+                                  onPress={() =>
+                                    handleSelectClusterCandidate(index, cand)
+                                  }
+                                  style={[
+                                    styles.chip,
+                                    {
+                                      backgroundColor:
+                                        cluster.text === cand
+                                          ? strokeColor + '20'
+                                          : colors.card,
+                                      borderColor:
+                                        cluster.text === cand
+                                          ? strokeColor
+                                          : colors.border || '#DDD',
+                                    },
+                                  ]}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.chipText,
+                                      {
+                                        color:
+                                          cluster.text === cand
+                                            ? strokeColor
+                                            : colors.textPrimary || '#333',
+                                      },
+                                    ]}
+                                  >
+                                    {cand}
+                                  </Text>
+                                </TouchableOpacity>
+                              ))}
+                            </View>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })}
                 </View>
+              ) : (
+                /* Tek Küme Görünümü */
+                <>
+                  <Text
+                    style={[
+                      styles.sectionLabel,
+                      { color: colors.textSecondary || '#757575' },
+                    ]}
+                  >
+                    {t(
+                      'recognition.recognizedLabel',
+                      'Tanınan Metin (Gerekiyorsa düzenleyin):'
+                    )}
+                  </Text>
+                  <View
+                    style={[
+                      styles.inputContainer,
+                      {
+                        backgroundColor: colors.background || '#F5F5F5',
+                        borderColor: colors.border || '#E0E0E0',
+                      },
+                    ]}
+                  >
+                    <TextInput
+                      value={text}
+                      onChangeText={setText}
+                      multiline
+                      placeholder={t(
+                        'recognition.placeholder',
+                        'Metin bulunamadı, buraya yazabilirsiniz...'
+                      )}
+                      placeholderTextColor={colors.textSecondary + '77'}
+                      style={[
+                        styles.textInput,
+                        {
+                          color:
+                            clusterList[0]?.color || colors.textPrimary || '#212121',
+                          fontFamily: activeFontObj.fontFamily,
+                          fontSize: Math.min(22, Math.max(15, fontSize)),
+                        },
+                      ]}
+                    />
+                  </View>
+
+                  {candidates && candidates.length > 1 && (
+                    <View style={styles.candidatesSection}>
+                      <Text
+                        style={[
+                          styles.subLabel,
+                          { color: colors.textSecondary || '#757575' },
+                        ]}
+                      >
+                        {t('recognition.candidates', 'Alternatif Okumalar:')}
+                      </Text>
+                      <View style={styles.candidateChips}>
+                        {candidates.slice(0, 5).map((cand, idx) => (
+                          <TouchableOpacity
+                            key={idx}
+                            onPress={() => handleSelectCandidate(cand)}
+                            style={[
+                              styles.chip,
+                              {
+                                backgroundColor:
+                                  text === cand ? colors.accent + '20' : colors.card,
+                                borderColor:
+                                  text === cand
+                                    ? colors.accent
+                                    : colors.border || '#DDD',
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.chipText,
+                                {
+                                  color:
+                                    text === cand
+                                      ? colors.accent || '#C2185B'
+                                      : colors.textPrimary || '#333',
+                                },
+                              ]}
+                            >
+                              {cand}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+                </>
               )}
 
               {/* 3. Yazı Tipi Seçici (Font Picker) */}
@@ -304,13 +521,13 @@ export default function RecognitionConfirmationModal({
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={handleConfirm}
-                disabled={!text.trim()}
+                disabled={!hasValidText}
                 style={[
                   styles.footerBtn,
                   styles.confirmBtn,
                   {
                     backgroundColor: colors.accent || '#C2185B',
-                    opacity: text.trim() ? 1 : 0.5,
+                    opacity: hasValidText ? 1 : 0.5,
                   },
                 ]}
               >
@@ -501,5 +718,68 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
+  },
+  multiClusterContainer: {
+    marginBottom: 16,
+    gap: 12,
+  },
+  clustersBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 4,
+  },
+  clustersBadgeText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  clusterCard: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+    gap: 8,
+  },
+  clusterCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  clusterColorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  colorDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.15)',
+  },
+  clusterTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  clusterCoord: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  clusterInputContainer: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    minHeight: 52,
+    maxHeight: 100,
+  },
+  candidatesSectionSmall: {
+    marginTop: 2,
+  },
+  subLabelSmall: {
+    fontSize: 11,
+    marginBottom: 4,
   },
 });

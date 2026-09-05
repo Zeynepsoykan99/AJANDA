@@ -95,6 +95,7 @@
     "textDeleted": "Text deleted",
     "textsDeleted": "{{count}} texts deleted",
     "handwritingConverted": "Handwriting converted to text",
+    "multipleTextsConverted": "{{count}} texts converted",
     "stickerDeleted": "Sticker deleted",
     "typeNotePlaceholder": "Type your note..."
   },
@@ -105,6 +106,8 @@
   "recognition": {
     "title": "Convert Handwriting to Text",
     "scanning": "Scanning handwriting with digital ink engine...",
+    "multipleClustersDetected": "{{count}} handwriting groups detected",
+    "groupTitle": "Group #{{number}}",
     "recognizedLabel": "Recognized Text (edit if needed):",
     "placeholder": "No text detected, type here...",
     "candidates": "Alternative Readings:",

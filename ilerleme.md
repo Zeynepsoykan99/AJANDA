@@ -4,6 +4,47 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-05] - El Yazısını Metne Dönüştürmede Konum Mirası (Spatial Mapping), Renk Mirası (Color Inheritance) ve Akıllı Kümeleme (Clustering)
+
+### 🚀 Eklenen Özellikler & UI/UX İyileştirmeleri
+- **Konum Mirası (Spatial Mapping):**
+  - Kement aracıyla (Lasso) seçilen el yazısı çizimleri artık tek bir noktaya veya sol üst köşeye yığılmaz.
+  - Her bağımsız çizim grubunun fiziksel sınırlayıcı kutusu (`cluster.bounds: minX, minY`) hesaplanarak, oluşturulan dijital `<TextInput>` / `<Text>` bileşeni tam olarak orijinal el yazısının başladığı $(X, Y)$ koordinatına yerleştirilir (`x: cluster.bounds.minX, y: cluster.bounds.minY`).
+- **Renk Mirası (Color Inheritance):**
+  - Seçilen el yazısı yollarının (`strokes`) çizim rengi (`stroke.color`) ayıklanır ve dijital metin nesnesine atanır (`color: cluster.color`).
+  - Dijital metin bileşeni ekranda `style={{ color: originalColor }}` ile doğrudan çizildiği orijinal renginde (kırmızı, mavi, yeşil vb.) render edilir.
+- **Akıllı Kümeleme Algoritması (`clusterStrokesByColorAndProximity` in `utils/lassoGeometry.js`):**
+  - **Renk Ayrımı (Zorunlu Kural):** Farklı renkteki çizimler asla aynı kümede birleştirilmez, doğrudan bağımsız kümelere ayrılır.
+  - **Mekansal Yakınlık (Connected Components / BFS):** Aynı renkteki çizgiler harf/kelime ve satır aralığı eşiklerine göre taranır; yakın olanlar tek bir kelime/blokta toplanırken, sayfanın uzak noktalarındaki aynı renkli yazılar ayrı kümelere bölünür.
+  - **Doğal Okuma Sırası:** Kümeler Y ekseninde yukarıdan aşağıya, aynı satırdakiler ise X ekseninde soldan sağa otomatik sıralanır.
+- **Paralel Çoklu Tanıma Motoru (Batch Processing):**
+  - Ayrıştırılan her bir küme `recognizeSelectedStrokes` servisine paralel olarak (`Promise.all`) gönderilir.
+  - Her küme kendi tanınan metnini, alternatif adaylarını ve boyutuna özel font puntosunu (`fitTextToBounds`) bağımsız olarak alır.
+- **Gelişmiş Çoklu Onay Modalı (`RecognitionConfirmationModal.js`):**
+  - **Çoklu Küme Rozeti:** Kaç adet bağımsız el yazısı grubu tespit edildiğini bildiren dinamik rozet (`"X El Yazısı Grubu Tespit Edildi"`).
+  - **Renkli Canlı Kartlar:** Her küme için orijinal el yazısı renginde rozet noktası, grup numarası, $(X, Y)$ koordinat bilgisi ve o renkte metin düzenleme alanı.
+  - **Geriye Dönük Tam Uyumluluk:** Tek bir çizim veya tek küme seçildiğinde sade tekli arayüz sorunsuz çalışmaya devam eder.
+- **Bağımsız Sürüklenebilir Metin Düğümleri (Drag & Drop Uyumu):**
+  - Dönüştürülen her küme bağımsız birer `TextBlock` objesi olarak `page.textBlocks` dizisine eklenir. Kullanıcı daha sonra her bir metin kutusunu bağımsız olarak ekranda sürükleyebilir, boyutlandırabilir veya düzenleyebilir.
+- **Atomik Geri Al (Undo / Redo Desteği):**
+  - Geri alma geçmişinde `createdTextIds: string[]` tutulur. Kullanıcı "Geri Al" dediğinde tek seferde oluşturulan tüm metin blokları silinir ve kaldırılan orijinal çizimler eksiksiz geri yüklenir.
+- **Çok Dilli Çeviri Entegrasyonu (i18n):**
+  - Çoklu küme tespiti ve çoklu metin dönüşüm mesajları Türkçe (TR), İngilizce (EN), Almanca (DE), İspanyolca (ES) ve Fransızca (FR) dillerine eklendi.
+
+### 📁 Değiştirilen Dosyalar
+- `utils/lassoGeometry.js`: `clusterStrokesByColorAndProximity` algoritması ve dışa aktarımı.
+- `components/drawing/RecognitionConfirmationModal.js`: `clusters` prop desteği, çoklu küme canlı kartları, renkle eşleşen metin girişleri ve font kontrolleri.
+- `app/todolist/[pageId].js`: Kümeleme, paralel tanıma, konum/renk mirası ve çoklu blok geri alma desteği.
+- `app/ajandam/[pageId].js`: Ajanda şablon ekranında To-Do ile tam eşdeğer entegrasyon.
+- `locales/tr.json`, `en.json`, `de.json`, `es.json`, `fr.json`: Yeni bildirim ve modal anahtarları.
+
+### ✅ Doğrulama & Testler
+- Birim test scripti (`test_stroke_clustering.js`) ile renk ayrımı, yakınlık birleştirme, uzaklık ayrıştırma ve okuma sırası %100 doğrulandı.
+- Entegrasyon testi (`test_integration.mjs`) ile gerçek fonksiyon çağrıları test edildi.
+- Metro Android ve iOS canlı bundle derlemeleri (`HTTP 200 OK`) hatasız tamamlandı.
+
+---
+
 ## 📅 [2026-09-04] - Çizim ve Metin Araç Çubuğunun Yüzen, Sürüklenebilir ve Katlanabilir (Floating, Draggable & Collapsible) Bir Widget'a Dönüştürülmesi
 
 ### 🚀 Eklenen Özellikler & Tasarım İyileştirmeleri

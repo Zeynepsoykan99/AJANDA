@@ -25,7 +25,7 @@ import UndoToast from '../../components/ui/UndoToast';
 import { recognizeHandwriting, recognizeSelectedStrokes } from '../../services/handwritingService';
 import LassoActionMenu from '../../components/drawing/LassoActionMenu';
 import RecognitionConfirmationModal from '../../components/drawing/RecognitionConfirmationModal';
-import { fitTextToBounds } from '../../utils/lassoGeometry';
+import { fitTextToBounds, clusterStrokesByColorAndProximity } from '../../utils/lassoGeometry';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 import { getPageDisplayTitle, getCategoryDisplayName } from '../../utils/pageTitleHelper';
 
@@ -55,6 +55,7 @@ export default function TodoViewScreen() {
     text: '',
     candidates: [],
     estimatedFontSize: 16,
+    clusters: [],
   });
 
   // Kısayol değişkenler — geriye dönük uyumluluk için
@@ -294,49 +295,106 @@ export default function TodoViewScreen() {
     [page?.id, t]
   );
 
-  // Kementle seçilen el yazısını metne dönüştürme başlat
+  // Kementle seçilen el yazısını metne dönüştürme başlat (Renk & Mesafe Kümelemeli)
   const handleLassoConvertToText = useCallback(async () => {
     if (selectedStrokes.length === 0) return;
 
     setIsRecognizingSelected(true);
     setIsRecognitionModalVisible(true);
 
-    const result = await recognizeSelectedStrokes(selectedStrokes, { language: i18n.language || 'tr' });
+    // 1. Çizimleri renk ve mekansal yakınlığa göre kümelere ayır
+    const clusters = clusterStrokesByColorAndProximity(selectedStrokes);
+    const lang = i18n.language || 'tr';
 
-    const fitted = fitTextToBounds(selectionBounds, result.text || '');
+    // 2. Her kümeyi bağımsız ve paralel olarak tanı (Batch Recognition)
+    const clusterResults = await Promise.all(
+      clusters.map(async (cluster) => {
+        const result = await recognizeSelectedStrokes(cluster.strokes, { language: lang });
+        const fitted = fitTextToBounds(cluster.bounds, result.text || '');
+        return {
+          id: cluster.id,
+          color: cluster.color,
+          strokes: cluster.strokes,
+          strokeIds: cluster.strokeIds,
+          bounds: cluster.bounds,
+          text: result.text || '',
+          candidates: result.candidates || [],
+          estimatedFontSize: fitted.fontSize,
+          fittedWidth: fitted.width,
+        };
+      })
+    );
+
+    const combinedText = clusterResults.map((c) => c.text).filter(Boolean).join(' ');
+    const firstFitted = clusterResults[0]
+      ? fitTextToBounds(clusterResults[0].bounds, clusterResults[0].text)
+      : { fontSize: 16 };
+
     setRecognizedData({
-      text: result.text || '',
-      candidates: result.candidates || [],
-      estimatedFontSize: fitted.fontSize,
+      text: combinedText,
+      candidates: clusterResults[0]?.candidates || [],
+      estimatedFontSize: firstFitted.fontSize || 16,
+      clusters: clusterResults,
     });
     setIsRecognizingSelected(false);
-  }, [selectedStrokes, selectionBounds]);
+  }, [selectedStrokes, i18n.language]);
 
-  // Modal üzerinden onaylanan metni gerçek TextElement olarak ekle
+  // Modal üzerinden onaylanan metni gerçek TextElement olarak ekle (Konum & Renk Mirası)
   const handleConfirmConversion = useCallback(
-    ({ text, fontFamily, fontSize }) => {
-      if (!text.trim() || !selectionBounds) return;
+    ({ text, fontFamily, fontSize, clusters: confirmedClusters }) => {
+      const activeClusters =
+        confirmedClusters && confirmedClusters.length > 0
+          ? confirmedClusters
+          : recognizedData.clusters;
 
-      const fitted = fitTextToBounds(selectionBounds, text);
-      const newBlockId = `text_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-      const newBlock = {
-        id: newBlockId,
-        x: Math.max(8, selectionBounds.minX),
-        y: Math.max(8, selectionBounds.minY),
-        width: Math.max(120, fitted.width),
-        text,
-        color: selectedStrokes[0]?.color || textColor,
-        fontSize: fontSize || fitted.fontSize,
-        fontFamily,
-      };
+      let newBlocks = [];
 
+      if (activeClusters && activeClusters.length > 0) {
+        newBlocks = activeClusters
+          .filter((c) => (c.text || '').trim().length > 0)
+          .map((c, idx) => {
+            const fitted = fitTextToBounds(c.bounds, c.text);
+            const blockId = `text_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 6)}`;
+            return {
+              id: blockId,
+              x: Math.max(8, c.bounds.minX), // 1. Konum Mirası: Orijinal X koordinatı
+              y: Math.max(8, c.bounds.minY), // 1. Konum Mirası: Orijinal Y koordinatı
+              width: Math.max(100, fitted.width),
+              text: c.text,
+              color: c.color || textColor,   // 2. Renk Mirası: Orijinal el yazısı çizim rengi
+              fontSize: fontSize || c.estimatedFontSize || fitted.fontSize,
+              fontFamily,
+            };
+          });
+      }
+
+      // Güvenlik fallback'i: Eğer küme verisi yoksa tek blok oluştur
+      if (newBlocks.length === 0) {
+        if (!text || !text.trim() || !selectionBounds) return;
+        const fitted = fitTextToBounds(selectionBounds, text);
+        const blockId = `text_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        newBlocks = [
+          {
+            id: blockId,
+            x: Math.max(8, selectionBounds.minX),
+            y: Math.max(8, selectionBounds.minY),
+            width: Math.max(120, fitted.width),
+            text: text.trim(),
+            color: selectedStrokes[0]?.color || textColor,
+            fontSize: fontSize || fitted.fontSize,
+            fontFamily,
+          },
+        ];
+      }
+
+      const createdTextIds = newBlocks.map((b) => b.id);
       const removedStrokesList = [...selectedStrokes];
 
       setPage((prev) => {
         const remainingDrawings = (prev.drawings || []).filter(
           (s) => !selectedStrokeIds.includes(s.id)
         );
-        const updatedTextBlocks = [...(prev.textBlocks || []), newBlock];
+        const updatedTextBlocks = [...(prev.textBlocks || []), ...newBlocks];
 
         StorageService.updatePage(prev.id, {
           drawings: remainingDrawings,
@@ -354,27 +412,48 @@ export default function TodoViewScreen() {
       conversionHistoryRef.current.push({
         type: 'CONVERT_HANDWRITING_TO_TEXT',
         removedStrokes: removedStrokesList,
-        createdTextId: newBlockId,
+        createdTextIds,
+        createdTextId: createdTextIds[0],
       });
 
       // Geri al bildirimi göster
       pendingStickerDeleteRef.current = {
         type: 'handwriting_convert',
         removedStrokes: removedStrokesList,
-        createdTextId: newBlockId,
+        createdTextIds,
+        createdTextId: createdTextIds[0],
         pageId: page?.id,
         timer: setTimeout(() => {
           pendingStickerDeleteRef.current = null;
           setUndoToast({ visible: false, message: '' });
         }, 5500),
       };
-      setUndoToast({ visible: true, message: t('drawing.handwritingConverted', 'El yazısı metne dönüştürüldü') });
+      setUndoToast({
+        visible: true,
+        message:
+          newBlocks.length > 1
+            ? t('drawing.multipleTextsConverted', {
+                count: newBlocks.length,
+                defaultValue: `${newBlocks.length} metin dönüştürüldü`,
+              })
+            : t('drawing.handwritingConverted', 'El yazısı metne dönüştürüldü'),
+      });
 
       setIsRecognitionModalVisible(false);
       handleCloseLassoSelection();
       setActiveMode('none');
     },
-    [selectionBounds, selectedStrokes, selectedStrokeIds, textColor, page?.id, handleCloseLassoSelection, setActiveMode, t]
+    [
+      recognizedData.clusters,
+      selectionBounds,
+      selectedStrokes,
+      selectedStrokeIds,
+      textColor,
+      page?.id,
+      handleCloseLassoSelection,
+      setActiveMode,
+      t,
+    ]
   );
 
   const handleAddSticker = useCallback((sticker) => {
@@ -457,9 +536,11 @@ export default function TodoViewScreen() {
       setUndoToast({ visible: false, message: '' });
 
       if (pending.type === 'handwriting_convert') {
+        const idsToDelete =
+          pending.createdTextIds || (pending.createdTextId ? [pending.createdTextId] : []);
         setPage((prev) => {
           const updatedTextBlocks = (prev.textBlocks || []).filter(
-            (b) => b.id !== pending.createdTextId
+            (b) => !idsToDelete.includes(b.id)
           );
           const updatedDrawings = [...(prev.drawings || []), ...pending.removedStrokes];
           StorageService.updatePage(prev.id, {
@@ -517,9 +598,12 @@ export default function TodoViewScreen() {
     // 2. Bekleyen toast yoksa geçmiş dönüşümlere bak
     if (conversionHistoryRef.current.length > 0) {
       const lastConversion = conversionHistoryRef.current.pop();
+      const idsToDelete =
+        lastConversion.createdTextIds ||
+        (lastConversion.createdTextId ? [lastConversion.createdTextId] : []);
       setPage((prev) => {
         const updatedTextBlocks = (prev.textBlocks || []).filter(
-          (b) => b.id !== lastConversion.createdTextId
+          (b) => !idsToDelete.includes(b.id)
         );
         const updatedDrawings = [...(prev.drawings || []), ...lastConversion.removedStrokes];
         StorageService.updatePage(prev.id, {
@@ -793,6 +877,7 @@ export default function TodoViewScreen() {
         initialText={recognizedData.text}
         candidates={recognizedData.candidates}
         estimatedFontSize={recognizedData.estimatedFontSize}
+        clusters={recognizedData.clusters}
         onConfirm={handleConfirmConversion}
         onCancel={() => setIsRecognitionModalVisible(false)}
       />

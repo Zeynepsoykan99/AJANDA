@@ -95,6 +95,7 @@
     "textDeleted": "Metin silindi",
     "textsDeleted": "{{count}} metin silindi",
     "handwritingConverted": "El yazısı metne dönüştürüldü",
+    "multipleTextsConverted": "{{count}} metin dönüştürüldü",
     "stickerDeleted": "Çıkartma silindi",
     "typeNotePlaceholder": "Notunu yaz..."
   },
@@ -105,6 +106,8 @@
   "recognition": {
     "title": "El Yazısını Metne Dönüştür",
     "scanning": "El yazınız dijital mürekkep motoruyla taranıyor...",
+    "multipleClustersDetected": "{{count}} el yazısı grubu tespit edildi",
+    "groupTitle": "Grup #{{number}}",
     "recognizedLabel": "Tanınan Metin (Gerekiyorsa düzenleyin):",
     "placeholder": "Metin bulunamadı, buraya yazabilirsiniz...",
     "candidates": "Alternatif Okumalar:",

@@ -95,6 +95,7 @@
     "textDeleted": "Text gelöscht",
     "textsDeleted": "{{count}} Texte gelöscht",
     "handwritingConverted": "Handschrift in Text umgewandelt",
+    "multipleTextsConverted": "{{count}} Texte konvertiert",
     "stickerDeleted": "Sticker gelöscht",
     "typeNotePlaceholder": "Notiz schreiben..."
   },
@@ -105,6 +106,8 @@
   "recognition": {
     "title": "Handschrift in Text umwandeln",
     "scanning": "Handschrift wird mit Digital-Ink-Engine gescannt...",
+    "multipleClustersDetected": "{{count}} Handschrift-Gruppen erkannt",
+    "groupTitle": "Gruppe #{{number}}",
     "recognizedLabel": "Erkannter Text (bei Bedarf bearbeiten):",
     "placeholder": "Kein Text erkannt, hier tippen...",
     "candidates": "Alternative Treffer:",

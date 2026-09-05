@@ -95,6 +95,7 @@
     "textDeleted": "Texte supprimé",
     "textsDeleted": "{{count}} textes supprimés",
     "handwritingConverted": "Écriture convertie en texte",
+    "multipleTextsConverted": "{{count}} textes convertis",
     "stickerDeleted": "Autocollant supprimé",
     "typeNotePlaceholder": "Écrivez votre note..."
   },
@@ -105,6 +106,8 @@
   "recognition": {
     "title": "Convertir l'Écriture en Texte",
     "scanning": "Numérisation de l'écriture avec le moteur d'encre numérique...",
+    "multipleClustersDetected": "{{count}} groupes d'écriture détectés",
+    "groupTitle": "Groupe #{{number}}",
     "recognizedLabel": "Texte Reconnu (modifiez si nécessaire) :",
     "placeholder": "Aucun texte détecté, écrivez ici...",
     "candidates": "Lectures Alternatives :",
