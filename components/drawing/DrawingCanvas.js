@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, StyleSheet, PanResponder } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import {
   isStrokeInsidePolygon,
@@ -73,7 +75,7 @@ export default function DrawingCanvas({
   onSelectionChange,
   style,
 }) {
-  const { scale: zoomScale, pageToCanvas, screenToCanvas } = useZoomableCanvas();
+  const { scale: zoomScale, pageToCanvas, screenToCanvas, isDrawingActive } = useZoomableCanvas();
   const [currentPath, setCurrentPath] = useState('');
   const [lassoPath, setLassoPath] = useState('');
   const [hiddenStrokeIds, setHiddenStrokeIds] = useState(new Set());
@@ -165,6 +167,7 @@ export default function DrawingCanvas({
     zoomScale,
     pageToCanvas,
     screenToCanvas,
+    isDrawingActive,
   });
 
   // Her render'da ref'i güncelliyoruz
@@ -186,6 +189,7 @@ export default function DrawingCanvas({
       zoomScale,
       pageToCanvas,
       screenToCanvas,
+      isDrawingActive,
     };
   }, [
     isDrawingMode,
@@ -204,6 +208,7 @@ export default function DrawingCanvas({
     zoomScale,
     pageToCanvas,
     screenToCanvas,
+    isDrawingActive,
   ]);
 
   // Unmount anında bekleyen RAF varsa temizle
@@ -420,220 +425,229 @@ export default function DrawingCanvas({
     setHiddenStrokeIds(new Set());
   }, []);
 
-  // PanResponder yalnızca bir kez oluşturulur ve her zaman güncel ref değerlerini okur
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: (evt) => {
-        if (!stateRef.current.isDrawingMode) return false;
-        // İki veya daha fazla parmak dokunduysa çizimi başlatma, ZoomableCanvas'a bırak
-        if (evt.nativeEvent.touches && evt.nativeEvent.touches.length > 1) return false;
-        return true;
-      },
-      onMoveShouldSetPanResponder: (evt) => {
-        if (!stateRef.current.isDrawingMode) return false;
-        if (evt.nativeEvent.touches && evt.nativeEvent.touches.length > 1) return false;
-        return true;
-      },
+  const handleTouchStart = useCallback(
+    (absX, absY, locX, locY) => {
+      const state = stateRef.current;
+      let coordX = locX;
+      let coordY = locY;
+      if (absX !== undefined && absY !== undefined && state.pageToCanvas) {
+        const pt = state.pageToCanvas(absX, absY);
+        coordX = pt.x;
+        coordY = pt.y;
+      } else if (state.screenToCanvas) {
+        const pt = state.screenToCanvas(locX, locY);
+        coordX = pt.x;
+        coordY = pt.y;
+      }
 
-      onPanResponderGrant: (evt) => {
-        if (evt.nativeEvent.touches && evt.nativeEvent.touches.length > 1) {
-          return;
+      if (state.tool === 'eraser') {
+        eraserSessionRef.current = {
+          drawings: [...state.drawings],
+          deletedDrawingIds: new Set(),
+          currentTextBlocks: [...state.textBlocks],
+          deletedBlockIds: new Set(),
+          completelyDeletedBlocks: [],
+          editedBlocksInfo: [],
+          textBlocksChanged: false,
+          hasChanges: false,
+        };
+        prevEraseCoordRef.current = { x: coordX, y: coordY };
+        lastEraseCoordRef.current = { x: coordX, y: coordY };
+        processEraseAt(coordX, coordY);
+        return;
+      }
+
+      if (state.tool === 'lasso') {
+        if (state.selectedStrokeIds.length > 0 && state.onSelectionChange) {
+          state.onSelectionChange({ selectedStrokeIds: [], bounds: null, selectedStrokes: [] });
         }
+        pointsRef.current = [{ x: coordX, y: coordY }];
+        setLassoPath(`M ${coordX} ${coordY}`);
+        return;
+      }
 
-        const state = stateRef.current;
-        const { locationX, locationY, pageX, pageY } = evt.nativeEvent;
+      strokeStartTimeRef.current = Date.now();
+      pointsRef.current = [{ x: coordX, y: coordY, timestamp: 0 }];
+      setCurrentPath(`M ${coordX} ${coordY}`);
+    },
+    [processEraseAt]
+  );
 
-        // Koordinat Dönüşümü:
-        let coordX = locationX;
-        let coordY = locationY;
-        if (pageX !== undefined && pageY !== undefined && state.pageToCanvas) {
-          const pt = state.pageToCanvas(pageX, pageY);
-          coordX = pt.x;
-          coordY = pt.y;
-        } else if (state.screenToCanvas) {
-          const pt = state.screenToCanvas(locationX, locationY);
-          coordX = pt.x;
-          coordY = pt.y;
-        }
+  const handleTouchMove = useCallback(
+    (absX, absY, locX, locY) => {
+      const state = stateRef.current;
+      let coordX = locX;
+      let coordY = locY;
+      if (absX !== undefined && absY !== undefined && state.pageToCanvas) {
+        const pt = state.pageToCanvas(absX, absY);
+        coordX = pt.x;
+        coordY = pt.y;
+      } else if (state.screenToCanvas) {
+        const pt = state.screenToCanvas(locX, locY);
+        coordX = pt.x;
+        coordY = pt.y;
+      }
 
-        if (state.tool === 'eraser') {
-          // Yeni bir silgi oturumu başlat
-          eraserSessionRef.current = {
-            drawings: [...state.drawings],
-            deletedDrawingIds: new Set(),
-            currentTextBlocks: [...state.textBlocks],
-            deletedBlockIds: new Set(),
-            completelyDeletedBlocks: [],
-            editedBlocksInfo: [],
-            textBlocksChanged: false,
-            hasChanges: false,
-          };
-          prevEraseCoordRef.current = { x: coordX, y: coordY };
-          lastEraseCoordRef.current = { x: coordX, y: coordY };
-          processEraseAt(coordX, coordY);
-          return;
-        }
-
-        if (state.tool === 'lasso') {
-          if (state.selectedStrokeIds.length > 0 && state.onSelectionChange) {
-            state.onSelectionChange({ selectedStrokeIds: [], bounds: null, selectedStrokes: [] });
-          }
-          pointsRef.current = [{ x: coordX, y: coordY }];
-          setLassoPath(`M ${coordX} ${coordY}`);
-          return;
-        }
-
-        strokeStartTimeRef.current = Date.now();
-        pointsRef.current = [{ x: coordX, y: coordY, timestamp: 0 }];
-        setCurrentPath(`M ${coordX} ${coordY}`);
-      },
-
-      onPanResponderMove: (evt) => {
-        // İki parmak algılandığında çizimi anında iptal et (çapraz leke çizgisini önler)
-        if (evt.nativeEvent.touches && evt.nativeEvent.touches.length > 1) {
-          pointsRef.current = [];
-          setCurrentPath('');
-          setLassoPath('');
-          return;
-        }
-
-        const state = stateRef.current;
-        const { locationX, locationY, pageX, pageY } = evt.nativeEvent;
-
-        let coordX = locationX;
-        let coordY = locationY;
-        if (pageX !== undefined && pageY !== undefined && state.pageToCanvas) {
-          const pt = state.pageToCanvas(pageX, pageY);
-          coordX = pt.x;
-          coordY = pt.y;
-        } else if (state.screenToCanvas) {
-          const pt = state.screenToCanvas(locationX, locationY);
-          coordX = pt.x;
-          coordY = pt.y;
-        }
-
-        if (state.tool === 'eraser') {
-          lastEraseCoordRef.current = { x: coordX, y: coordY };
-          if (!eraseRafIdRef.current) {
-            eraseRafIdRef.current = requestAnimationFrame(() => {
-              eraseRafIdRef.current = null;
-              if (lastEraseCoordRef.current) {
-                eraseBetweenPoints(prevEraseCoordRef.current, lastEraseCoordRef.current);
-                prevEraseCoordRef.current = { ...lastEraseCoordRef.current };
-              }
-            });
-          }
-          return;
-        }
-
-        if (state.tool === 'lasso') {
-          pointsRef.current.push({ x: coordX, y: coordY });
-          const newLasso = pointsToLassoSvgPath(pointsRef.current);
-          setLassoPath(newLasso);
-          return;
-        }
-
-        const elapsed = Date.now() - strokeStartTimeRef.current;
-        pointsRef.current.push({ x: coordX, y: coordY, timestamp: elapsed });
-        const newPath = pointsToSvgPath(pointsRef.current);
-        setCurrentPath(newPath);
-      },
-
-      onPanResponderRelease: () => {
-        const state = stateRef.current;
-        if (state.tool === 'eraser') {
-          if (eraseRafIdRef.current) {
-            cancelAnimationFrame(eraseRafIdRef.current);
+      if (state.tool === 'eraser') {
+        lastEraseCoordRef.current = { x: coordX, y: coordY };
+        if (!eraseRafIdRef.current) {
+          eraseRafIdRef.current = requestAnimationFrame(() => {
             eraseRafIdRef.current = null;
-          }
-          if (lastEraseCoordRef.current) {
-            eraseBetweenPoints(prevEraseCoordRef.current, lastEraseCoordRef.current);
-            prevEraseCoordRef.current = null;
-            lastEraseCoordRef.current = null;
-          }
-          commitEraserBatch();
-          return;
-        }
-
-        if (state.tool === 'lasso') {
-          if (pointsRef.current.length >= 3) {
-            const polygon = [...pointsRef.current];
-            const matchingStrokes = state.drawings.filter((s) =>
-              isStrokeInsidePolygon(s, polygon)
-            );
-
-            if (matchingStrokes.length > 0 && state.onSelectionChange) {
-              const bounds = getMultiStrokeBounds(matchingStrokes);
-              state.onSelectionChange({
-                selectedStrokeIds: matchingStrokes.map((s) => s.id),
-                bounds,
-                selectedStrokes: matchingStrokes,
-              });
-            } else if (state.onSelectionChange) {
-              state.onSelectionChange({
-                selectedStrokeIds: [],
-                bounds: null,
-                selectedStrokes: [],
-              });
+            if (lastEraseCoordRef.current) {
+              eraseBetweenPoints(prevEraseCoordRef.current, lastEraseCoordRef.current);
+              prevEraseCoordRef.current = { ...lastEraseCoordRef.current };
             }
-          }
-          pointsRef.current = [];
-          setLassoPath('');
-          return;
+          });
         }
+        return;
+      }
 
-        if (pointsRef.current.length > 0 && state.onDrawingsChange) {
-          const finalPath = pointsToSvgPath(pointsRef.current);
-          if (finalPath) {
-            const resolvedOpacity = state.tool === 'highlighter' ? 0.4 : 0.95;
-            const resolvedWidth =
-              state.tool === 'highlighter' ? state.strokeWidth * 3.5 : state.strokeWidth;
+      if (state.tool === 'lasso') {
+        pointsRef.current.push({ x: coordX, y: coordY });
+        const newLasso = pointsToLassoSvgPath(pointsRef.current);
+        setLassoPath(newLasso);
+        return;
+      }
 
-            const newStroke = {
-              id: `stroke_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-              d: finalPath,
-              color: state.color,
-              strokeWidth: resolvedWidth,
-              strokeOpacity: resolvedOpacity,
-              points: [...pointsRef.current],
-            };
+      const elapsed = Date.now() - strokeStartTimeRef.current;
+      pointsRef.current.push({ x: coordX, y: coordY, timestamp: elapsed });
+      const newPath = pointsToSvgPath(pointsRef.current);
+      setCurrentPath(newPath);
+    },
+    [eraseBetweenPoints]
+  );
 
-            // Önbelleği yeni çizgi için de besle
-            let minX = Infinity;
-            let minY = Infinity;
-            let maxX = -Infinity;
-            let maxY = -Infinity;
-            for (let i = 0; i < newStroke.points.length; i++) {
-              const p = newStroke.points[i];
-              if (p.x < minX) minX = p.x;
-              if (p.x > maxX) maxX = p.x;
-              if (p.y < minY) minY = p.y;
-              if (p.y > maxY) maxY = p.y;
-            }
-            strokeBoundsCacheRef.current.set(newStroke.id, { minX, minY, maxX, maxY });
+  const handleTouchEnd = useCallback(() => {
+    const state = stateRef.current;
+    if (state.tool === 'eraser') {
+      if (eraseRafIdRef.current) {
+        cancelAnimationFrame(eraseRafIdRef.current);
+        eraseRafIdRef.current = null;
+      }
+      if (lastEraseCoordRef.current) {
+        eraseBetweenPoints(prevEraseCoordRef.current, lastEraseCoordRef.current);
+        prevEraseCoordRef.current = null;
+        lastEraseCoordRef.current = null;
+      }
+      commitEraserBatch();
+      return;
+    }
 
-            state.onDrawingsChange([...state.drawings, newStroke]);
-          }
+    if (state.tool === 'lasso') {
+      if (pointsRef.current.length >= 3) {
+        const polygon = [...pointsRef.current];
+        const matchingStrokes = state.drawings.filter((s) =>
+          isStrokeInsidePolygon(s, polygon)
+        );
+
+        if (matchingStrokes.length > 0 && state.onSelectionChange) {
+          const bounds = getMultiStrokeBounds(matchingStrokes);
+          state.onSelectionChange({
+            selectedStrokeIds: matchingStrokes.map((s) => s.id),
+            bounds,
+            selectedStrokes: matchingStrokes,
+          });
+        } else if (state.onSelectionChange) {
+          state.onSelectionChange({
+            selectedStrokeIds: [],
+            bounds: null,
+            selectedStrokes: [],
+          });
         }
-        pointsRef.current = [];
-        setCurrentPath('');
-      },
+      }
+      pointsRef.current = [];
+      setLassoPath('');
+      return;
+    }
 
-      onPanResponderTerminate: () => {
-        const state = stateRef.current;
-        if (state.tool === 'eraser') {
-          if (eraseRafIdRef.current) {
-            cancelAnimationFrame(eraseRafIdRef.current);
-            eraseRafIdRef.current = null;
-          }
-          commitEraserBatch();
+    if (pointsRef.current.length > 0 && state.onDrawingsChange) {
+      const finalPath = pointsToSvgPath(pointsRef.current);
+      if (finalPath) {
+        const resolvedOpacity = state.tool === 'highlighter' ? 0.4 : 0.95;
+        const resolvedWidth =
+          state.tool === 'highlighter' ? state.strokeWidth * 3.5 : state.strokeWidth;
+
+        const newStroke = {
+          id: `stroke_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          d: finalPath,
+          color: state.color,
+          strokeWidth: resolvedWidth,
+          strokeOpacity: resolvedOpacity,
+          points: [...pointsRef.current],
+        };
+
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        for (let i = 0; i < newStroke.points.length; i++) {
+          const p = newStroke.points[i];
+          if (p.x < minX) minX = p.x;
+          if (p.x > maxX) maxX = p.x;
+          if (p.y < minY) minY = p.y;
+          if (p.y > maxY) maxY = p.y;
         }
-        pointsRef.current = [];
-        setCurrentPath('');
-        setLassoPath('');
-      },
+        strokeBoundsCacheRef.current.set(newStroke.id, { minX, minY, maxX, maxY });
+
+        state.onDrawingsChange([...state.drawings, newStroke]);
+      }
+    }
+    pointsRef.current = [];
+    setCurrentPath('');
+  }, [commitEraserBatch, eraseBetweenPoints]);
+
+  const handleTouchCancel = useCallback(() => {
+    const state = stateRef.current;
+    if (state.tool === 'eraser') {
+      if (eraseRafIdRef.current) {
+        cancelAnimationFrame(eraseRafIdRef.current);
+        eraseRafIdRef.current = null;
+      }
+      commitEraserBatch();
+    }
+    pointsRef.current = [];
+    setCurrentPath('');
+    setLassoPath('');
+  }, [commitEraserBatch]);
+
+  // Çizim Gesture'ı (react-native-gesture-handler Pan):
+  // KESİNLİKLE sadece tek parmak (minPointers(1).maxPointers(1)) ile tetiklenir.
+  // Çizim başladığı anda UI-thread seviyesinde isDrawingActive = true yapılarak
+  // avuç içi teması (palm rejection) nedeniyle Pinch ve Pan tetiklenmesi %100 engellenir.
+  const drawingGesture = Gesture.Pan()
+    .minPointers(1)
+    .maxPointers(1)
+    .shouldCancelWhenOutside(false)
+    .averageTouches(false)
+    .enabled(isDrawingMode)
+    .onBegin(() => {
+      'worklet';
+      if (isDrawingActive) {
+        isDrawingActive.value = true;
+      }
     })
-  ).current;
+    .onStart((event) => {
+      'worklet';
+      runOnJS(handleTouchStart)(event.absoluteX, event.absoluteY, event.x, event.y);
+    })
+    .onUpdate((event) => {
+      'worklet';
+      runOnJS(handleTouchMove)(event.absoluteX, event.absoluteY, event.x, event.y);
+    })
+    .onEnd(() => {
+      'worklet';
+      if (isDrawingActive) {
+        isDrawingActive.value = false;
+      }
+      runOnJS(handleTouchEnd)();
+    })
+    .onFinalize(() => {
+      'worklet';
+      if (isDrawingActive) {
+        isDrawingActive.value = false;
+      }
+      runOnJS(handleTouchCancel)();
+    });
 
   // Fosforlu Kalem için anlık saydamlık
   const currentOpacity = tool === 'highlighter' ? 0.4 : 0.95;
@@ -649,83 +663,86 @@ export default function DrawingCanvas({
         style,
       ]}
       pointerEvents={isDrawingMode ? 'auto' : 'none'}
-      {...(isDrawingMode ? panResponder.panHandlers : {})}
     >
-      <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
-        {/* Tamamlanmış Kalıcı Çizgiler (Memoized Layer - 0 Gereksiz Re-render) */}
-        <StaticDrawingsLayer
-          drawings={drawings}
-          selectedStrokeIds={selectedStrokeIds}
-          hiddenStrokeIds={hiddenStrokeIds}
-        />
+      <GestureDetector gesture={drawingGesture}>
+        <View style={StyleSheet.absoluteFill}>
+          <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
+            {/* Tamamlanmış Kalıcı Çizgiler (Memoized Layer - 0 Gereksiz Re-render) */}
+            <StaticDrawingsLayer
+              drawings={drawings}
+              selectedStrokeIds={selectedStrokeIds}
+              hiddenStrokeIds={hiddenStrokeIds}
+            />
 
-        {/* Halen Çizilmekte Olan Anlık Çizgi */}
-        {currentPath ? (
-          <Path
-            d={currentPath}
-            stroke={color}
-            strokeWidth={currentDrawWidth}
-            strokeOpacity={currentOpacity}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-          />
-        ) : null}
+            {/* Halen Çizilmekte Olan Anlık Çizgi */}
+            {currentPath ? (
+              <Path
+                d={currentPath}
+                stroke={color}
+                strokeWidth={currentDrawWidth}
+                strokeOpacity={currentOpacity}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+            ) : null}
 
-        {/* Anlık Kement (Lasso) Çizim Hattı */}
-        {lassoPath ? (
-          <Path
-            d={lassoPath}
-            stroke="#E91E63"
-            strokeWidth={2}
-            strokeDasharray="6, 4"
-            fill="rgba(233, 30, 99, 0.08)"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        ) : null}
+            {/* Anlık Kement (Lasso) Çizim Hattı */}
+            {lassoPath ? (
+              <Path
+                d={lassoPath}
+                stroke="#E91E63"
+                strokeWidth={2}
+                strokeDasharray="6, 4"
+                fill="rgba(233, 30, 99, 0.08)"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            ) : null}
 
-        {/* Kementle Seçilen Çizgilerin Sınırlayıcı Kutusu (Bounding Box & Handles) */}
-        {hasSelection && (
-          <>
-            <Rect
-              x={selectionBounds.minX - 6}
-              y={selectionBounds.minY - 6}
-              width={selectionBounds.width + 12}
-              height={selectionBounds.height + 12}
-              stroke="#E91E63"
-              strokeWidth={1.5}
-              strokeDasharray="5, 4"
-              fill="rgba(233, 30, 99, 0.04)"
-              rx={6}
-            />
-            <Circle
-              cx={selectionBounds.minX - 6}
-              cy={selectionBounds.minY - 6}
-              r={4}
-              fill="#E91E63"
-            />
-            <Circle
-              cx={selectionBounds.maxX + 6}
-              cy={selectionBounds.minY - 6}
-              r={4}
-              fill="#E91E63"
-            />
-            <Circle
-              cx={selectionBounds.minX - 6}
-              cy={selectionBounds.maxY + 6}
-              r={4}
-              fill="#E91E63"
-            />
-            <Circle
-              cx={selectionBounds.maxX + 6}
-              cy={selectionBounds.maxY + 6}
-              r={4}
-              fill="#E91E63"
-            />
-          </>
-        )}
-      </Svg>
+            {/* Kementle Seçilen Çizgilerin Sınırlayıcı Kutusu (Bounding Box & Handles) */}
+            {hasSelection && (
+              <>
+                <Rect
+                  x={selectionBounds.minX - 6}
+                  y={selectionBounds.minY - 6}
+                  width={selectionBounds.width + 12}
+                  height={selectionBounds.height + 12}
+                  stroke="#E91E63"
+                  strokeWidth={1.5}
+                  strokeDasharray="5, 4"
+                  fill="rgba(233, 30, 99, 0.04)"
+                  rx={6}
+                />
+                <Circle
+                  cx={selectionBounds.minX - 6}
+                  cy={selectionBounds.minY - 6}
+                  r={4}
+                  fill="#E91E63"
+                />
+                <Circle
+                  cx={selectionBounds.maxX + 6}
+                  cy={selectionBounds.minY - 6}
+                  r={4}
+                  fill="#E91E63"
+                />
+                <Circle
+                  cx={selectionBounds.minX - 6}
+                  cy={selectionBounds.maxY + 6}
+                  r={4}
+                  fill="#E91E63"
+                />
+                <Circle
+                  cx={selectionBounds.maxX + 6}
+                  cy={selectionBounds.maxY + 6}
+                  r={4}
+                  fill="#E91E63"
+                />
+              </>
+            )}
+          </Svg>
+        </View>
+      </GestureDetector>
     </View>
   );
 }

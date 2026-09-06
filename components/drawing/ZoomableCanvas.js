@@ -29,6 +29,7 @@ export const ZoomableCanvasContext = createContext({
   scale: { value: 1 },
   translateX: { value: 0 },
   translateY: { value: 0 },
+  isDrawingActive: { value: false },
   screenToCanvas: (x, y) => ({ x, y }),
   canvasToScreen: (x, y) => ({ x, y }),
   pageToCanvas: (x, y) => ({ x, y }),
@@ -70,6 +71,7 @@ const ZoomableCanvas = forwardRef(function ZoomableCanvas(
   const focalY = useSharedValue(0);
 
   const isPinching = useSharedValue(false);
+  const isDrawingActive = useSharedValue(false);
 
   const viewportWidth = useSharedValue(0);
   const viewportHeight = useSharedValue(0);
@@ -161,6 +163,8 @@ const ZoomableCanvas = forwardRef(function ZoomableCanvas(
   const pinchGesture = Gesture.Pinch()
     .onStart((event) => {
       'worklet';
+      // Çizim yapılıyorsa veya avuç içi teması varsa pinch kesinlikle başlatılamaz
+      if (isDrawingActive.value) return;
       savedScale.value = scale.value;
       savedTranslateX.value = translateX.value;
       savedTranslateY.value = translateY.value;
@@ -170,6 +174,8 @@ const ZoomableCanvas = forwardRef(function ZoomableCanvas(
     })
     .onUpdate((event) => {
       'worklet';
+      if (!isPinching.value || isDrawingActive.value) return;
+
       const nextScale = Math.min(
         Math.max(savedScale.value * event.scale, minScale * 0.85),
         maxScale * 1.15
@@ -194,20 +200,20 @@ const ZoomableCanvas = forwardRef(function ZoomableCanvas(
     });
 
   // ─── GESTURE 2: Pan (Sayfayı kaydırma) ───
-  // Çizim veya metin modunda 2 parmak zorunlu; gezinme modunda tek parmak yeterli
+  // KESİNLİKLE ve İSTİSNASIZ sadece 2 parmakla çalışır; tek parmak asla sayfayı kaydıramaz
   const panGesture = Gesture.Pan()
-    .minPointers(isDrawingMode || isTextMode ? 2 : 1)
+    .minPointers(2)
     .maxPointers(2)
+    .averageTouches(true)
     .onStart(() => {
       'worklet';
+      if (isDrawingActive.value) return;
       savedTranslateX.value = translateX.value;
       savedTranslateY.value = translateY.value;
     })
     .onUpdate((event) => {
       'worklet';
-      // %100 boyuttayken ve çizim/metin modu açıkken tek parmak kaydırmaya izin verme
-      if (scale.value <= 1.0 && (isDrawingMode || isTextMode)) return;
-
+      if (isDrawingActive.value) return;
       translateX.value = savedTranslateX.value + event.translationX;
       translateY.value = savedTranslateY.value + event.translationY;
     })
@@ -217,9 +223,11 @@ const ZoomableCanvas = forwardRef(function ZoomableCanvas(
     });
 
   // ─── GESTURE 3: Double Tap (Çift Tıklamayla Yakınlaştır / Sıfırla) ───
+  // Çizim veya metin modunda yazı yazarken (nokta koyma, hızlı vuruşlar) KESİNLİKLE devre dışı
   const doubleTapGesture = Gesture.Tap()
     .numberOfTaps(2)
     .maxDelay(250)
+    .enabled(!isDrawingMode && !isTextMode)
     .onEnd((event) => {
       'worklet';
       if (scale.value > 1.05) {
@@ -333,6 +341,7 @@ const ZoomableCanvas = forwardRef(function ZoomableCanvas(
     scale,
     translateX,
     translateY,
+    isDrawingActive,
     screenToCanvas,
     canvasToScreen,
     pageToCanvas,

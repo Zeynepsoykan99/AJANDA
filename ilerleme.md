@@ -4,6 +4,30 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-06] - Çizim & Tuval Gesture İzolasyonu ve Avuç İçi Koruması (Palm Rejection)
+
+### 🚀 Eklenen Özellikler & UI/UX İyileştirmeleri
+- **KESİNLİKLE 2 Parmaklı Sayfa Kaydırma (`minPointers(2).maxPointers(2)`):**
+  - `ZoomableCanvas` içindeki `panGesture` kesin ve koşulsuz olarak sadece 2 parmakla (`.minPointers(2).maxPointers(2)`) çalışacak şekilde kısıtlandı. Tek parmak veya stylus kalemin sayfayı istemsizce kaydırması fiziksel olarak engellendi.
+- **Çizim Etkileşim İzolasyonu (`DrawingCanvas.js`):**
+  - `DrawingCanvas` eski `PanResponder` yapısından çıkarılarak yerel `react-native-gesture-handler` (`Gesture.Pan().minPointers(1).maxPointers(1)`) altyapısına bağlandı.
+  - Çizim, silgi ve kement işlemlerinin sadece tek parmak veya kalem ile çalışması güvenceye alındı; 2 temas noktası olduğunda çizim tetiklenmesi önlendi.
+- **UI-Thread Avuç İçi Koruması (Palm Rejection):**
+  - Reanimated Shared Value'su `isDrawingActive` ile kalem veya parmak ekrana değip çizgi başlattığı milisaniyede (`onBegin` worklet) `isDrawingActive.value = true` yapılır.
+  - Kullanıcı yazı yazarken avucunu ekrana yaslasa dahi, `pinchGesture` ve `panGesture` aktif çizim olduğunu algılayarak (`if (isDrawingActive.value) return;`) derhal kendilerini kilitler. Ekran sıçraması, istenmeyen zoom veya kayma %100 önlendi.
+- **Çift Tıklama (Double Tap) Sıçrama Koruması:**
+  - Yazı yazarken nokta koyma ("i", "j" harfi, noktalama işaretleri veya hızlı vuruşlar) sırasında 250ms içinde çift tıklama algılanıp ekranın aniden büyümesini veya sıfırlanmasını önlemek için, çizim ve metin modlarında `doubleTapGesture` `.enabled(!isDrawingMode && !isTextMode)` ile tamamen devre dışı bırakıldı.
+
+### 📁 Değiştirilen Dosyalar
+- `components/drawing/ZoomableCanvas.js`: `isDrawingActive` shared value, `panGesture.minPointers(2).maxPointers(2)`, `pinchGesture` çizim kilidi, `doubleTapGesture.enabled` kısıtlaması.
+- `components/drawing/DrawingCanvas.js`: `Gesture.Pan().minPointers(1).maxPointers(1)` yerel gesture handler migrasyonu ve `isDrawingActive` entegrasyonu.
+
+### ✅ Doğrulama & Testler
+- Matematiksel birim testleri (`tests/zoomableCanvas.test.js`) 6/6 başarıyla tamamlandı.
+- Metro bundler Android, iOS ve Web derlemeleri (`HTTP 200 OK`) hatasız geçti.
+
+---
+
 ## 📅 [2026-09-05] - Zoomable Canvas: Pinch-to-Zoom, İki Parmakla Kaydırma (Pan) ve Hassas Koordinat Transformasyonu
 
 ### 🚀 Eklenen Özellikler & UI/UX İyileştirmeleri
