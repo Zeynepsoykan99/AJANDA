@@ -59,6 +59,7 @@ export const PAGE_TEMPLATES = {
       description: 'Özel yapılacaklar listesi tasarımı 1',
       type: 'image_template',
       colors: { bg: '#FFF5F8', accent: '#E91E63', header: '#C2185B', day: '#FFFFFF', border: '#F8BBD0' },
+      edgeColor: '#FFF5F8',
       aspectRatio: 0.70,
     },
     {
@@ -67,6 +68,7 @@ export const PAGE_TEMPLATES = {
       description: 'Özel yapılacaklar listesi tasarımı 2',
       type: 'image_template',
       colors: { bg: '#FFF5F8', accent: '#E91E63', header: '#C2185B', day: '#FFFFFF', border: '#F8BBD0' },
+      edgeColor: '#FFF5F8',
       aspectRatio: 0.70,
     },
     {
@@ -75,6 +77,7 @@ export const PAGE_TEMPLATES = {
       description: 'Özel yapılacaklar listesi tasarımı 4',
       type: 'image_template',
       colors: { bg: '#FFF5F8', accent: '#E91E63', header: '#C2185B', day: '#FFFFFF', border: '#F8BBD0' },
+      edgeColor: '#FFF5F8',
       aspectRatio: 0.70,
     },
     {
@@ -83,6 +86,7 @@ export const PAGE_TEMPLATES = {
       description: 'Özel yapılacaklar listesi tasarımı 5',
       type: 'image_template',
       colors: { bg: '#FFF5F8', accent: '#E91E63', header: '#C2185B', day: '#FFFFFF', border: '#F8BBD0' },
+      edgeColor: '#FFF5F8',
       aspectRatio: 0.70,
     },
     {
@@ -91,6 +95,7 @@ export const PAGE_TEMPLATES = {
       description: 'Özel yapılacaklar listesi tasarımı 6',
       type: 'image_template',
       colors: { bg: '#FFF5F8', accent: '#E91E63', header: '#C2185B', day: '#FFFFFF', border: '#F8BBD0' },
+      edgeColor: '#FFF5F8',
       aspectRatio: 0.70,
     },
   ],
@@ -101,6 +106,7 @@ export const PAGE_TEMPLATES = {
       description: 'El çizimi şık aylık ajanda tasarımı 1',
       type: 'image_template',
       colors: { bg: '#FFF5F8', accent: '#E91E63', header: '#C2185B', day: '#FFFFFF', border: '#F8BBD0' },
+      edgeColor: '#FFF5F8',
       aspectRatio: 0.70,
     },
     {
@@ -109,6 +115,7 @@ export const PAGE_TEMPLATES = {
       description: 'El çizimi şık aylık ajanda tasarımı 2',
       type: 'image_template',
       colors: { bg: '#FFF5F8', accent: '#E91E63', header: '#C2185B', day: '#FFFFFF', border: '#F8BBD0' },
+      edgeColor: '#FFF5F8',
       aspectRatio: 0.70,
     },
     {
@@ -117,6 +124,7 @@ export const PAGE_TEMPLATES = {
       description: 'El çizimi şık aylık ajanda tasarımı 3',
       type: 'image_template',
       colors: { bg: '#FFF5F8', accent: '#E91E63', header: '#C2185B', day: '#FFFFFF', border: '#F8BBD0' },
+      edgeColor: '#FFF5F8',
       aspectRatio: 0.70,
     },
     {
@@ -125,6 +133,7 @@ export const PAGE_TEMPLATES = {
       description: 'El çizimi şık aylık ajanda tasarımı 4',
       type: 'image_template',
       colors: { bg: '#FFF5F8', accent: '#E91E63', header: '#C2185B', day: '#FFFFFF', border: '#F8BBD0' },
+      edgeColor: '#FFF5F8',
       aspectRatio: 0.70,
     },
     {
@@ -133,6 +142,7 @@ export const PAGE_TEMPLATES = {
       description: 'El çizimi şık aylık ajanda tasarımı 5',
       type: 'image_template',
       colors: { bg: '#FFF5F8', accent: '#E91E63', header: '#C2185B', day: '#FFFFFF', border: '#F8BBD0' },
+      edgeColor: '#FFF5F8',
       aspectRatio: 0.70,
     },
     {
@@ -141,6 +151,7 @@ export const PAGE_TEMPLATES = {
       description: 'El çizimi şık aylık ajanda tasarımı 6',
       type: 'image_template',
       colors: { bg: '#FFF5F8', accent: '#E91E63', header: '#C2185B', day: '#FFFFFF', border: '#F8BBD0' },
+      edgeColor: '#FFF5F8',
       aspectRatio: 0.70,
     },
   ],
@@ -151,6 +162,7 @@ export const PAGE_TEMPLATES = {
       description: 'Birebir orijinal el çizimi pembe haftalık planlayıcı',
       type: 'image_template',
       colors: { bg: '#FFF5F8', accent: '#E91E63', header: '#C2185B', day: '#FFFFFF', border: '#F8BBD0' },
+      edgeColor: '#FFF5F8',
       aspectRatio: 0.703,
     },
     {
@@ -159,6 +171,7 @@ export const PAGE_TEMPLATES = {
       description: 'Birebir orijinal çiçekli kareli haftalık planlayıcı',
       type: 'image_template',
       colors: { bg: '#FFFDE7', accent: '#F57F17', header: '#E65100', day: '#FFFFFF', border: '#FFE082' },
+      edgeColor: '#FFFDE7',
       aspectRatio: 0.66,
     },
     {
@@ -167,6 +180,7 @@ export const PAGE_TEMPLATES = {
       description: 'Pastel çiçekli ve çay fincanlı haftalık planlayıcı',
       type: 'image_template',
       colors: { bg: '#FFF5F8', accent: '#E91E63', header: '#C2185B', day: '#FFFFFF', border: '#F8BBD0' },
+      edgeColor: '#FFF5F8',
       aspectRatio: 0.707,
     },
     {
@@ -175,6 +189,7 @@ export const PAGE_TEMPLATES = {
       description: 'Pembe saten kurdeleli ve mektup zarflı haftalık planlayıcı',
       type: 'image_template',
       colors: { bg: '#FFFDF9', accent: '#D81B60', header: '#880E4F', day: '#FFFFFF', border: '#F8BBD0' },
+      edgeColor: '#FFFDF9',
       aspectRatio: 0.707,
     },
     {
@@ -183,6 +198,7 @@ export const PAGE_TEMPLATES = {
       description: 'Kahve fincanı, kitaplar ve botanik yapraklar',
       type: 'image_template',
       colors: { bg: '#FDFBF7', accent: '#8D6E63', header: '#4E342E', day: '#FFFFFF', border: '#D7CCC8' },
+      edgeColor: '#FDFBF7',
       aspectRatio: 0.77,
     },
     {
@@ -191,6 +207,7 @@ export const PAGE_TEMPLATES = {
       description: 'Pati izleri, sevimli kedicikler ve renkli bantlar',
       type: 'image_template',
       colors: { bg: '#FFFDF5', accent: '#FB8C00', header: '#E65100', day: '#FFFFFF', border: '#FFE0B2' },
+      edgeColor: '#FFFDF5',
       aspectRatio: 0.67,
     },
     {
@@ -198,6 +215,8 @@ export const PAGE_TEMPLATES = {
       name: 'Mavi Çiçekli Şablon 💙',
       description: 'Sade pastel mavi çiçek detaylı haftalık planlayıcı',
       type: 'image_template',
+      colors: { bg: '#F0F4F8', accent: '#4682B4', header: '#2C5282', day: '#FFFFFF', border: '#BEE3F8' },
+      edgeColor: '#F0F4F8',
       aspectRatio: 0.707,
     },
     {
@@ -206,6 +225,7 @@ export const PAGE_TEMPLATES = {
       description: 'Özel eklenen el çizimi haftalık planlayıcı',
       type: 'image_template',
       colors: { bg: '#FFF5F8', accent: '#E91E63', header: '#C2185B', day: '#FFFFFF', border: '#F8BBD0' },
+      edgeColor: '#FFF5F8',
       aspectRatio: 0.70,
     },
     {
@@ -213,7 +233,8 @@ export const PAGE_TEMPLATES = {
       name: 'Orijinal Haftalık Şablon 2',
       description: 'Özel eklenen el çizimi haftalık planlayıcı 2',
       type: 'image_template',
-      colors: { bg: '#FFF5F8', accent: '#E91E63', header: '#C2185B', day: '#FFFFFF', border: '#F8BBD0' },
+      colors: { bg: '#FFFDE7', accent: '#E91E63', header: '#C2185B', day: '#FFFFFF', border: '#F8BBD0' },
+      edgeColor: '#FFFDE7',
       aspectRatio: 0.70,
     },
   ],
@@ -222,22 +243,34 @@ export const PAGE_TEMPLATES = {
       id: 'blank_lined',
       name: 'Çizgili Sayfa',
       colors: { bg: '#FFFFFF', accent: '#C2185B', line: '#FCE4EC' },
+      edgeColor: '#FFFFFF',
       lineStyle: 'horizontal',
     },
     {
       id: 'blank_dotted',
       name: 'Noktalı Sayfa',
       colors: { bg: '#FFFFFF', accent: '#7B1FA2', line: '#F3E5F5' },
+      edgeColor: '#FFFFFF',
       lineStyle: 'dots',
     },
     {
       id: 'blank_plain',
       name: 'Düz Sayfa',
       colors: { bg: '#FFFFFF', accent: '#2E7D32', line: 'transparent' },
+      edgeColor: '#FFFFFF',
       lineStyle: 'none',
     },
   ],
 };
+
+/**
+ * Şablonun dış kenar rengini (edgeColor) döndürür.
+ * Güvenli geri dönüş mekanizmasıyla (edgeColor -> colors.bg -> fallback) çalışır.
+ */
+export function getTemplateEdgeColor(template, fallback = '#FFF5F8') {
+  if (!template) return fallback;
+  return template.edgeColor || template.colors?.bg || fallback;
+}
 
 /**
  * Kategori ID ve şablon ID'ye göre şablon detayını döndürür.

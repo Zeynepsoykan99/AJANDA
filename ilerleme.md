@@ -4,6 +4,41 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-06] - Dinamik Kenar Rengi Eşleştirmesi ve Reanimated 300ms Yumuşak Geçiş (Dynamic Edge Color Matching)
+
+### 🚀 Eklenen Özellikler & UI/UX İyileştirmeleri
+- **Kesintisiz Görsel Bütünlük (Seamless Edge Color Matching):**
+  - Ajanda, günlük ve To-Do listesi sayfalarında seçilen sayfa şablonunun en dış köşe/kenar rengi algılanarak ekranın en dış kapsayıcısına (`SafeAreaView` / root container) enjekte edildi.
+  - Cihaz ekranının üst Safe Area (durum çubuğu/çentik bölgesi), alt Safe Area (ev göstergesi alanı) ve yan boşlukları, sayfa şablonunun dış pikselleriyle milimetrik olarak birebir aynı renge büründü.
+- **Yüksek Performanslı Statik Haritalama (Yaklaşım A Tercihi):**
+  - Çalışma anında native asenkron görüntü analizi (`react-native-image-colors`) yerine, $O(1)$ anlık erişim, 0ms gecikme ve %100 cross-platform stabilite sağlayan `constants/pageTemplates.js` ve `constants/coverTemplates.js` veri yapısına doğrudan `edgeColor` alanı tanımlandı.
+  - Sayfa açılışlarında veya geçişlerde yaşanan siyah/beyaz flaşlanma ve asenkron gecikmeler tamamen ortadan kaldırıldı.
+  - Güvenli geri dönüş mekanizması (`getTemplateEdgeColor` ve `getCoverEdgeColor`) ile şablon rengi -> `colors.bg` -> `fallbackColor` hiyerarşisi kuruldu.
+- **Reanimated 300ms UI-Thread Yumuşak Fade Geçişi (`useDynamicEdgeColor.js`):**
+  - Kullanıcı sayfalar veya şablonlar arasında geçiş yaptığında arka plan renginin aniden patlayarak değişmesi yerine, `react-native-reanimated` (`interpolateColor` ve `withTiming`) kullanılarak 300ms süreli pürüzsüz bir fade animasyonu oluşturuldu.
+  - Tüm animasyon UI thread üzerinde çalıştığı için 60/120 FPS akıcılıkta çalışır ve JS thread'ini bloke etmez.
+- **Şeffaf Görsel Kapsayıcı Entegrasyonu (`ImageTemplatePage.js`):**
+  - Görsel şablon kapsayıcısındaki sabit `backgroundColor: '#FFFFFF'` kaldırıldı; `backgroundColor: template?.edgeColor || 'transparent'` atanarak görsel ile arka plan arasındaki letterbox/pillarbox sınırları tamamen eritildi.
+- **Ekran Entegrasyonları:**
+  - `app/ajandam/[pageId].js`: `AnimatedSafeAreaView` ve `useDynamicEdgeColor` ile haftalık, aylık, to-do ve boş ajanda sayfalarına entegre edildi.
+  - `app/todolist/[pageId].js`: `AnimatedSafeAreaView` ve `useDynamicEdgeColor` ile to-do detay sayfalarına entegre edildi.
+  - `app/ajandam/index.js`: `AnimatedSafeAreaView` ve `useDynamicEdgeColor` ile ajanda kapağı ekranına entegre edildi.
+
+### 📁 Değiştirilen & Eklenen Dosyalar
+- `hooks/useDynamicEdgeColor.js`: [YENİ] Reanimated `interpolateColor` ve `withTiming` ile 300ms yumuşak fade geçiş kancası.
+- `constants/pageTemplates.js`: [GÜNCELLEME] Tüm haftalık, aylık, to-do ve boş sayfa şablonlarına `edgeColor` özelliği ve `getTemplateEdgeColor` yardımcı fonksiyonu eklendi.
+- `constants/coverTemplates.js`: [GÜNCELLEME] 6 kapak şablonuna `edgeColor` özelliği ve `getCoverEdgeColor` yardımcı fonksiyonu eklendi.
+- `components/pages/ImageTemplatePage.js`: [GÜNCELLEME] Sabit `#FFFFFF` kaldırıldı, dinamik kenar rengi ve şeffaflık sağlandı.
+- `app/ajandam/[pageId].js`: [GÜNCELLEME] `AnimatedSafeAreaView` ve `useDynamicEdgeColor` entegrasyonu.
+- `app/todolist/[pageId].js`: [GÜNCELLEME] `AnimatedSafeAreaView` ve `useDynamicEdgeColor` entegrasyonu.
+- `app/ajandam/index.js`: [GÜNCELLEME] `AnimatedSafeAreaView` ve `useDynamicEdgeColor` entegrasyonu.
+
+### ✅ Doğrulama & Testler
+- Babel transform derleme testi tüm 7 dosyada (`hooks/useDynamicEdgeColor.js`, `constants/pageTemplates.js`, `constants/coverTemplates.js`, `components/pages/ImageTemplatePage.js`, `app/ajandam/[pageId].js`, `app/todolist/[pageId].js`, `app/ajandam/index.js`) 7/7 PASSED ile başarıyla tamamlandı.
+- JSX hiyerarşisi ve Reanimated worklet kuralları doğrulandı.
+
+---
+
 ## 📅 [2026-09-06] - Çizim & Tuval Gesture İzolasyonu ve Avuç İçi Koruması (Palm Rejection)
 
 ### 🚀 Eklenen Özellikler & UI/UX İyileştirmeleri

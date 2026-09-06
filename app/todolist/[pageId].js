@@ -9,12 +9,14 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated from 'react-native-reanimated';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { StorageService } from '../../services/storageService';
-import { getPageTemplate, PAGE_CATEGORIES } from '../../constants/pageTemplates';
+import { getPageTemplate, getTemplateEdgeColor, PAGE_CATEGORIES } from '../../constants/pageTemplates';
+import useDynamicEdgeColor from '../../hooks/useDynamicEdgeColor';
 import ImageTemplatePage from '../../components/pages/ImageTemplatePage';
 import DrawingCanvas from '../../components/drawing/DrawingCanvas';
 import DrawingToolbar from '../../components/drawing/DrawingToolbar';
@@ -33,6 +35,8 @@ import { getPageDisplayTitle, getCategoryDisplayName } from '../../utils/pageTit
 /**
  * TodoViewScreen - Sadece To-Do listesini görüntüler ve düzenler
  */
+const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
+
 export default function TodoViewScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
@@ -42,6 +46,12 @@ export default function TodoViewScreen() {
 
   const [page, setPage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Şablon ve Dinamik Kenar Rengi (Edge Color)
+  const template = page ? getPageTemplate('todo', page.templateId) : null;
+  const targetEdgeColor = template ? getTemplateEdgeColor(template, colors.background) : colors.background;
+  const { animatedStyle: animatedBgStyle } = useDynamicEdgeColor(targetEdgeColor, colors.background, 300);
+
   const [isStickerMenuVisible, setIsStickerMenuVisible] = useState(false);
   const [undoToast, setUndoToast] = useState({ visible: false, message: '' });
   const pendingStickerDeleteRef = useRef(null);
@@ -687,19 +697,19 @@ export default function TodoViewScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView
-        style={[styles.safeArea, { backgroundColor: colors.background }]}
+      <AnimatedSafeAreaView
+        style={[styles.safeArea, animatedBgStyle]}
         edges={['top', 'bottom']}
       >
         <ActivityIndicator size="large" color={colors.accent} />
-      </SafeAreaView>
+      </AnimatedSafeAreaView>
     );
   }
 
   if (!page) {
     return (
-      <SafeAreaView
-        style={[styles.safeArea, { backgroundColor: colors.background }]}
+      <AnimatedSafeAreaView
+        style={[styles.safeArea, animatedBgStyle]}
         edges={['top', 'bottom']}
       >
         <Text style={[styles.errorText, { color: colors.textSecondary }]}>
@@ -710,16 +720,15 @@ export default function TodoViewScreen() {
             {t('todo.goBack', 'Geri Dön')}
           </Text>
         </TouchableOpacity>
-      </SafeAreaView>
+      </AnimatedSafeAreaView>
     );
   }
 
-  const template = getPageTemplate('todo', page.templateId);
   const category = PAGE_CATEGORIES.find((c) => c.id === 'todo');
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: colors.background }]}
+    <AnimatedSafeAreaView
+      style={[styles.safeArea, animatedBgStyle]}
       edges={['top', 'bottom']}
     >
       {/* Üst Bar */}
@@ -930,7 +939,7 @@ export default function TodoViewScreen() {
           }
         />
       </View>
-    </SafeAreaView>
+    </AnimatedSafeAreaView>
   );
 }
 

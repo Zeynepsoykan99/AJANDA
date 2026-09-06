@@ -8,6 +8,7 @@ import {
   ImageBackground,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +17,9 @@ import { StorageService } from '../../services/storageService';
 import {
   DEFAULT_COVER_TEMPLATE_ID,
   getCoverTemplateById,
+  getCoverEdgeColor,
 } from '../../constants/coverTemplates';
+import useDynamicEdgeColor from '../../hooks/useDynamicEdgeColor';
 import CoverEditor from '../../components/CoverEditor';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 import Skeleton from '../../components/ui/Skeleton';
@@ -33,6 +36,8 @@ import { recognizeHandwriting } from '../../services/handwritingService';
  * Kullanıcıyı tam sayfa bir kapak karşılar.
  * Kapağın üzerine çizim yapabilir, metin ekleyebilir ve kapağı değiştirebilir.
  */
+const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
+
 export default function AjandamScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
@@ -42,6 +47,11 @@ export default function AjandamScreen() {
   const [coverData, setCoverData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditorVisible, setIsEditorVisible] = useState(false);
+
+  // Şablon ve Dinamik Kenar Rengi (Edge Color)
+  const template = getCoverTemplateById(coverData?.templateId);
+  const targetEdgeColor = getCoverEdgeColor(template, colors.background);
+  const { animatedStyle: animatedBgStyle } = useDynamicEdgeColor(targetEdgeColor, colors.background, 300);
 
   // Araç Çubuğu Aktif Mod: 'none' | 'drawing' | 'text'
   const [activeMode, setActiveMode] = useState('none');
@@ -180,34 +190,41 @@ export default function AjandamScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView
-        style={[styles.safeArea, { backgroundColor: colors.background }]}
+      <AnimatedSafeAreaView
+        style={[styles.safeArea, animatedBgStyle]}
         edges={['top', 'bottom']}
       >
+        {/* Skeleton Yükleme Durumu */}
         <View style={[styles.headerBar, { borderBottomColor: colors.border }]}>
-          <Skeleton width={38} height={38} borderRadius={19} />
-          <Skeleton width={120} height={20} borderRadius={6} />
-          <View style={{ flexDirection: 'row', gap: 6 }}>
-            <Skeleton width={38} height={38} borderRadius={19} />
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => router.back()}
+            style={[styles.headerButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+          >
+            <MaterialCommunityIcons name="arrow-left" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Skeleton width={130} height={18} borderRadius={4} />
+          </View>
+          <View style={styles.headerRightGroup}>
             <Skeleton width={38} height={38} borderRadius={19} />
           </View>
         </View>
-        <View style={[styles.contentArea, { backgroundColor: colors.background }]}>
+
+        <View style={[styles.contentArea, { backgroundColor: 'transparent' }]}>
           <Skeleton 
             width="82%" 
             height={undefined} 
             style={{ aspectRatio: 0.72, maxWidth: 420, borderRadius: 8, alignSelf: 'center' }} 
           />
         </View>
-      </SafeAreaView>
+      </AnimatedSafeAreaView>
     );
   }
 
-  const template = getCoverTemplateById(coverData?.templateId);
-
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: colors.background }]}
+    <AnimatedSafeAreaView
+      style={[styles.safeArea, animatedBgStyle]}
       edges={['top', 'bottom']}
     >
       {/* Üst Bar / Araç Çubuğu */}
@@ -236,7 +253,7 @@ export default function AjandamScreen() {
       </View>
 
       {/* Merkezlenmiş Kapak Görseli ve İnteraktif Katmanlar */}
-      <View style={[styles.contentArea, { backgroundColor: colors.background }]}>
+      <View style={[styles.contentArea, { backgroundColor: 'transparent' }]}>
         <InteractiveCover3D
           style={styles.coverContainer}
           disabled={activeMode !== 'none'}
@@ -315,7 +332,7 @@ export default function AjandamScreen() {
           canUndo={(coverData?.drawings || []).length > 0}
         />
       </View>
-    </SafeAreaView>
+    </AnimatedSafeAreaView>
   );
 }
 

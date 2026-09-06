@@ -9,9 +9,10 @@ import ImageWithSkeleton from '../ui/ImageWithSkeleton';
  */
 export default function ImageTemplatePage({ template }) {
   const imageSource = template?.image;
+  const edgeColor = template?.edgeColor || 'transparent';
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: edgeColor }]}>
       <ImageWithSkeleton
         isBackground={true}
         source={imageSource}
@@ -28,7 +29,7 @@ const styles = StyleSheet.create({
     padding: 0,
     margin: 0,
     overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
   },
   fullBleedImage: {
     flex: 1,

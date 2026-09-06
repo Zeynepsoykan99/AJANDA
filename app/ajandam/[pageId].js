@@ -9,12 +9,14 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated from 'react-native-reanimated';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { StorageService } from '../../services/storageService';
-import { getPageTemplate, PAGE_CATEGORIES } from '../../constants/pageTemplates';
+import { getPageTemplate, getTemplateEdgeColor, PAGE_CATEGORIES } from '../../constants/pageTemplates';
+import useDynamicEdgeColor from '../../hooks/useDynamicEdgeColor';
 import TodoPage from '../../components/pages/TodoPage';
 import MonthlyPage from '../../components/pages/MonthlyPage';
 import WeeklyPage from '../../components/pages/WeeklyPage';
@@ -39,6 +41,8 @@ import { getPageDisplayTitle, getCategoryDisplayName } from '../../utils/pageTit
  * PageViewScreen - Dinamik sayfa görüntüleme ve düzenleme
  * URL parametresinden pageId alır, ilgili sayfayı yükler.
  */
+const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
+
 export default function PageViewScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
@@ -48,6 +52,11 @@ export default function PageViewScreen() {
 
   const [page, setPage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Şablon ve Dinamik Kenar Rengi (Edge Color)
+  const template = page ? getPageTemplate(page.category, page.templateId) : null;
+  const targetEdgeColor = template ? getTemplateEdgeColor(template, colors.background) : colors.background;
+  const { animatedStyle: animatedBgStyle } = useDynamicEdgeColor(targetEdgeColor, colors.background, 300);
   const [isStickerMenuVisible, setIsStickerMenuVisible] = useState(false);
   const [undoToast, setUndoToast] = useState({ visible: false, message: '' });
   const pendingStickerDeleteRef = useRef(null);
@@ -733,19 +742,19 @@ export default function PageViewScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView
-        style={[styles.safeArea, { backgroundColor: colors.background }]}
+      <AnimatedSafeAreaView
+        style={[styles.safeArea, animatedBgStyle]}
         edges={['top', 'bottom']}
       >
         <ActivityIndicator size="large" color={colors.accent} />
-      </SafeAreaView>
+      </AnimatedSafeAreaView>
     );
   }
 
   if (!page) {
     return (
-      <SafeAreaView
-        style={[styles.safeArea, { backgroundColor: colors.background }]}
+      <AnimatedSafeAreaView
+        style={[styles.safeArea, animatedBgStyle]}
         edges={['top', 'bottom']}
       >
         <Text style={[styles.errorText, { color: colors.textSecondary }]}>
@@ -756,11 +765,10 @@ export default function PageViewScreen() {
             {t('todo.goBack', 'Geri Dön')}
           </Text>
         </TouchableOpacity>
-      </SafeAreaView>
+      </AnimatedSafeAreaView>
     );
   }
 
-  const template = getPageTemplate(page.category, page.templateId);
   const category = PAGE_CATEGORIES.find((c) => c.id === page.category);
 
   // Kategoriye göre doğru sayfa bileşenini render et
@@ -822,8 +830,8 @@ export default function PageViewScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: colors.background }]}
+    <AnimatedSafeAreaView
+      style={[styles.safeArea, animatedBgStyle]}
       edges={['top', 'bottom']}
     >
       {/* Üst Bar */}
@@ -1046,7 +1054,7 @@ export default function PageViewScreen() {
           }
         />
       </View>
-    </SafeAreaView>
+    </AnimatedSafeAreaView>
   );
 }
 
