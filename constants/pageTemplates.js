@@ -247,6 +247,13 @@ export const PAGE_TEMPLATES = {
       lineStyle: 'horizontal',
     },
     {
+      id: 'blank_grid',
+      name: 'Kareli Sayfa',
+      colors: { bg: '#FFFFFF', accent: '#3F51B5', line: '#E8EAF6' },
+      edgeColor: '#FFFFFF',
+      lineStyle: 'grid',
+    },
+    {
       id: 'blank_dotted',
       name: 'Noktalı Sayfa',
       colors: { bg: '#FFFFFF', accent: '#7B1FA2', line: '#F3E5F5' },

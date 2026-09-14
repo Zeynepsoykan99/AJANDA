@@ -199,5 +199,26 @@
       "addPlaceholder": "Neuen Plan oder Unterricht eintragen...",
       "badgeLabel": "WOCHENPLAN"
     }
+  },
+  "diary": {
+    "title": "Mein Tagebuch",
+    "coverTitle": "Tagebuch-Cover",
+    "openDiary": "Tagebuch Öffnen",
+    "openDiaryButton": "🌸 Mein Tagebuch Öffnen",
+    "selectCover": "Cover Ändern",
+    "selectTemplate": "Seitenvorlage Wählen",
+    "addPage": "Neue Seite Hinzufügen",
+    "page": "Seite",
+    "deletePageConfirmTitle": "Seite Löschen",
+    "deletePageConfirmMessage": "Möchtest du diese Seite wirklich löschen?",
+    "pageAdded": "Neue Seite hinzugefügt",
+    "pageDeleted": "Seite gelöscht",
+    "singlePageWarning": "Das Tagebuch muss mindestens eine Seite enthalten.",
+    "templates": {
+      "lined": "Linierte Seite",
+      "grid": "Karierte Seite",
+      "dotted": "Punktierte Seite",
+      "plain": "Blanko-Seite"
+    }
   }
 }

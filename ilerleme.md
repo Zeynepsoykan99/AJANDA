@@ -4,6 +4,50 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-14] - "Günlüğüm" (My Diary) Modülü, Çoklu Sayfa (Pagination) ve Pürüzsüz Yatay Kaydırma (Swipe)
+
+### 🚀 Eklenen Özellikler & UI/UX İyileştirmeleri
+- **3D İnteraktif Kapak ve Şablon Seçimi (`app/gunlugum/index.js`):**
+  - "Günlüğüm" modülü `/gunlugum` rotasında, Ajandam modülündeki zarif kırtasiye dili ve 3D eğim animasyonu (`InteractiveCover3D`) ile açılan bir kapak ekranıyla başlatıldı.
+  - Kapak üzerinde doğrudan serbest çizim (`DrawingCanvas`) ve metin kutuları (`TextCanvas`) eklenebilmesi sağlandı.
+  - Kapak galerisi (`CoverEditor`) ile kapak görseli, yeni `PaperTemplateModal` ile iç sayfalarda kullanılacak kağıt düzeni (çizgili, kareli, noktalı, düz) kolayca seçilebilir hale getirildi.
+  - Kapağa dokunarak veya "🌸 Günlüğümü Aç" butonuyla çoklu sayfalı günlük tuvaline geçiş sağlandı.
+- **Dizi Tabanlı Çoklu Sayfa (Pagination) Veri Modeli (`StorageService`):**
+  - Tek tuval yapısı yerine, her biri bağımsız çizim, serbest metin ve sticker katmanına sahip dizi tabanlı (`pages: [ { pageId, pageNumber, createdAt, drawings, textBlocks, stickers, data }, ... ]`) veri modeli oluşturuldu.
+  - `StorageService` içerisine `@ajanda_diary_v1` anahtarıyla çalışan `getDiary`, `saveDiary`, `addDiaryPage`, `updateDiaryPage` ve `deleteDiaryPage` CRUD metotları eklendi.
+- **Pürüzsüz Yatay Sayfa Kaydırma (Swipe Navigation - `app/gunlugum/pages.js`):**
+  - `ScrollView` bileşeni `horizontal={true}`, `pagingEnabled={true}` ve `showsHorizontalScrollIndicator={false}` ile yapılandırılarak kullanıcıların sayfalar arasında sağa/sola pürüzsüzce kayarak (swipe) gezinebilmesi sağlandı.
+  - Üst menüye eklenen `< Sayfa X / N >` indikatörü ile tek dokunuşla önceki/sonraki sayfaya atlama desteği verildi.
+- **Kritik Dokunma ve Çizim İzolasyonu (Gesture Isolation):**
+  - Kullanıcı çizim (`activeMode === 'drawing'`) veya serbest metin (`activeMode === 'text'`) modundayken yatay kaydırma `scrollEnabled={activeMode === 'none'}` koşuluyla kilitlendi.
+  - Tek parmak veya Apple Pencil ile yazı yazarken/çizim yaparken sayfanın kazara sağa/sola kayması %100 engellendi.
+  - 2 parmaklı Pinch-to-Zoom ve Pan hareketleri `ZoomableCanvas` ile korunarak her sayfa için bağımsız yakınlaştırma imkanı sunuldu.
+- **Dinamik "+" Sayfa Ekleme ve Sayfa Silme:**
+  - Üst menüye yerleştirilen `+` butonuyla, seçili şablonda anında yeni ve boş bir sayfa nesnesi üretilip diziye eklenmesi ve otomatik olarak yeni sayfaya kaydırılması sağlandı.
+  - Çöp kutusu butonuyla onaylı sayfa silme ve en az 1 boş sayfa kalmasını garanti eden koruma mekanizması uygulandı.
+- **Kareli Kağıt (Grid Ruling) Entegrasyonu (`PaperSheet.js` & `pageTemplates.js`):**
+  - `PaperSheet` kırtasiye bileşenine yatay ve dikey ızgara çizgileri içeren `ruling === 'grid'` desteği eklendi.
+  - `constants/pageTemplates.js` içerisine `blank_grid` şablonu dahil edildi.
+- **5 Dilde Eksiksiz Yerelleştirme (i18n):**
+  - `locales/tr.json`, `locales/en.json`, `locales/de.json`, `locales/es.json` ve `locales/fr.json` dosyalarına günlük modülüne ait tüm başlık, buton, modal ve şablon çevirileri entegre edildi.
+
+### 📁 Eklenen ve Değiştirilen Dosyalar
+- `app/gunlugum.js`: [SİLİNDİ] Yerini klasör yapısına ve çoklu sayfa rotalarına bıraktı.
+- `app/gunlugum/_layout.js`: [YENİ] Günlük modülü Stack layout yapısı.
+- `app/gunlugum/index.js`: [YENİ] 3D kapak, kapak/şablon seçimi ve giriş ekranı.
+- `app/gunlugum/pages.js`: [YENİ] Çoklu sayfalı swipeable günlük tuvali, pagination, çizim, metin ve sticker katmanları.
+- `components/PaperTemplateModal.js`: [YENİ] İç sayfa kağıt şablonu (çizgili, kareli, noktalı, düz) seçim modalı.
+- `components/stationery/PaperSheet.js`: [GÜNCELLEME] `grid` (kareli kağıt) ızgara desteği eklendi.
+- `constants/pageTemplates.js`: [GÜNCELLEME] `blank_grid` şablonu eklendi.
+- `services/storageService.js`: [GÜNCELLEME] Günlük için `@ajanda_diary_v1` ve CRUD metotları eklendi.
+- `locales/tr.json`, `en.json`, `de.json`, `es.json`, `fr.json`: [GÜNCELLEME] `diary` çevirileri eklendi.
+
+### ✅ Doğrulama & Testler
+- JSON doğrulama: 5 dil dosyasının tamamı geçerli JSON olarak onaylandı.
+- Babel derleme testi: 7 dosyanın tümü (`storageService.js`, `pageTemplates.js`, `PaperSheet.js`, `PaperTemplateModal.js`, `app/gunlugum/_layout.js`, `index.js`, `pages.js`) 7/7 Syntax OK ile başarıyla doğrulandı.
+
+---
+
 ## 📅 [2026-09-14] - Kusursuz Arka Plan Bütünlüğü (Seamless Blend) ve Piksel Düzeyinde Eşleştirme
 
 ### 🚀 Eklenen Özellikler & UI/UX İyileştirmeleri

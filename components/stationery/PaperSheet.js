@@ -5,7 +5,7 @@ import { View, StyleSheet } from 'react-native';
  * PaperSheet - Gerçekçi Kırtasiye Kağıdı Tabanı
  * Fildişi/krem rengi taban, defter çizgileri veya noktalı ızgara dokusu sunar.
  *
- * @param {string} ruling - 'lined' (çizgili) | 'dotted' (noktalı) | 'blank' (düz)
+ * @param {string} ruling - 'lined' (çizgili) | 'grid' (kareli) | 'dotted' (noktalı) | 'blank' (düz)
  * @param {string} paperColor - Kağıt rengi (varsayılan: fildişi/krem #FFFDF9)
  * @param {string} lineColor - Çizgi / nokta rengi
  * @param {boolean} showMargin - Sol dikey pembe marj çizgisi
@@ -29,6 +29,28 @@ export default function PaperSheet({
               style={[styles.horizontalLine, { backgroundColor: lineColor }]}
             />
           ))}
+        </View>
+      )}
+
+      {/* Kareli Kağıt Dokusu (Grid) */}
+      {ruling === 'grid' && (
+        <View style={[styles.rulingContainer, { overflow: 'hidden' }]} pointerEvents="none">
+          <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+            {Array.from({ length: 40 }).map((_, i) => (
+              <View
+                key={`gh_${i}`}
+                style={[styles.gridHorizontalLine, { backgroundColor: lineColor }]}
+              />
+            ))}
+          </View>
+          <View style={[StyleSheet.absoluteFillObject, { flexDirection: 'row' }]} pointerEvents="none">
+            {Array.from({ length: 30 }).map((_, i) => (
+              <View
+                key={`gv_${i}`}
+                style={[styles.gridVerticalLine, { backgroundColor: lineColor }]}
+              />
+            ))}
+          </View>
         </View>
       )}
 
@@ -86,6 +108,16 @@ const styles = StyleSheet.create({
     height: 1,
     width: '100%',
     marginBottom: 27,
+  },
+  gridHorizontalLine: {
+    height: 1,
+    width: '100%',
+    marginBottom: 23,
+  },
+  gridVerticalLine: {
+    width: 1,
+    height: '100%',
+    marginRight: 23,
   },
   dottedRow: {
     flexDirection: 'row',

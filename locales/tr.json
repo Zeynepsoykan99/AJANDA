@@ -199,5 +199,26 @@
       "addPlaceholder": "Yeni plan veya ders yaz...",
       "badgeLabel": "HAFTALIK PLAN"
     }
+  },
+  "diary": {
+    "title": "Günlüğüm",
+    "coverTitle": "Günlük Kapağı",
+    "openDiary": "Günlüğü Aç",
+    "openDiaryButton": "🌸 Günlüğümü Aç",
+    "selectCover": "Kapak Değiştir",
+    "selectTemplate": "Sayfa Şablonu Seç",
+    "addPage": "Yeni Sayfa Ekle",
+    "page": "Sayfa",
+    "deletePageConfirmTitle": "Sayfayı Sil",
+    "deletePageConfirmMessage": "Bu sayfayı silmek istediğinize emin misiniz?",
+    "pageAdded": "Yeni sayfa eklendi",
+    "pageDeleted": "Sayfa silindi",
+    "singlePageWarning": "Günlükte en az bir sayfa bulunmalıdır.",
+    "templates": {
+      "lined": "Çizgili Sayfa",
+      "grid": "Kareli Sayfa",
+      "dotted": "Noktalı Sayfa",
+      "plain": "Düz Sayfa"
+    }
   }
 }

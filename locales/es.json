@@ -199,5 +199,26 @@
       "addPlaceholder": "Escribe un nuevo plan o lección...",
       "badgeLabel": "PLAN SEMANAL"
     }
+  },
+  "diary": {
+    "title": "Mi Diario",
+    "coverTitle": "Portada del Diario",
+    "openDiary": "Abrir Diario",
+    "openDiaryButton": "🌸 Abrir Mi Diario",
+    "selectCover": "Cambiar Portada",
+    "selectTemplate": "Elegir Plantilla de Página",
+    "addPage": "Añadir Nueva Página",
+    "page": "Página",
+    "deletePageConfirmTitle": "Eliminar Página",
+    "deletePageConfirmMessage": "¿Estás seguro de que deseas eliminar esta página?",
+    "pageAdded": "Nueva página añadida",
+    "pageDeleted": "Página eliminada",
+    "singlePageWarning": "El diario debe contener al menos una página.",
+    "templates": {
+      "lined": "Página Rayada",
+      "grid": "Página Cuadriculada",
+      "dotted": "Página Punteada",
+      "plain": "Página Lisa"
+    }
   }
 }

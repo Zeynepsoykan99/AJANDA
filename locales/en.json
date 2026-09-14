@@ -199,5 +199,26 @@
       "addPlaceholder": "Write a new plan or lesson...",
       "badgeLabel": "WEEKLY PLAN"
     }
+  },
+  "diary": {
+    "title": "My Diary",
+    "coverTitle": "Diary Cover",
+    "openDiary": "Open Diary",
+    "openDiaryButton": "🌸 Open My Diary",
+    "selectCover": "Change Cover",
+    "selectTemplate": "Select Page Template",
+    "addPage": "Add New Page",
+    "page": "Page",
+    "deletePageConfirmTitle": "Delete Page",
+    "deletePageConfirmMessage": "Are you sure you want to delete this page?",
+    "pageAdded": "New page added",
+    "pageDeleted": "Page deleted",
+    "singlePageWarning": "The diary must contain at least one page.",
+    "templates": {
+      "lined": "Lined Page",
+      "grid": "Grid Page",
+      "dotted": "Dotted Page",
+      "plain": "Plain Page"
+    }
   }
 }

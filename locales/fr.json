@@ -199,5 +199,26 @@
       "addPlaceholder": "Écrire un nouveau plan ou cours...",
       "badgeLabel": "PLAN HEBDOMADAIRE"
     }
+  },
+  "diary": {
+    "title": "Mon Journal",
+    "coverTitle": "Couverture du Journal",
+    "openDiary": "Ouvrir le Journal",
+    "openDiaryButton": "🌸 Ouvrir Mon Journal",
+    "selectCover": "Changer la Couverture",
+    "selectTemplate": "Choisir le Modèle de Page",
+    "addPage": "Ajouter une Page",
+    "page": "Page",
+    "deletePageConfirmTitle": "Supprimer la Page",
+    "deletePageConfirmMessage": "Voulez-vous vraiment supprimer cette page ?",
+    "pageAdded": "Nouvelle page ajoutée",
+    "pageDeleted": "Page supprimée",
+    "singlePageWarning": "Le journal doit contenir au moins une page.",
+    "templates": {
+      "lined": "Page Lignée",
+      "grid": "Page Quadrillée",
+      "dotted": "Page Pointillée",
+      "plain": "Page Blanche"
+    }
   }
 }

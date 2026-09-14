@@ -10,6 +10,7 @@ const KEYS = {
   COVER: '@ajanda_cover',
   PAGES: '@ajanda_pages',
   LANGUAGE: '@ajanda_language',
+  DIARY: '@ajanda_diary_v1',
 };
 
 export const StorageService = {
@@ -131,6 +132,155 @@ export const StorageService = {
       return reordered;
     } catch (error) {
       console.warn('StorageService.reorderPages hata:', error);
+      return null;
+    }
+  },
+
+  // ─── Günlüğüm (My Diary - Çoklu Sayfa) ─────────────────
+  getDiary: async () => {
+    try {
+      const data = await AsyncStorage.getItem(KEYS.DIARY);
+      if (data) {
+        const diary = JSON.parse(data);
+        if (!diary.pages || !Array.isArray(diary.pages) || diary.pages.length === 0) {
+          diary.pages = [
+            {
+              pageId: `page_${Date.now()}`,
+              pageNumber: 1,
+              createdAt: new Date().toISOString(),
+              drawings: [],
+              textBlocks: [],
+              stickers: [],
+              data: { content: '' },
+            },
+          ];
+        }
+        return diary;
+      }
+      // Varsayılan yeni günlük kaydı
+      const defaultDiary = {
+        id: 'my_diary',
+        title: 'Günlüğüm',
+        coverTemplateId: 'cover_1',
+        paperTemplateId: 'blank_lined',
+        coverDrawings: [],
+        coverTextBlocks: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        pages: [
+          {
+            pageId: `page_${Date.now()}`,
+            pageNumber: 1,
+            createdAt: new Date().toISOString(),
+            drawings: [],
+            textBlocks: [],
+            stickers: [],
+            data: { content: '' },
+          },
+        ],
+      };
+      await AsyncStorage.setItem(KEYS.DIARY, JSON.stringify(defaultDiary));
+      return defaultDiary;
+    } catch (error) {
+      console.warn('StorageService.getDiary hata:', error);
+      return null;
+    }
+  },
+
+  saveDiary: async (diaryData) => {
+    try {
+      const updated = {
+        ...diaryData,
+        updatedAt: new Date().toISOString(),
+      };
+      await AsyncStorage.setItem(KEYS.DIARY, JSON.stringify(updated));
+      return updated;
+    } catch (error) {
+      console.warn('StorageService.saveDiary hata:', error);
+      return null;
+    }
+  },
+
+  addDiaryPage: async (pageData = {}) => {
+    try {
+      const diary = await StorageService.getDiary();
+      const newPageNumber = (diary.pages?.length || 0) + 1;
+      const newPage = {
+        pageId: pageData.pageId || `page_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        pageNumber: newPageNumber,
+        createdAt: new Date().toISOString(),
+        drawings: pageData.drawings || [],
+        textBlocks: pageData.textBlocks || [],
+        stickers: pageData.stickers || [],
+        data: pageData.data || { content: '' },
+        ...pageData,
+      };
+      const updatedPages = [...(diary.pages || []), newPage];
+      const updatedDiary = {
+        ...diary,
+        pages: updatedPages,
+        updatedAt: new Date().toISOString(),
+      };
+      await AsyncStorage.setItem(KEYS.DIARY, JSON.stringify(updatedDiary));
+      return { updatedDiary, newPage };
+    } catch (error) {
+      console.warn('StorageService.addDiaryPage hata:', error);
+      return null;
+    }
+  },
+
+  updateDiaryPage: async (pageId, pageUpdates) => {
+    try {
+      const diary = await StorageService.getDiary();
+      const updatedPages = (diary.pages || []).map((p) => {
+        if (p.pageId === pageId) {
+          return { ...p, ...pageUpdates };
+        }
+        return p;
+      });
+      const updatedDiary = {
+        ...diary,
+        pages: updatedPages,
+        updatedAt: new Date().toISOString(),
+      };
+      await AsyncStorage.setItem(KEYS.DIARY, JSON.stringify(updatedDiary));
+      return updatedDiary;
+    } catch (error) {
+      console.warn('StorageService.updateDiaryPage hata:', error);
+      return null;
+    }
+  },
+
+  deleteDiaryPage: async (pageId) => {
+    try {
+      const diary = await StorageService.getDiary();
+      let filtered = (diary.pages || []).filter((p) => p.pageId !== pageId);
+      // Günlükte en az 1 sayfa bulunmasını garantiye al
+      if (filtered.length === 0) {
+        filtered = [
+          {
+            pageId: `page_${Date.now()}`,
+            pageNumber: 1,
+            createdAt: new Date().toISOString(),
+            drawings: [],
+            textBlocks: [],
+            stickers: [],
+            data: { content: '' },
+          },
+        ];
+      } else {
+        // Sayfa numaralarını yeniden sırala
+        filtered = filtered.map((p, idx) => ({ ...p, pageNumber: idx + 1 }));
+      }
+      const updatedDiary = {
+        ...diary,
+        pages: filtered,
+        updatedAt: new Date().toISOString(),
+      };
+      await AsyncStorage.setItem(KEYS.DIARY, JSON.stringify(updatedDiary));
+      return updatedDiary;
+    } catch (error) {
+      console.warn('StorageService.deleteDiaryPage hata:', error);
       return null;
     }
   },
