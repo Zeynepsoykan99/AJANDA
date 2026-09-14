@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
+import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -224,11 +225,12 @@ export default function AjandamScreen() {
 
   return (
     <AnimatedSafeAreaView
-      style={[styles.safeArea, animatedBgStyle]}
+      style={[styles.safeArea, { backgroundColor: targetEdgeColor }, animatedBgStyle]}
       edges={['top', 'bottom']}
     >
+      <StatusBar style="dark" backgroundColor={targetEdgeColor} />
       {/* Üst Bar / Araç Çubuğu */}
-      <View style={[styles.headerBar, { borderBottomColor: colors.border }]}>
+      <View style={styles.headerBar}>
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => router.back()}
@@ -339,6 +341,8 @@ export default function AjandamScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    padding: 0,
+    margin: 0,
   },
   floatingToolbarContainer: {
     ...StyleSheet.absoluteFillObject,
@@ -351,7 +355,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 12,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
+    backgroundColor: 'transparent',
     zIndex: 100,
   },
   headerButton: {

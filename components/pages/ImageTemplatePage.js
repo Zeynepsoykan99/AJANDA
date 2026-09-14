@@ -16,7 +16,7 @@ export default function ImageTemplatePage({ template }) {
       <ImageWithSkeleton
         isBackground={true}
         source={imageSource}
-        style={styles.fullBleedImage}
+        style={[styles.fullBleedImage, { backgroundColor: edgeColor }]}
         resizeMode="contain"
       />
     </View>

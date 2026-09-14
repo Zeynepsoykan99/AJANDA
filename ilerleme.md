@@ -4,6 +4,42 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-14] - Kusursuz Arka Plan Bütünlüğü (Seamless Blend) ve Piksel Düzeyinde Eşleştirme
+
+### 🚀 Eklenen Özellikler & UI/UX İyileştirmeleri
+- **Damlalık Seviyesinde Kesin Hex Eşleştirmesi:**
+  - Python & PIL kullanılarak şablon görsellerinin (`.webp`) tüm sınır, köşe ve orta pikselleri analiz edildi.
+  - Önceki tahmini ve hatalı hex kodları (özellikle mavi olan `todo_4` ve `todo_5` şablonlarındaki pembe kodlar, sarı atanan `weekly_floral_grid` leylak şablonu vb.) damlalıkla alınmış gibi birebir ölçülen kesin hex kodlarıyla güncellendi:
+    - `todo_template_4` -> `#FFFFFF`, `todo_template_5` -> `#ACCFE7`, `todo_template_1` -> `#FEF2F4`, `todo_template_2` -> `#FFFAF4`
+    - `weekly_cute_pink_planner` -> `#FFFCF9`, `weekly_floral_grid_planner` -> `#FBF2F5`, `weekly_blue_floral_planner` -> `#F1F5FB`
+    - `monthly_3`, `monthly_4`, `monthly_5` -> `#FFFFFF`
+    - Kapak şablonları (`cover_1` -> `#F6E4DF`, `cover_4` -> `#EED5BD`, `cover_6` -> `#FFFCEF` vb.)
+- **1 Piksellik Başlık Ayırıcı Çizgisinin Yok Edilmesi (`headerBar`):**
+  - `app/ajandam/[pageId].js`, `app/todolist/[pageId].js` ve `app/ajandam/index.js` içindeki `styles.headerBar` stilinden `borderBottomWidth: 1` ve `borderBottomColor` tamamen kaldırıldı (`borderBottomWidth: 0, backgroundColor: 'transparent'`).
+  - Üst Safe Area, durum çubuğu ve başlık çubuğu ile sayfa arasındaki tüm dikiş izleri ve yatay çizgiler silindi.
+- **Statik Arka Plan Güvencesi ve Kapsayıcı Boşluk İzolasyonu:**
+  - `AnimatedSafeAreaView` bileşenine statik `backgroundColor: targetEdgeColor` doğrudan atandı (`style={[styles.safeArea, { backgroundColor: targetEdgeColor }, animatedBgStyle]}`).
+  - `safeArea` stillerine `padding: 0, margin: 0` güvencesi eklendi.
+- **Android Status Bar Senkronizasyonu:**
+  - Sayfa ekranlarına yerel `<StatusBar style="dark" backgroundColor={targetEdgeColor} />` bileşeni entegre edilerek Android üst çubuğunun genel temada takılı kalması engellendi; sayfa kenarıyla birebir aynı renge kilitlendi.
+- **Görsel Kaynama ve Gri İskelet Flaşlanması Temizliği:**
+  - `ImageWithSkeleton.js` içinde tam sayfa arka plan şablonları (`isBackground={true}`) için gri `Skeleton` overlay'i devre dışı bırakıldı; sayfa açılırken kenarlarda beliren gri kutu patlaması önlendi.
+  - `ImageTemplatePage.js` içindeki `ImageWithSkeleton` bileşenine `{ backgroundColor: edgeColor }` verilerek `resizeMode="contain"` altındaki tüm boşlukların şablon kenarıyla kesintisiz erimesi sağlandı.
+
+### 📁 Değiştirilen Dosyalar
+- `constants/pageTemplates.js`: [GÜNCELLEME] 20 şablonun `edgeColor` değerleri kesin damlalık hex kodlarıyla güncellendi.
+- `constants/coverTemplates.js`: [GÜNCELLEME] 6 kapağın `edgeColor` değerleri kesin damlalık hex kodlarıyla güncellendi.
+- `components/pages/ImageTemplatePage.js`: [GÜNCELLEME] Görsel kapsayıcısına tam `edgeColor` kaynaşması eklendi.
+- `components/ui/ImageWithSkeleton.js`: [GÜNCELLEME] Tam sayfa arka plan şablonlarında gri `Skeleton` kutu flaşlanması kaldırıldı.
+- `app/ajandam/[pageId].js`: [GÜNCELLEME] Üst bar 1px çizgisi kaldırıldı, statik `backgroundColor: targetEdgeColor` ve `StatusBar` eklendi.
+- `app/todolist/[pageId].js`: [GÜNCELLEME] Üst bar 1px çizgisi kaldırıldı, statik `backgroundColor: targetEdgeColor` ve `StatusBar` eklendi.
+- `app/ajandam/index.js`: [GÜNCELLEME] Üst bar 1px çizgisi kaldırıldı, statik `backgroundColor: targetEdgeColor` ve `StatusBar` eklendi.
+
+### ✅ Doğrulama & Testler
+- Babel AST derleme testi tüm 7 dosyada 7/7 PASSED ile başarıyla tamamlandı.
+
+---
+
 ## 📅 [2026-09-06] - Dinamik Kenar Rengi Eşleştirmesi ve Reanimated 300ms Yumuşak Geçiş (Dynamic Edge Color Matching)
 
 ### 🚀 Eklenen Özellikler & UI/UX İyileştirmeleri

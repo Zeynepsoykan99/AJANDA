@@ -39,7 +39,7 @@ export default function ImageWithSkeleton({
         {isBackground && children}
       </ImageComponent>
 
-      {!isLoaded && (
+      {!isLoaded && !isBackground && (
         <Animated.View style={[styles.skeletonOverlay, animatedSkeletonStyle]} pointerEvents="none">
           <Skeleton width="100%" height="100%" borderRadius={0} />
         </Animated.View>

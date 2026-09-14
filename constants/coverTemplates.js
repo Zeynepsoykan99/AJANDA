@@ -8,7 +8,7 @@ export const COVER_TEMPLATES = [
     id: 'cover_1',
     name: 'Kapak 1',
     imageSource: require('../assets/covers/kapak1.webp'),
-    edgeColor: '#FCEAE6',
+    edgeColor: '#F6E4DF',
   },
   {
     id: 'cover_2',
@@ -20,25 +20,25 @@ export const COVER_TEMPLATES = [
     id: 'cover_3',
     name: 'Kapak 3',
     imageSource: require('../assets/covers/kapak3.webp'),
-    edgeColor: '#E8DCD9',
+    edgeColor: '#F2E3DD',
   },
   {
     id: 'cover_4',
     name: 'Kapak 4',
     imageSource: require('../assets/covers/kapak4.webp'),
-    edgeColor: '#E5CBB4',
+    edgeColor: '#EED5BD',
   },
   {
     id: 'cover_5',
     name: 'Kapak 5',
     imageSource: require('../assets/covers/kapak5.webp'),
-    edgeColor: '#F9F6ED',
+    edgeColor: '#F9F2E4',
   },
   {
     id: 'cover_6',
     name: 'Kapak 6',
     imageSource: require('../assets/covers/kapak6.webp'),
-    edgeColor: '#FAF6EB',
+    edgeColor: '#FFFCEF',
   },
 ];
 
