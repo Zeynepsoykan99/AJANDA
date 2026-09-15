@@ -6,11 +6,12 @@ const RULING_TOP = 36; // rulingContainer paddingTop
 const RULING_SIDE = 12; // rulingContainer paddingHorizontal
 const LINE_PITCH = 28; // çizgi yüksekliği 1 + marginBottom 27
 const GRID_PITCH = 24; // ızgara çizgisi 1 + margin 23
-const DOT_ROW_PITCH = 26.5; // nokta 2.5 + marginBottom 24
+const DOT_SIZE = 2.5;
+const DOT_PITCH = 26.5; // nokta 2.5 + boşluk 24; satır ve sütunda aynı aralık -> kare ızgara
+const DOT_ROW_SIDE = 8; // dottedRow paddingHorizontal
 
 // Ölçüm gelmeden önceki ilk render için eski sabit değerler
-const FALLBACK_COUNTS = { lines: 30, gridRows: 40, gridCols: 30, dotRows: 24 };
-const DOT_COLUMNS = 16;
+const FALLBACK_COUNTS = { lines: 30, gridRows: 40, gridCols: 30, dotRows: 24, dotCols: 16 };
 
 /**
  * Kağıdın gerçek boyutuna göre doku elemanı sayılarını hesaplar.
@@ -22,7 +23,12 @@ function getRulingCounts(width, height) {
     lines: Math.ceil(Math.max(0, height - RULING_TOP) / LINE_PITCH) + 1,
     gridRows: Math.ceil(height / GRID_PITCH) + 1,
     gridCols: Math.ceil(width / GRID_PITCH) + 1,
-    dotRows: Math.ceil(Math.max(0, height - RULING_TOP) / DOT_ROW_PITCH) + 1,
+    dotRows: Math.ceil(Math.max(0, height - RULING_TOP) / DOT_PITCH) + 1,
+    // Satıra sığan tam aralık sayısı kadar sütun; kalan boşluk satırın iki yanına eşit dağıtılır
+    dotCols:
+      Math.floor(
+        Math.max(0, width - 2 * RULING_SIDE - 2 * DOT_ROW_SIDE - DOT_SIZE) / DOT_PITCH
+      ) + 1,
   };
 }
 
@@ -101,10 +107,10 @@ export default function PaperSheet({
         <View style={styles.rulingContainer} pointerEvents="none">
           {Array.from({ length: counts.dotRows }).map((_, row) => (
             <View key={row} style={styles.dottedRow}>
-              {Array.from({ length: DOT_COLUMNS }).map((_, col) => (
+              {Array.from({ length: counts.dotCols }).map((_, col) => (
                 <View
                   key={col}
-                  style={[styles.dot, { backgroundColor: lineColor }]}
+                  style={[styles.dot, col > 0 && styles.dotSpacing, { backgroundColor: lineColor }]}
                 />
               ))}
             </View>
@@ -163,14 +169,17 @@ const styles = StyleSheet.create({
   },
   dottedRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: DOT_ROW_PITCH - 2.5,
-    paddingHorizontal: 8,
+    justifyContent: 'center',
+    marginBottom: DOT_PITCH - DOT_SIZE,
+    paddingHorizontal: DOT_ROW_SIDE,
   },
   dot: {
-    width: 2.5,
-    height: 2.5,
+    width: DOT_SIZE,
+    height: DOT_SIZE,
     borderRadius: 1.5,
+  },
+  dotSpacing: {
+    marginLeft: DOT_PITCH - DOT_SIZE,
   },
   marginLine: {
     position: 'absolute',

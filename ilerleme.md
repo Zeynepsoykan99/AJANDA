@@ -4,6 +4,19 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-15] - Noktalı Kağıtta Dinamik Sütun Sayısı ve Kare Nokta Izgarası
+
+### 🚀 Değişiklik (`components/stationery/PaperSheet.js`)
+- Noktalı kağıtta satır sayısı dinamikti ancak satır başına nokta sayısı sabit 16'ydı; `space-between` ile dağıtıldığı için geniş ekranlarda noktalar yatayda seyrekleşiyor (iPad yatayda ~68 px), telefonda ise sıklaşıyordu (~18 px), dikey aralık 26.5 px iken ızgara kare görünmüyordu.
+- Sütun sayısı artık kağıdın ölçülen genişliğinden hesaplanır: ⌊(genişlik − 24 − 16 − 2.5) / 26.5⌋ + 1. Noktalar arasına sabit 24 px boşluk verilir (`dotSpacing`), satır `justifyContent: 'center'` ile ortalanır; böylece yatay ve dikey aralık aynı (26.5 px) olur, kalan boşluk iki yana eşit dağılır.
+- Ölçüm gelmeden önceki ilk render eski 16 sütunu kullanır. `DOT_ROW_PITCH` sabiti satır ve sütunda ortak kullanıldığı için `DOT_PITCH` olarak yeniden adlandırıldı.
+
+### ✅ Doğrulama & Testler
+- Tanımsız tanımlayıcı taraması 0; web paketi hatasız derlendi; konsol hatası 0.
+- Web (Playwright) ölçümleri — tüm boyutlarda yatay aralık = dikey aralık = 26.5 px, sol/sağ boşluk eşit: 375×667 → 11 sütun (24 / 24 px), 820×1180 → 27 sütun (21 / 21 px), 1180×820 → 39 sütun (26.5 / 26.5 px), 1366×1024 → 39 sütun (26.5 / 26.5 px).
+
+---
+
 ## 📅 [2026-09-15] - Günlüğüm: Veri Kaybı Önleme, Gerçek Geri Alma, Tam Yükseklik Defter ve Dinamik Kağıt Dokusu
 
 ### 🛡️ 1. Kapak Ekranındaki Bayat State'in Sayfaları Silmesi (Veri Kaybı)
