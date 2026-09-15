@@ -4,6 +4,28 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-16] - Notlarım: Kapaktaki Varsayılan Kağıt Seçiminin İlk Sayfaya ve "+" Seçicisine Uygulanması
+
+### 🐞 Hata ve Kök Neden
+- **Bildirim:** Yeni defterde, sayfalara girmeden kapak ekranından "Kareli" seçildiğinde defter açılınca ilk sayfa "Çizgili" geliyordu.
+- **Web'de yeniden üretildi (Notlarım ve Günlüğüm'de aynı sonuç):** Varsayılan `notebook.paperTemplateId` alanına doğru yazılıyordu (`NotebookCoverView.js` → `updateNotebookMeta`), ancak:
+  1. İlk sayfa defter oluşturulurken sabit `blank_lined` şablonla kalıcı olarak yaratılıyordu (`storageService.js` → `createNotebook`). Sayfanın kendi şablonu olduğu için okuma sırasında (sayfa → defter → çizgili) varsayılana hiç bakılmıyordu; "varsayılan yalnızca yeni sayfaları etkiler" kuralı gereği bu sayfa güncellenmiyordu.
+  2. "+" seçicisi defterin varsayılanını değil aktif sayfanın şablonunu seçili açıyordu (`NotebookPagesView.js`); seçilen değer açıkça gönderildiği için depolamadaki varsayılana düşme yedeği arayüzden hiç çalışmıyordu.
+- Ortaklaştırma sırasında bir kopma yoktu: ortaklaştırma öncesi Günlüğüm kodu da aynı davranıyordu.
+
+### 🔧 Düzeltmeler (yalnızca Notlarım; Günlüğüm davranışı değişmedi)
+- **`services/storageService.js`:** `updateNotebookMeta` varsayılan kağıt değiştiğinde, defterde **tek sayfa varsa**, o sayfa **boşsa** (çizim yok, dolu metin kutusu yok, sticker yok; boş metin kutuları metin sayılmaz) ve **şablonu önceki varsayılanla aynıysa** o sayfayı da yeni varsayılana geçirir (`notebookWithDefaultPaperApplied`). `updateDiaryMeta` değişmedi.
+- **`components/notebook/NotebookPagesView.js`:** Yeni `newPageTemplateSource` ayarı (`'activePage'` varsayılan | `'notebookDefault'`); "+" seçicisinde seçili gelecek şablonu belirler.
+- **`app/defterlerim/[notebookId]/pages.js`:** Notlarım `newPageTemplateSource="notebookDefault"` kullanır; Günlüğüm varsayılan (`activePage`) ile kalır.
+
+### ✅ Doğrulama & Testler
+- Tanımsız tanımlayıcı taraması 0; web paketi hatasız derlendi; konsol hatası 0.
+- Sahte AsyncStorage testi (7 senaryo): boş tek sayfa varsayılanı art arda takip etti (grid → dotted); yalnızca boş metin kutusu olan sayfa boş sayıldı; çizim, metin veya sticker içeren sayfa değişmedi; şablonu elle değiştirilmiş sayfa değişmedi; iki sayfalı defterde sayfalar değişmedi; ad/kapak güncellemesi sayfaya dokunmadı; Günlüğüm ilk sayfası değişmedi. Önceki Notlarım, depolama kilidi ve sticker temizliği testleri tekrar geçti.
+- Web (Playwright) Notlarım: oluşturma `[lined]` → kapakta Kareli → `[grid]`, açılışta ilk sayfa kareli çizildi; "+" seçicisinde Kareli seçili geldi, değiştirmeden eklenen sayfa `grid`; aktif sayfa Eskitme yapıldıktan sonra da "+" Kareli önerdi; 3 sayfalı defterde kapakta varsayılan Noktalı yapılınca sayfalar değişmedi.
+- Web Günlüğüm (değişmediği doğrulandı): kapakta Kareli → sayfa `[lined]` kaldı; "+" seçicisinde Çizgili (aktif sayfa) seçili geldi.
+
+---
+
 ## 📅 [2026-09-15] - Notlarım (Defterlerim) Modülü: Çoklu Defter, Kapak, Sayfa Şablonları ve Defter İçi Arama
 
 ### 🧱 Mimari: Günlüğüm Altyapısının Ortaklaştırılması

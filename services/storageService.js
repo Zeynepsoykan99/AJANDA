@@ -140,6 +140,30 @@ const notebookWithRestoredPage = (notebook, page, index) => {
 
 const touchNotebook = (notebook) => ({ ...notebook, updatedAt: new Date().toISOString() });
 
+// Sayfada çizim, dolu metin kutusu veya sticker yoksa boş sayılır (boş metin kutuları metin sayılmaz)
+const isNotebookPageEmpty = (page) =>
+  !(Array.isArray(page?.drawings) && page.drawings.length > 0) &&
+  !(Array.isArray(page?.textBlocks) && page.textBlocks.some((b) => typeof b?.text === 'string' && b.text.trim())) &&
+  !(Array.isArray(page?.stickers) && page.stickers.length > 0);
+
+/**
+ * Notlarım: Kapakta varsayılan kağıt şablonu değişince defterin otomatik oluşturulmuş ilk sayfasını da günceller.
+ * Yalnızca şu durumda uygulanır: defterde tek sayfa var, o sayfa boş ve şablonu önceki varsayılanla aynı.
+ * Aksi halde "varsayılan yalnızca yeni sayfaları etkiler" kuralı geçerlidir.
+ */
+const notebookWithDefaultPaperApplied = (previous, next) => {
+  const previousDefault = previous.paperTemplateId || DEFAULT_PAPER_TEMPLATE_ID;
+  const nextDefault = next.paperTemplateId || DEFAULT_PAPER_TEMPLATE_ID;
+  const pages = next.pages || [];
+  if (nextDefault === previousDefault || pages.length !== 1) return next;
+
+  const [onlyPage] = pages;
+  const pageTemplate = onlyPage.paperTemplateId || previousDefault;
+  if (pageTemplate !== previousDefault || !isNotebookPageEmpty(onlyPage)) return next;
+
+  return { ...next, pages: [{ ...onlyPage, paperTemplateId: nextDefault }] };
+};
+
 // ─── Günlüğüm kaydı (kilitsiz okuma/yazma: yalnızca withJournalLock içinden çağrılmalıdır) ───
 const readDiary = async () => {
   const data = await AsyncStorage.getItem(KEYS.DIARY);
@@ -491,7 +515,7 @@ export const StorageService = {
     withJournalLock(async () => {
       try {
         const result = await mutateNotebook(notebookId, (nb) => ({
-          notebook: { ...nb, ...pickNotebookMeta(fields) },
+          notebook: notebookWithDefaultPaperApplied(nb, { ...nb, ...pickNotebookMeta(fields) }),
         }));
         return result ? result.notebook : null;
       } catch (error) {

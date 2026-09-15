@@ -7,6 +7,7 @@ import NotebookPagesView from '../../../components/notebook/NotebookPagesView';
 /**
  * Notlarım - Defter sayfaları
  * Seçilen defteri ortak defter sayfa görünümüne bağlar; sağ üstte defter içi arama açıktır.
+ * "+" ile yeni sayfa eklerken seçicide defterin varsayılan kağıt şablonu seçili gelir.
  */
 export default function NotebookPagesScreen() {
   const { t } = useTranslation();
@@ -34,6 +35,7 @@ export default function NotebookPagesScreen() {
       title={getTitle}
       singlePageWarning={t('notebooks.singlePageWarning', 'Defterde en az bir sayfa bulunmalıdır.')}
       enableSearch
+      newPageTemplateSource="notebookDefault"
     />
   );
 }

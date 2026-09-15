@@ -19,7 +19,11 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 import useDynamicEdgeColor from '../../hooks/useDynamicEdgeColor';
-import { getPaperTemplate, resolvePagePaperTemplateId } from '../../constants/pageTemplates';
+import {
+  getPaperTemplate,
+  resolvePagePaperTemplateId,
+  DEFAULT_PAPER_TEMPLATE_ID,
+} from '../../constants/pageTemplates';
 
 import PaperSheet from '../../components/stationery/PaperSheet';
 import PaperTemplateModal from '../../components/PaperTemplateModal';
@@ -53,8 +57,16 @@ const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
  * @param {string|function} title - Üst bardaki başlık: sabit metin veya (notebook) => metin
  * @param {string} singlePageWarning - Son sayfa silinmek istendiğinde gösterilecek uyarı
  * @param {boolean} enableSearch - Sağ üstte defter içi arama butonu gösterilsin mi
+ * @param {'activePage'|'notebookDefault'} newPageTemplateSource - "+" seçicisinde seçili gelecek şablon:
+ *   aktif sayfanın şablonu (Günlüğüm) veya defterin varsayılan kağıt şablonu (Notlarım)
  */
-export default function NotebookPagesView({ storage, title, singlePageWarning, enableSearch = false }) {
+export default function NotebookPagesView({
+  storage,
+  title,
+  singlePageWarning,
+  enableSearch = false,
+  newPageTemplateSource = 'activePage',
+}) {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const { colors } = useTheme();
@@ -1033,11 +1045,15 @@ export default function NotebookPagesView({ storage, title, singlePageWarning, e
         })}
       </ScrollView>
 
-      {/* Kağıt Şablonu Seçici (Yeni sayfa / Aktif sayfa) - açılışta aktif sayfanın şablonu seçili gelir */}
+      {/* Kağıt Şablonu Seçici (Yeni sayfa / Aktif sayfa) - yeni sayfada newPageTemplateSource'a göre seçili gelir */}
       <PaperTemplateModal
         visible={templateSheetMode !== null}
         onClose={() => setTemplateSheetMode(null)}
-        currentTemplateId={activePaperTemplateId}
+        currentTemplateId={
+          templateSheetMode === 'newPage' && newPageTemplateSource === 'notebookDefault'
+            ? notebook?.paperTemplateId || DEFAULT_PAPER_TEMPLATE_ID
+            : activePaperTemplateId
+        }
         onSelectTemplate={templateSheetMode === 'newPage' ? handleAddPage : handleChangePageTemplate}
         mode={templateSheetMode || 'editPage'}
       />
