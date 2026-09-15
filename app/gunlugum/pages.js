@@ -94,6 +94,15 @@ export default function GunlugumPagesScreen() {
   const [isActivePageZoomed, setIsActivePageZoomed] = useState(false);
   const [isMultiTouch, setIsMultiTouch] = useState(false);
 
+  // Yatay kaydırma alanının ölçülen yüksekliği: her sayfaya açık height olarak verilir.
+  // Satır yönlü içerik kapsayıcısında flex: 1 yalnızca genişliği etkilediği için sayfalar
+  // aksi halde içerikleri kadar kısa kalıyordu (web ve mobil için aynı düzen kuralı).
+  const [pagesViewportHeight, setPagesViewportHeight] = useState(0);
+  const handlePagesViewportLayout = useCallback((e) => {
+    const height = Math.round(e.nativeEvent.layout.height);
+    setPagesViewportHeight((prev) => (prev === height ? prev : height));
+  }, []);
+
   // Günlük verilerini yükle
   useEffect(() => {
     (async () => {
@@ -847,8 +856,8 @@ export default function GunlugumPagesScreen() {
         onTouchCancel={handleScrollTouchEnd}
         // Çizim/metin modunda, sayfa büyütülmüşken veya iki parmak ekrandayken yatay swipe kilitlenir
         scrollEnabled={activeMode === 'none' && !isActivePageZoomed && !isMultiTouch}
+        onLayout={handlePagesViewportLayout}
         style={styles.horizontalScrollView}
-        contentContainerStyle={styles.horizontalContent}
       >
         {pages.map((p, index) => {
           const isActive = index === currentPageIndex;
@@ -857,7 +866,11 @@ export default function GunlugumPagesScreen() {
           return (
             <View
               key={p.pageId || `page_${index}`}
-              style={[styles.pageSlide, { width: windowWidth }]}
+              style={[
+                styles.pageSlide,
+                { width: windowWidth },
+                pagesViewportHeight > 0 && { height: pagesViewportHeight },
+              ]}
             >
               <ZoomableCanvas
                 ref={(r) => {
@@ -1109,11 +1122,7 @@ const styles = StyleSheet.create({
   horizontalScrollView: {
     flex: 1,
   },
-  horizontalContent: {
-    alignItems: 'center',
-  },
   pageSlide: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },

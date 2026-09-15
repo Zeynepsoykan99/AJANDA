@@ -4,6 +4,42 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-15] - Günlüğüm: Veri Kaybı Önleme, Gerçek Geri Alma, Tam Yükseklik Defter ve Dinamik Kağıt Dokusu
+
+### 🛡️ 1. Kapak Ekranındaki Bayat State'in Sayfaları Silmesi (Veri Kaybı)
+- **Kaynak:** `app/gunlugum/index.js` günlüğü yalnızca ilk açılışta okuyor, geri dönüldüğünde yenilemiyordu. 5 kayıt noktası (kapak şablonu, varsayılan kağıt, kapak çizimi, kapak metni, çizim geri alma) günlüğün tamamını bu bayat kopyadan `saveDiary` ile yazıyordu. Web'de yeniden üretildi: sayfalarda eklenen 3. sayfa, kapakta varsayılan şablon değiştirilince silindi.
+- **Çözüm (`services/storageService.js`):**
+  - `updateDiaryMeta(fields)`: Güncel kaydı okuyup yalnızca izinli üst düzey alanları (`title`, `coverTemplateId`, `paperTemplateId`, `coverDrawings`, `coverTextBlocks`) birleştirir; `pages` dizisine asla dokunmaz.
+  - Tüm günlük işlemleri (`getDiary`, `saveDiary`, `updateDiaryMeta`, `addDiaryPage`, `updateDiaryPage`, `deleteDiaryPage`, `restoreDiaryPage`) tek bir sıralı kuyrukta (`withDiaryLock`) çalışır; eşzamanlı "oku → değiştir → yaz" işlemleri birbirini ezmez. Bir işlem hata verse de kuyruk çalışmaya devam eder.
+- **Kapak ekranı (`app/gunlugum/index.js`):** Veriyi her odaklanmada yeniden okur (`useFocusEffect`); tüm kayıtlar `updateDiaryMeta` ile yalnızca değişen alanı yazar. Kapak çizim ve metin kayıtları ayrı debounce zamanlayıcıları kullanır; çizim geri alma bekleyen çizim kaydını iptal eder.
+- **Neden bu yaklaşım:** Sayfa değişikliklerini kapak state'ine yansıtmak iki ekran arasında paylaşılan yeni bir günlük context'i gerektirir ve "tüm nesneyi hafızadaki kopyadan yazma" alışkanlığını sürdürürdü. Alan bazlı birleştirme sorunu depolama katmanında kökten kapatır.
+
+### ↩️ 2. Günlük Bildirimlerine Gerçek Geri Alma (`app/gunlugum/pages.js`)
+- **Sayfa eklendi → Geri Al:** Eklenen sayfa kaldırılır, önceki sayfaya dönülür.
+- **Sayfa silindi → Geri Al:** Sayfa, ekrandaki en güncel içeriğiyle birlikte eski sırasına geri eklenir (`StorageService.restoreDiaryPage`), numaralar yeniden sıralanır ve sayfaya kaydırılır.
+- **Şablon güncellendi → Geri Al:** Önceki kağıt şablonuna dönülür. Aynı şablon seçilirse bildirim gösterilmez.
+- Her bildirim benzersiz `id` alır: art arda gelen bildirimlerde otomatik kapanma süresi yeniden başlar, Geri Al yalnızca son işlemi geri alır.
+- Sayfa silme sonrası state storage'dan değil yerel olarak güncellenir; diğer sayfaların kaydedilmemiş (debounce bekleyen) değişiklikleri ekrandan kaybolmaz.
+
+### 📐 3. Defter Yüksekliği (`app/gunlugum/pages.js`)
+- **Kaynak:** Yatay ScrollView içerik kapsayıcısındaki `alignItems: 'center'`; satır yönlü kapsayıcıda `pageSlide`'ın `flex: 1`'i yalnızca genişliği etkilediği için sayfa içeriği kadar kısa kalıyordu (web'de 836 px alanda 236 px). Yoga ve CSS aynı kuralı uyguladığı için mobilde de aynı sorunun olması beklenir.
+- **Çözüm:** Kaydırma alanının yüksekliği `onLayout` ile ölçülüp her sayfaya açık `height` verilir; `alignItems: 'center'` kaldırıldı. Açık yükseklik web ve mobilde aynı sonucu verir.
+
+### 📏 4. Dinamik Kağıt Dokusu (`components/stationery/PaperSheet.js`)
+- Sabit sayılar (30 çizgi, 40×30 ızgara, 24 nokta satırı) yerine kağıdın ölçülen boyutundan hesaplanır: çizgi = ⌈(yükseklik − 36) / 28⌉ + 1, ızgara satır = ⌈yükseklik / 24⌉ + 1, ızgara sütun = ⌈genişlik / 24⌉ + 1, nokta satırı = ⌈(yükseklik − 36) / 26.5⌉ + 1. Taşan son eleman `overflow: hidden` ile kırpılır. Ölçüm gelmeden önceki ilk render eski sabitleri kullanır.
+- `PaperSheet` kullanan diğer bileşenler (`BlankPage`, `MonthlyPage`, `TodoPage`, `WeeklyPage`, şablon önizlemeleri) de aynı davranışı kazanır.
+
+### 📁 Değiştirilen Dosyalar
+- `services/storageService.js`, `app/gunlugum/index.js`, `app/gunlugum/pages.js`, `components/stationery/PaperSheet.js`
+
+### ✅ Doğrulama & Testler
+- Babel derleme 66/66, tanımsız tanımlayıcı taraması 0, `tests/zoomableCanvas.test.js` 6/6.
+- Sahte AsyncStorage ile depolama testi (rastgele gecikmeli): bayat kapak verisiyle meta yazma sayfaları korudu; eşzamanlı 5 yazmanın (2 sayfa güncelleme, 2 meta, 1 sayfa ekleme) hepsi korundu; silme + geri yükleme içerik ve sırayı korudu; hata sonrası kuyruk çalışmaya devam etti.
+- Web (Playwright): veri kaybı senaryosu artık 3 sayfayı koruyor (kapak şablonu ve kapak çizimi yolları dahil); üç geri alma işlemi storage ve ekranda doğrulandı (silinen sayfanın metni geri geldi); defter 430×900'de 836 px tam yükseklik; doku boşluğu her boyutta bir aralıktan küçük (375×667, 820×1180, 1024×1366, 1180×820 — çizgili/kareli/noktalı); yükseklik değişikliği sonrası 3 sayfada çizim X koordinatları birebir.
+- Web'de gözlenen, bu işten önce de var olan davranış: çizim hareketi birkaç piksel sürüklemeden sonra başladığı için çizginin ilk ~15 px'i kesiliyor (Ajandam sayfasında da aynı). Bu görevde değiştirilmedi.
+
+---
+
 ## 📅 [2026-09-15] - Günlüğüm Tamamlama: Sayfa Bazlı Kağıt Şablonu, Pinch-to-Zoom Uyumu, El Yazısı Dönüştürme Onarımı ve Şablon Seçici
 
 ### 🧩 Faz 1 — Sayfa Bazlı Kağıt Şablonu Altyapısı
