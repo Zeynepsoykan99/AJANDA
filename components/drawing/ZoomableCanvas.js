@@ -150,8 +150,20 @@ const ZoomableCanvas = forwardRef(function ZoomableCanvas(
     triggerHaptic();
   }, [scale, translateX, translateY]);
 
+  // Görünüm alanının pencere içindeki konumunu ölç (pageToCanvas bu ofseti kullanır).
+  // Yatay kaydırılan kapsayıcılarda (ör. Günlüğüm sayfaları) kaydırma sonrası yeniden çağrılmalıdır.
+  const measureViewport = useCallback(() => {
+    if (viewportRef.current && viewportRef.current.measureInWindow) {
+      viewportRef.current.measureInWindow((x, y) => {
+        transformRef.current.viewportOffsetX = x;
+        transformRef.current.viewportOffsetY = y;
+      });
+    }
+  }, []);
+
   useImperativeHandle(ref, () => ({
     resetZoom,
+    remeasure: measureViewport,
     getTransform: () => ({
       scale: scale.value,
       translateX: translateX.value,
@@ -316,15 +328,9 @@ const ZoomableCanvas = forwardRef(function ZoomableCanvas(
       viewportHeight.value = height;
       transformRef.current.viewportWidth = width;
       transformRef.current.viewportHeight = height;
-
-      if (viewportRef.current && viewportRef.current.measureInWindow) {
-        viewportRef.current.measureInWindow((x, y) => {
-          transformRef.current.viewportOffsetX = x;
-          transformRef.current.viewportOffsetY = y;
-        });
-      }
+      measureViewport();
     },
-    [viewportWidth, viewportHeight]
+    [viewportWidth, viewportHeight, measureViewport]
   );
 
   const animatedStyle = useAnimatedStyle(() => {

@@ -64,7 +64,8 @@ export default function GunlugumPagesScreen() {
 
   // Sticker Menüsü ve Toast
   const [isStickerMenuVisible, setIsStickerMenuVisible] = useState(false);
-  const [isTemplateModalVisible, setIsTemplateModalVisible] = useState(false);
+  // Kağıt şablonu seçici: null (kapalı) | 'newPage' (+ ile yeni sayfa) | 'editPage' (aktif sayfa)
+  const [templateSheetMode, setTemplateSheetMode] = useState(null);
   const [undoToast, setUndoToast] = useState({ visible: false, message: '' });
 
   // Kement (Lasso) Seçim Durumu
@@ -84,6 +85,14 @@ export default function GunlugumPagesScreen() {
 
   const scrollViewRef = useRef(null);
   const saveTimeoutRef = useRef(null);
+
+  // Sayfa başına ZoomableCanvas referansları (pageId -> ref)
+  const canvasRefs = useRef({});
+
+  // Yatay sayfa kaydırma kilitleri: aktif sayfa büyütülmüşse veya ekranda 2+ parmak varsa
+  // yatay swipe kapanır; böylece iki parmakla pinch/pan sayfa değiştirmeyle çakışmaz
+  const [isActivePageZoomed, setIsActivePageZoomed] = useState(false);
+  const [isMultiTouch, setIsMultiTouch] = useState(false);
 
   // Günlük verilerini yükle
   useEffect(() => {
@@ -110,6 +119,59 @@ export default function GunlugumPagesScreen() {
   const targetEdgeColor = activePaperTemplate.paper.paperColor;
   const { animatedStyle: animatedBgStyle } = useDynamicEdgeColor(targetEdgeColor, colors.background, 300);
 
+  // Aktif sayfanın ekran ofsetini yeniden ölç: yatay ScrollView'de sayfaların pencere içindeki X konumu
+  // kaydırdıkça değişir; ölçüm güncellenmezse dokunma -> tuval koordinat dönüşümü kayar
+  const remeasureActiveCanvas = useCallback(() => {
+    const pageId = pages[currentPageIndex]?.pageId;
+    if (pageId) canvasRefs.current[pageId]?.remeasure?.();
+  }, [pages, currentPageIndex]);
+
+  // Kaydırma animasyonunun süresi platforma göre değişir; ölçümü kaydırma durduktan sonra yap.
+  // Throttle nedeniyle son scroll olayı düşebildiği için ikinci bir gecikmeli ölçüm de yapılır.
+  const remeasureRef = useRef(remeasureActiveCanvas);
+  remeasureRef.current = remeasureActiveCanvas;
+  const scrollSettleTimersRef = useRef([]);
+
+  const clearScrollSettleTimers = useCallback(() => {
+    scrollSettleTimersRef.current.forEach(clearTimeout);
+    scrollSettleTimersRef.current = [];
+  }, []);
+
+  const handleScroll = useCallback(() => {
+    clearScrollSettleTimers();
+    scrollSettleTimersRef.current = [150, 500].map((delay) =>
+      setTimeout(() => remeasureRef.current(), delay)
+    );
+  }, [clearScrollSettleTimers]);
+
+  useEffect(() => clearScrollSettleTimers, [clearScrollSettleTimers]);
+
+  const activePageId = activePage?.pageId;
+  useEffect(() => {
+    // Sayfa değişince önceki sayfanın kement seçimini temizle
+    setLassoSelection({ ids: [], bounds: null, strokes: [] });
+
+    // Yeni aktif sayfanın büyütme durumunu oku
+    const transform = activePageId ? canvasRefs.current[activePageId]?.getTransform?.() : null;
+    setIsActivePageZoomed((transform?.scale || 1) > 1.01);
+
+    // Kaydırma animasyonu bittikten sonra ofseti ölç
+    const timer = setTimeout(remeasureActiveCanvas, 400);
+    return () => clearTimeout(timer);
+  }, [activePageId, pages.length, windowWidth]);
+
+  const handleActiveTransformChange = useCallback(({ scale }) => {
+    setIsActivePageZoomed(scale > 1.01);
+  }, []);
+
+  const handleScrollTouchStart = useCallback((e) => {
+    if ((e.nativeEvent.touches?.length || 0) >= 2) setIsMultiTouch(true);
+  }, []);
+
+  const handleScrollTouchEnd = useCallback((e) => {
+    if ((e.nativeEvent.touches?.length || 0) < 2) setIsMultiTouch(false);
+  }, []);
+
   // Sayfa Değiştirme
   const goToPage = useCallback(
     (index) => {
@@ -131,15 +193,17 @@ export default function GunlugumPagesScreen() {
       const newIndex = Math.round(offsetX / windowWidth);
       if (newIndex >= 0 && newIndex < pages.length && newIndex !== currentPageIndex) {
         setCurrentPageIndex(newIndex);
+      } else {
+        remeasureActiveCanvas();
       }
     },
-    [pages.length, currentPageIndex, windowWidth]
+    [pages.length, currentPageIndex, windowWidth, remeasureActiveCanvas]
   );
 
   // Yeni Sayfa Ekleme (+)
-  const handleAddPage = useCallback(async () => {
-    // Yeni sayfa, günlüğün varsayılan kağıt şablonunu StorageService üzerinden alır
-    const result = await StorageService.addDiaryPage();
+  const handleAddPage = useCallback(async (paperTemplateId) => {
+    // Yeni sayfa, seçici sheet'te seçilen kağıt şablonuyla StorageService üzerinden eklenir
+    const result = await StorageService.addDiaryPage(paperTemplateId ? { paperTemplateId } : {});
     if (!result) return;
 
     // Henüz kaydedilmemiş (debounce bekleyen) çizimler kaybolmasın diye yalnızca yeni sayfayı state'e ekle
@@ -426,65 +490,153 @@ export default function GunlugumPagesScreen() {
     handleCloseLassoSelection();
   }, [selectedStrokeIds, activePage, currentPageIndex, handleDrawingsChange, handleCloseLassoSelection]);
 
+  // Kementle seçilen el yazısını metne dönüştürme başlat (Renk & Mesafe Kümelemeli)
+  // Ajandam ile aynı akış: app/ajandam/[pageId].js -> handleLassoConvertToText
   const handleLassoConvertToText = useCallback(async () => {
-    if (selectedStrokes.length === 0 || !selectionBounds || !activePage) return;
+    if (selectedStrokes.length === 0 || !activePage) return;
+
     setIsRecognizingSelected(true);
+    setIsRecognitionModalVisible(true);
+
     try {
-      const result = await recognizeSelectedStrokes(selectedStrokes, {
-        language: i18n.language || 'tr',
+      // 1. Çizimleri renk ve mekansal yakınlığa göre kümelere ayır
+      const clusters = clusterStrokesByColorAndProximity(selectedStrokes);
+      const lang = i18n.language || 'tr';
+
+      // 2. Her kümeyi bağımsız ve paralel olarak tanı; puntoyu kümenin fiziksel yüksekliğinden üret
+      const clusterResults = await Promise.all(
+        clusters.map(async (cluster) => {
+          const result = await recognizeSelectedStrokes(cluster.strokes, { language: lang });
+          const fitted = fitTextToBounds(cluster.bounds, result.text || '');
+          return {
+            id: cluster.id,
+            color: cluster.color,
+            strokes: cluster.strokes,
+            strokeIds: cluster.strokeIds,
+            bounds: cluster.bounds,
+            text: result.text || '',
+            candidates: result.candidates || [],
+            estimatedFontSize: fitted.fontSize,
+            fontSize: fitted.fontSize,
+            fittedWidth: fitted.width,
+          };
+        })
+      );
+
+      const combinedText = clusterResults.map((c) => c.text).filter(Boolean).join(' ');
+      const firstFitted = clusterResults[0]
+        ? fitTextToBounds(clusterResults[0].bounds, clusterResults[0].text)
+        : { fontSize: 18 };
+
+      setRecognizedData({
+        text: combinedText,
+        candidates: clusterResults[0]?.candidates || [],
+        estimatedFontSize: firstFitted.fontSize || 18,
+        clusters: clusterResults,
       });
-      if (result.success && result.text) {
-        const clusters = clusterStrokesByColorAndProximity(selectedStrokes, 40);
-        const estimatedFontSize = fitTextToBounds(result.text, selectionBounds, 14, 28);
-        setRecognizedData({
-          text: result.text,
-          candidates: result.candidates || [],
-          estimatedFontSize,
-          clusters,
-        });
-        setIsRecognitionModalVisible(true);
-      }
     } catch (error) {
-      console.warn('Lasso recognition error:', error);
+      console.warn('Günlük el yazısı tanıma hatası:', error);
     } finally {
       setIsRecognizingSelected(false);
     }
-  }, [selectedStrokes, selectionBounds, activePage, i18n.language]);
+  }, [selectedStrokes, activePage, i18n.language]);
 
-  const handleConfirmRecognition = useCallback(
-    (confirmedText) => {
-      if (!confirmedText || !activePage) return;
-      // Seçili çizgileri kaldır
-      const remainingDrawings = (activePage.drawings || []).filter(
-        (s) => !selectedStrokeIds.includes(s.id)
-      );
-      // Yeni metin kutusu ekle
-      const newBlock = {
-        id: `text_${Date.now()}`,
-        text: confirmedText,
-        x: selectionBounds?.minX ?? 80,
-        y: selectionBounds?.minY ?? 100,
-        fontSize: recognizedData.estimatedFontSize || 16,
-        color: textColor,
-        fontFamily: 'System',
-      };
-      const updatedTextBlocks = [...(activePage.textBlocks || []), newBlock];
+  // Modal üzerinden onaylanan metni gerçek metin kutularına dönüştür (Konum, Renk & Bireysel Boyut Mirası)
+  // Ajandam ile aynı akış: app/ajandam/[pageId].js -> handleConfirmConversion
+  const handleConfirmConversion = useCallback(
+    ({ text, fontFamily, fontSize, clusters: confirmedClusters }) => {
+      if (!activePage) return;
 
-      handleDrawingsChange(currentPageIndex, remainingDrawings);
-      handleTextBlocksChange(currentPageIndex, updatedTextBlocks);
+      const activeClusters =
+        confirmedClusters && confirmedClusters.length > 0
+          ? confirmedClusters
+          : recognizedData.clusters;
 
-      handleCloseLassoSelection();
+      let newBlocks = [];
+
+      if (activeClusters && activeClusters.length > 0) {
+        newBlocks = activeClusters
+          .filter((c) => (c.text || '').trim().length > 0)
+          .map((c, idx) => {
+            const fitted = fitTextToBounds(c.bounds, c.text);
+            const blockId = `text_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 6)}`;
+            // Bireysel Dinamik Punto: Her bloğun fiziksel çizim yüksekliğinden üretilen kendi font boyutu
+            const individualFontSize =
+              c.fontSize || c.estimatedFontSize || fitted.fontSize || fontSize || 18;
+
+            return {
+              id: blockId,
+              x: Math.max(8, c.bounds.minX), // 1. Konum Mirası: Orijinal X koordinatı
+              y: Math.max(8, c.bounds.minY), // 1. Konum Mirası: Orijinal Y koordinatı
+              width: Math.max(100, fitted.width),
+              text: c.text,
+              color: c.color || textColor, // 2. Renk Mirası: Orijinal el yazısı çizim rengi
+              fontSize: individualFontSize, // 3. Bireysel Boyut: Dinamik Punto
+              fontFamily,
+            };
+          });
+      }
+
+      // Güvenlik fallback'i: Eğer küme verisi yoksa tek blok oluştur
+      if (newBlocks.length === 0) {
+        if (!text || !text.trim() || !selectionBounds) return;
+        const fitted = fitTextToBounds(selectionBounds, text);
+        newBlocks = [
+          {
+            id: `text_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            x: Math.max(8, selectionBounds.minX),
+            y: Math.max(8, selectionBounds.minY),
+            width: Math.max(120, fitted.width),
+            text: text.trim(),
+            color: selectedStrokes[0]?.color || textColor,
+            fontSize: fontSize || fitted.fontSize,
+            fontFamily,
+          },
+        ];
+      }
+
+      const targetPageId = activePage.pageId;
+
+      // Çizgi silme ve metin ekleme tek seferde kaydedilir; bekleyen debounce kaydı
+      // eski çizimleri geri yazmasın diye iptal edilir
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+
+      setDiary((prev) => {
+        const currentPages = [...(prev?.pages || [])];
+        const pageIndex = currentPages.findIndex((pg) => pg.pageId === targetPageId);
+        if (pageIndex === -1) return prev;
+
+        const pageToUpdate = currentPages[pageIndex];
+        const remainingDrawings = (pageToUpdate.drawings || []).filter(
+          (stroke) => !selectedStrokeIds.includes(stroke.id)
+        );
+        const updatedTextBlocks = [...(pageToUpdate.textBlocks || []), ...newBlocks];
+
+        currentPages[pageIndex] = {
+          ...pageToUpdate,
+          drawings: remainingDrawings,
+          textBlocks: updatedTextBlocks,
+        };
+
+        StorageService.updateDiaryPage(targetPageId, {
+          drawings: remainingDrawings,
+          textBlocks: updatedTextBlocks,
+        });
+
+        return { ...prev, pages: currentPages };
+      });
+
       setIsRecognitionModalVisible(false);
+      handleCloseLassoSelection();
+      setActiveMode('none');
     },
     [
       activePage,
-      selectedStrokeIds,
+      recognizedData.clusters,
       selectionBounds,
-      recognizedData.estimatedFontSize,
+      selectedStrokes,
+      selectedStrokeIds,
       textColor,
-      currentPageIndex,
-      handleDrawingsChange,
-      handleTextBlocksChange,
       handleCloseLassoSelection,
     ]
   );
@@ -568,7 +720,7 @@ export default function GunlugumPagesScreen() {
         <View style={styles.headerRightGroup}>
           <TouchableOpacity
             activeOpacity={0.7}
-            onPress={handleAddPage}
+            onPress={() => setTemplateSheetMode('newPage')}
             style={[styles.headerButton, styles.addPageBtn, { backgroundColor: colors.accent }]}
             accessibilityLabel={t('diary.addPage', 'Yeni Sayfa Ekle')}
           >
@@ -577,7 +729,7 @@ export default function GunlugumPagesScreen() {
 
           <TouchableOpacity
             activeOpacity={0.7}
-            onPress={() => setIsTemplateModalVisible(true)}
+            onPress={() => setTemplateSheetMode('editPage')}
             style={[styles.headerButton, { backgroundColor: colors.card, borderColor: colors.border }]}
             accessibilityLabel={t('diary.changeTemplate', 'Şablon Değiştir')}
           >
@@ -610,8 +762,12 @@ export default function GunlugumPagesScreen() {
         showsHorizontalScrollIndicator={false}
         scrollEventThrottle={16}
         onMomentumScrollEnd={handleMomentumScrollEnd}
-        // Çizim veya metin modu açıkken yatay swipe'ı kilitleyerek çizim çakışmasını engelle
-        scrollEnabled={activeMode === 'none'}
+        onScroll={handleScroll}
+        onTouchStart={handleScrollTouchStart}
+        onTouchEnd={handleScrollTouchEnd}
+        onTouchCancel={handleScrollTouchEnd}
+        // Çizim/metin modunda, sayfa büyütülmüşken veya iki parmak ekrandayken yatay swipe kilitlenir
+        scrollEnabled={activeMode === 'none' && !isActivePageZoomed && !isMultiTouch}
         style={styles.horizontalScrollView}
         contentContainerStyle={styles.horizontalContent}
       >
@@ -625,6 +781,11 @@ export default function GunlugumPagesScreen() {
               style={[styles.pageSlide, { width: windowWidth }]}
             >
               <ZoomableCanvas
+                ref={(r) => {
+                  if (r) canvasRefs.current[p.pageId] = r;
+                  else delete canvasRefs.current[p.pageId];
+                }}
+                onTransformChange={isActive ? handleActiveTransformChange : undefined}
                 isDrawingMode={isActive && activeMode === 'drawing'}
                 isTextMode={isActive && activeMode === 'text'}
                 minScale={1.0}
@@ -726,13 +887,13 @@ export default function GunlugumPagesScreen() {
         })}
       </ScrollView>
 
-      {/* Aktif Sayfanın Kağıt Şablonu Seçici */}
+      {/* Kağıt Şablonu Seçici (Yeni sayfa / Aktif sayfa) - açılışta aktif sayfanın şablonu seçili gelir */}
       <PaperTemplateModal
-        visible={isTemplateModalVisible}
-        onClose={() => setIsTemplateModalVisible(false)}
+        visible={templateSheetMode !== null}
+        onClose={() => setTemplateSheetMode(null)}
         currentTemplateId={activePaperTemplateId}
-        onSelectTemplate={handleChangePageTemplate}
-        mode="editPage"
+        onSelectTemplate={templateSheetMode === 'newPage' ? handleAddPage : handleChangePageTemplate}
+        mode={templateSheetMode || 'editPage'}
       />
 
       {/* Sticker Menüsü */}
@@ -745,9 +906,12 @@ export default function GunlugumPagesScreen() {
       {/* El Yazısı Tanıma Onay Modalı */}
       <RecognitionConfirmationModal
         visible={isRecognitionModalVisible}
-        recognizedText={recognizedData.text}
+        isLoading={isRecognizingSelected}
+        initialText={recognizedData.text}
         candidates={recognizedData.candidates}
-        onConfirm={handleConfirmRecognition}
+        estimatedFontSize={recognizedData.estimatedFontSize}
+        clusters={recognizedData.clusters}
+        onConfirm={handleConfirmConversion}
         onCancel={() => setIsRecognitionModalVisible(false)}
       />
 

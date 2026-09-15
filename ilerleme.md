@@ -4,6 +4,44 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-15] - Günlüğüm Tamamlama: Sayfa Bazlı Kağıt Şablonu, Pinch-to-Zoom Uyumu, El Yazısı Dönüştürme Onarımı ve Şablon Seçici
+
+### 🧩 Faz 1 — Sayfa Bazlı Kağıt Şablonu Altyapısı
+- **Tek şablon kaynağı (`constants/pageTemplates.js`):** `PAGE_TEMPLATES.blank` girdilerine `paper: { ruling, paperColor, lineColor }`, `icon`, `titleKey`, `descKey` alanları eklendi. Yeni yardımcılar: `getPaperTemplates`, `getPaperTemplate`, `resolvePagePaperTemplateId`, `DEFAULT_PAPER_TEMPLATE_ID`. Eski Ajandam "blank" alanlarına (`colors`, `edgeColor`, `lineStyle`) dokunulmadı.
+- **`blank_vintage` gerçek karşılığı:** Çizgili düzen, `#F5ECD7` zemin, `#D7C4A580` çizgi (pembe marj çizgisi korundu).
+- **Sayfa bazlı okuma (`app/gunlugum/pages.js`):** Her sayfa kendi `paperTemplateId` alanını okur (sayfa → günlük varsayılanı → çizgili). Önizlemedeki kağıt/çizgi rengi sayfaya birebir uygulanır.
+- **Depolama (`services/storageService.js`):** "+" butonu artık `addDiaryPage` kullanır. Şablonu olmayan eski sayfalara, günlük varsayılanı sonradan değişse de görünümleri korunsun diye mevcut varsayılan bir kez sabitlenir. Son sayfa silindiğinde oluşturulan yedek sayfaya da şablon yazılır.
+- **Kapak ekranındaki seçim:** Yalnızca yeni sayfaların varsayılanıdır; kendi şablonu olan sayfalar etkilenmez.
+- **Çeviriler:** `changeTemplate` / `templateChanged` kullanılmaya başlandı; `fr.json` eksikleri ve şablon açıklamaları (`linedDesc`, `gridDesc`, `dottedDesc`, `plainDesc`), `templateDesc`, `editTemplateDesc`, `newPageTemplateDesc` 5 dile eklendi.
+
+### 🔍 Faz 2.1 — Pinch-to-Zoom Uyumu
+- Günlük sayfaları zaten `ZoomableCanvas` ile sarılıydı; tek parmak çizim (`DrawingCanvas` `minPointers(1).maxPointers(1)`), iki parmak pan ve `isDrawingActive` avuç içi koruması Ajandam ile aynıdır.
+- **Koordinat kayması düzeltildi:** `ZoomableCanvas` ekran ofsetini yalnızca `onLayout` anında ölçüyordu; yatay ScrollView'de kaydırma sonrası ölçüm bayatladığı için 2. ve sonraki sayfalarda çizgi/kement/metin ekran genişliği kadar kayıyordu (web testinde ölçüldü: -710 px). `ZoomableCanvas`'a `remeasure()` eklendi; günlük ekranı kaydırma durduktan sonra (scroll debounce 150 ms + 500 ms), sayfa değiştiğinde ve momentum bitiminde aktif sayfayı yeniden ölçer.
+- **Hareket çakışması:** Yatay sayfa kaydırma; çizim/metin modunda, aktif sayfa büyütülmüşken (`scale > 1.01`) veya ekranda iki parmak varken kilitlenir.
+- Sayfa değişince önceki sayfanın kement seçimi temizlenir.
+
+### ✍️ Faz 2.2 — El Yazısını Metne Dönüştürme Onarımı
+- **Kök nedenler:** `fitTextToBounds` yanlış argüman sırasıyla çağrılıyordu (nesne punto olarak kullanılıyordu); modal'a `initialText` yerine `recognizedText` geçildiği için metin boş geliyordu; `onConfirm` nesnesi metin sanılıyordu; kümeler kullanılmıyordu; çizgi silme ve metin ekleme aynı debounce zamanlayıcısını paylaştığı için silinen çizgiler kalıcı olmuyordu.
+- **Ajandam akışı taşındı:** Renk + yakınlık kümeleme → her kümenin paralel tanınması → Konum Mirası (`bounds.minX/minY`), Renk Mirası (`cluster.color`), Bireysel Boyut (`fitTextToBounds` / `calculateAutoFontSize`). Çizgi silme + metin ekleme tek `updateDiaryPage` çağrısıyla atomik kaydedilir. Dönüştürmeyi geri alma bu işe dahil edilmedi.
+
+### 📄 Faz 2.3 — Dinamik Sayfa Şablonu Seçici
+- **`components/PaperTemplateModal.js`:** Tam ekran modal, `ThemePickerModal` desenindeki reanimated bottom sheet'e dönüştürüldü (karartma perdesi, tutamaçtan kaydırarak kapatma, radyo seçimli kartlar, küçük ekranda kayan liste). `mode`: `diaryDefault` | `newPage` | `editPage`.
+- **"+" butonu:** Her seferinde sheet'i aktif sayfanın şablonu seçili olarak açar; seçilen şablonla sayfa eklenir.
+- **Şablon butonu:** Aktif sayfanın şablonunu değiştirir ve `templateChanged` bildirimini gösterir.
+- **Seamless Blend:** Ekran arka planı ve StatusBar aktif sayfanın `paper.paperColor` değerine 300 ms fade ile eşitlenir (Eskitme dahil tüm şablonlar).
+
+### 📁 Değiştirilen Dosyalar
+- `constants/pageTemplates.js`, `services/storageService.js`, `components/PaperTemplateModal.js`, `components/drawing/ZoomableCanvas.js`, `app/gunlugum/pages.js`, `locales/tr.json`, `en.json`, `de.json`, `es.json`, `fr.json`
+
+### ✅ Doğrulama & Testler
+- Babel derleme: 66/66 dosya hatasız. Tanımsız tanımlayıcı taraması: 0.
+- `node tests/zoomableCanvas.test.js`: 6/6 geçti. 5 dil dosyası anahtar eşitliği: 193/193.
+- `npx expo export --platform web`: paket hatasız derlendi.
+- Web (Playwright, 430×900 ve 375×667) üzerinde doğrulandı: eski sayfalara şablon sabitleme, sayfa bazlı şablon değiştirme + kalıcılık, "+" ile şablonlu sayfa ekleme, kenar rengi eşleşmesi, 4 sayfa geçişinde çizim koordinatlarının doğruluğu, tek ve çift kümeli (farklı renk/boyut) el yazısı dönüştürme (konum 60,30 / 300,180; renk; punto 70 / 21 px), kapak ekranında varsayılan değiştirmenin mevcut sayfaları etkilememesi. Konsol hatası: 0.
+- İki parmak pinch/pan ve Apple Pencil davranışı web'de test edilemez; cihazda doğrulanmalıdır.
+
+---
+
 ## 📅 [2026-09-14] - "Günlüğüm" (My Diary) Modülü, Çoklu Sayfa (Pagination) ve Pürüzsüz Yatay Kaydırma (Swipe)
 
 ### 🚀 Eklenen Özellikler & UI/UX İyileştirmeleri

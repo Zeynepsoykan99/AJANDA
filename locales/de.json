@@ -218,6 +218,7 @@
     "templateChanged": "Seitenvorlage aktualisiert",
     "templateDesc": "Wähle das Papierlayout, das standardmäßig für neue Seiten verwendet wird:",
     "editTemplateDesc": "Wähle das Papierlayout für diese Seite:",
+    "newPageTemplateDesc": "Wähle das Papierlayout für die neue Seite:",
     "templates": {
       "lined": "Linierte Seite",
       "linedDesc": "Für ordentliches Schreiben und tägliche Notizen",

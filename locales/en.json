@@ -218,6 +218,7 @@
     "templateChanged": "Page template updated",
     "templateDesc": "Choose the paper layout used by default for newly added pages:",
     "editTemplateDesc": "Choose the paper layout for this page:",
+    "newPageTemplateDesc": "Choose the paper layout for the new page:",
     "templates": {
       "lined": "Lined Page",
       "linedDesc": "For tidy writing and daily notes",

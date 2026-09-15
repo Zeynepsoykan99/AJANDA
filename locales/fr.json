@@ -218,6 +218,7 @@
     "templateChanged": "Modèle de page mis à jour",
     "templateDesc": "Choisissez la mise en page du papier utilisée par défaut pour les nouvelles pages :",
     "editTemplateDesc": "Choisissez la mise en page du papier pour cette page :",
+    "newPageTemplateDesc": "Choisissez la mise en page du papier pour la nouvelle page :",
     "templates": {
       "lined": "Page Lignée",
       "linedDesc": "Pour une écriture soignée et les notes quotidiennes",

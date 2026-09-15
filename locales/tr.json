@@ -218,6 +218,7 @@
     "templateChanged": "Sayfa şablonu güncellendi",
     "templateDesc": "Yeni eklenen sayfalarda varsayılan olarak kullanılacak kağıt düzenini belirleyin:",
     "editTemplateDesc": "Bu sayfanın kağıt düzenini seçin:",
+    "newPageTemplateDesc": "Yeni sayfanın kağıt düzenini seçin:",
     "templates": {
       "lined": "Çizgili Sayfa",
       "linedDesc": "Düzenli yazı ve günlük notlar için",

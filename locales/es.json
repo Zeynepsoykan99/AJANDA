@@ -218,6 +218,7 @@
     "templateChanged": "Plantilla de página actualizada",
     "templateDesc": "Elige el diseño de papel que se usará por defecto en las páginas nuevas:",
     "editTemplateDesc": "Elige el diseño de papel para esta página:",
+    "newPageTemplateDesc": "Elige el diseño de papel para la nueva página:",
     "templates": {
       "lined": "Página Rayada",
       "linedDesc": "Para escritura ordenada y notas diarias",
