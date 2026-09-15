@@ -11,25 +11,30 @@ const KEYS = {
   PAGES: '@ajanda_pages',
   LANGUAGE: '@ajanda_language',
   DIARY: '@ajanda_diary_v1',
+  NOTEBOOKS: '@ajanda_notebooks_v1',
 };
 
-// Günlük kaydı tek bir JSON anahtarında tutulur ve her yazma "oku -> değiştir -> yaz" yapar.
-// Farklı ekranlardan eşzamanlı gelen yazmalar birbirinin değişikliğini ezmesin diye
-// tüm günlük okuma/yazma işlemleri bu kuyrukta sırayla çalıştırılır.
-let diaryQueue = Promise.resolve();
-const withDiaryLock = (task) => {
-  const run = diaryQueue.then(task, task);
-  diaryQueue = run.catch(() => {});
+// ─── Defter (Günlüğüm / Notlarım) Ortak Altyapısı ─────────────────
+// Günlüğüm tek bir defterdir (@ajanda_diary_v1); Notlarım ise aynı yapıdaki defterlerin dizisidir
+// (@ajanda_notebooks_v1). Her ikisi de "oku -> değiştir -> yaz" yaptığı için farklı ekranlardan
+// eşzamanlı gelen yazmalar birbirini ezmesin diye tüm defter işlemleri tek kuyrukta sırayla çalışır.
+let journalQueue = Promise.resolve();
+const withJournalLock = (task) => {
+  const run = journalQueue.then(task, task);
+  journalQueue = run.catch(() => {});
   return run;
 };
 
-// Kapak ekranının yazabileceği üst düzey günlük alanları (pages asla buradan yazılmaz)
-const DIARY_META_FIELDS = ['title', 'coverTemplateId', 'paperTemplateId', 'coverDrawings', 'coverTextBlocks'];
+// Kapak ekranının yazabileceği üst düzey defter alanları (pages asla buradan yazılmaz)
+const NOTEBOOK_META_FIELDS = ['title', 'coverTemplateId', 'paperTemplateId', 'coverDrawings', 'coverTextBlocks'];
 
-const createEmptyDiaryPage = (paperTemplateId) => ({
+const DEFAULT_PAPER_TEMPLATE_ID = 'blank_lined';
+const DEFAULT_COVER_TEMPLATE_ID = 'cover_1';
+
+const createEmptyNotebookPage = (paperTemplateId) => ({
   pageId: `page_${Date.now()}`,
   pageNumber: 1,
-  paperTemplateId: paperTemplateId || 'blank_lined',
+  paperTemplateId: paperTemplateId || DEFAULT_PAPER_TEMPLATE_ID,
   createdAt: new Date().toISOString(),
   drawings: [],
   textBlocks: [],
@@ -41,40 +46,107 @@ const createEmptyDiaryPage = (paperTemplateId) => ({
 const isUnrenderableSticker = (sticker) =>
   !sticker || (!sticker.type && !sticker.content && !sticker.stickerId);
 
-// Kilitsiz okuma: yalnızca withDiaryLock içinden çağrılmalıdır
+/**
+ * Defter kaydını okunabilir hale getirir.
+ * @returns {{ notebook: object, changed: boolean }} changed: kalıcı olarak yazılması gereken bir düzeltme yapıldı mı
+ */
+const normalizeNotebook = (source) => {
+  const notebook = { ...source };
+  let changed = false;
+
+  if (!Array.isArray(notebook.pages) || notebook.pages.length === 0) {
+    notebook.pages = [createEmptyNotebookPage(notebook.paperTemplateId)];
+    return { notebook, changed };
+  }
+
+  if (notebook.pages.some((p) => !p.paperTemplateId)) {
+    // Kendi şablonu olmayan eski sayfalar, varsayılan sonradan değişse
+    // bile görünümlerini korusunlar diye mevcut varsayılanı sayfaya sabitle
+    notebook.pages = notebook.pages.map((p) =>
+      p.paperTemplateId
+        ? p
+        : { ...p, paperTemplateId: notebook.paperTemplateId || DEFAULT_PAPER_TEMPLATE_ID }
+    );
+    changed = true;
+  }
+
+  if (notebook.pages.some((p) => Array.isArray(p.stickers) && p.stickers.some(isUnrenderableSticker))) {
+    // Kurtarılamayan görünmez sticker kayıtlarını bir kez temizle
+    notebook.pages = notebook.pages.map((p) =>
+      Array.isArray(p.stickers) && p.stickers.some(isUnrenderableSticker)
+        ? { ...p, stickers: p.stickers.filter((s) => !isUnrenderableSticker(s)) }
+        : p
+    );
+    changed = true;
+  }
+
+  return { notebook, changed };
+};
+
+// Yalnızca izinli üst düzey alanları seçer; boş başlık yazılmaz
+const pickNotebookMeta = (fields = {}) => {
+  const safeFields = {};
+  for (const key of NOTEBOOK_META_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(fields, key)) {
+      safeFields[key] = fields[key];
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(safeFields, 'title')) {
+    const title = typeof safeFields.title === 'string' ? safeFields.title.trim() : '';
+    if (title) safeFields.title = title;
+    else delete safeFields.title;
+  }
+  return safeFields;
+};
+
+const renumberPages = (pages) => pages.map((p, idx) => ({ ...p, pageNumber: idx + 1 }));
+
+// ─── Saf sayfa işlemleri (defter nesnesi alır, yeni defter nesnesi döndürür) ───
+const notebookWithAddedPage = (notebook, pageData = {}) => {
+  const newPage = {
+    pageId: pageData.pageId || `page_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    pageNumber: (notebook.pages?.length || 0) + 1,
+    paperTemplateId: pageData.paperTemplateId || notebook.paperTemplateId || DEFAULT_PAPER_TEMPLATE_ID,
+    createdAt: new Date().toISOString(),
+    drawings: pageData.drawings || [],
+    textBlocks: pageData.textBlocks || [],
+    stickers: pageData.stickers || [],
+    data: pageData.data || { content: '' },
+    ...pageData,
+  };
+  return { notebook: { ...notebook, pages: [...(notebook.pages || []), newPage] }, newPage };
+};
+
+const notebookWithUpdatedPage = (notebook, pageId, pageUpdates) => ({
+  ...notebook,
+  pages: (notebook.pages || []).map((p) => (p.pageId === pageId ? { ...p, ...pageUpdates } : p)),
+});
+
+const notebookWithDeletedPage = (notebook, pageId) => {
+  const filtered = (notebook.pages || []).filter((p) => p.pageId !== pageId);
+  // Defterde en az 1 sayfa bulunmasını garantiye al
+  return {
+    ...notebook,
+    pages: filtered.length === 0 ? [createEmptyNotebookPage(notebook.paperTemplateId)] : renumberPages(filtered),
+  };
+};
+
+const notebookWithRestoredPage = (notebook, page, index) => {
+  const pages = (notebook.pages || []).filter((p) => p.pageId !== page.pageId);
+  const insertAt = Math.max(0, Math.min(typeof index === 'number' ? index : pages.length, pages.length));
+  pages.splice(insertAt, 0, page);
+  return { ...notebook, pages: renumberPages(pages) };
+};
+
+const touchNotebook = (notebook) => ({ ...notebook, updatedAt: new Date().toISOString() });
+
+// ─── Günlüğüm kaydı (kilitsiz okuma/yazma: yalnızca withJournalLock içinden çağrılmalıdır) ───
 const readDiary = async () => {
   const data = await AsyncStorage.getItem(KEYS.DIARY);
   if (data) {
-    const diary = JSON.parse(data);
-    if (!diary.pages || !Array.isArray(diary.pages) || diary.pages.length === 0) {
-      diary.pages = [createEmptyDiaryPage(diary.paperTemplateId)];
-    } else {
-      let needsWrite = false;
-
-      if (diary.pages.some((p) => !p.paperTemplateId)) {
-        // Kendi şablonu olmayan eski sayfalar, günlük varsayılanı sonradan değişse
-        // bile görünümlerini korusunlar diye mevcut varsayılanı sayfaya sabitle
-        diary.pages = diary.pages.map((p) =>
-          p.paperTemplateId
-            ? p
-            : { ...p, paperTemplateId: diary.paperTemplateId || 'blank_lined' }
-        );
-        needsWrite = true;
-      }
-
-      if (diary.pages.some((p) => Array.isArray(p.stickers) && p.stickers.some(isUnrenderableSticker))) {
-        // Kurtarılamayan görünmez sticker kayıtlarını bir kez temizle
-        diary.pages = diary.pages.map((p) =>
-          Array.isArray(p.stickers) && p.stickers.some(isUnrenderableSticker)
-            ? { ...p, stickers: p.stickers.filter((s) => !isUnrenderableSticker(s)) }
-            : p
-        );
-        needsWrite = true;
-      }
-
-      if (needsWrite) {
-        await AsyncStorage.setItem(KEYS.DIARY, JSON.stringify(diary));
-      }
+    const { notebook: diary, changed } = normalizeNotebook(JSON.parse(data));
+    if (changed) {
+      await AsyncStorage.setItem(KEYS.DIARY, JSON.stringify(diary));
     }
     return diary;
   }
@@ -82,23 +154,66 @@ const readDiary = async () => {
   const defaultDiary = {
     id: 'my_diary',
     title: 'Günlüğüm',
-    coverTemplateId: 'cover_1',
-    paperTemplateId: 'blank_lined',
+    coverTemplateId: DEFAULT_COVER_TEMPLATE_ID,
+    paperTemplateId: DEFAULT_PAPER_TEMPLATE_ID,
     coverDrawings: [],
     coverTextBlocks: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    pages: [createEmptyDiaryPage('blank_lined')],
+    pages: [createEmptyNotebookPage(DEFAULT_PAPER_TEMPLATE_ID)],
   };
   await AsyncStorage.setItem(KEYS.DIARY, JSON.stringify(defaultDiary));
   return defaultDiary;
 };
 
-// Kilitsiz yazma: yalnızca withDiaryLock içinden çağrılmalıdır
 const writeDiary = async (diary) => {
-  const updated = { ...diary, updatedAt: new Date().toISOString() };
+  const updated = touchNotebook(diary);
   await AsyncStorage.setItem(KEYS.DIARY, JSON.stringify(updated));
   return updated;
+};
+
+// ─── Notlarım defter listesi (kilitsiz okuma/yazma: yalnızca withJournalLock içinden çağrılmalıdır) ───
+const readNotebooks = async () => {
+  const data = await AsyncStorage.getItem(KEYS.NOTEBOOKS);
+  if (!data) return [];
+  const parsed = JSON.parse(data);
+  if (!Array.isArray(parsed)) return [];
+  let anyChanged = false;
+  const notebooks = parsed.filter(Boolean).map((raw) => {
+    const { notebook, changed } = normalizeNotebook(raw);
+    if (changed) anyChanged = true;
+    return notebook;
+  });
+  if (anyChanged) {
+    await AsyncStorage.setItem(KEYS.NOTEBOOKS, JSON.stringify(notebooks));
+  }
+  return notebooks;
+};
+
+const writeNotebooks = async (notebooks) => {
+  await AsyncStorage.setItem(KEYS.NOTEBOOKS, JSON.stringify(notebooks));
+  return notebooks;
+};
+
+// En son düzenlenen defter en üstte
+const sortNotebooksByUpdatedAt = (notebooks) =>
+  [...notebooks].sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+
+/**
+ * Tek bir defteri güncel liste üzerinde değiştirip kaydeder.
+ * @param {string} notebookId
+ * @param {(notebook) => { notebook: object, [key: string]: any }} mutate - saf dönüşüm
+ * @returns {Promise<object|null>} mutate sonucu (notebook alanı kaydedilmiş defterdir) veya defter yoksa null
+ */
+const mutateNotebook = async (notebookId, mutate) => {
+  const notebooks = await readNotebooks();
+  const index = notebooks.findIndex((nb) => nb.id === notebookId);
+  if (index === -1) return null;
+  const result = mutate(notebooks[index]);
+  const saved = touchNotebook(result.notebook);
+  notebooks[index] = saved;
+  await writeNotebooks(notebooks);
+  return { ...result, notebook: saved };
 };
 
 export const StorageService = {
@@ -225,9 +340,9 @@ export const StorageService = {
   },
 
   // ─── Günlüğüm (My Diary - Çoklu Sayfa) ─────────────────
-  // Tüm günlük işlemleri withDiaryLock kuyruğunda sırayla çalışır.
+  // Tüm defter işlemleri withJournalLock kuyruğunda sırayla çalışır.
   getDiary: async () =>
-    withDiaryLock(async () => {
+    withJournalLock(async () => {
       try {
         return await readDiary();
       } catch (error) {
@@ -237,7 +352,7 @@ export const StorageService = {
     }),
 
   saveDiary: async (diaryData) =>
-    withDiaryLock(async () => {
+    withJournalLock(async () => {
       try {
         return await writeDiary(diaryData);
       } catch (error) {
@@ -249,19 +364,13 @@ export const StorageService = {
   /**
    * Günlüğün yalnızca üst düzey (kapak / varsayılan şablon) alanlarını güncel kayıt üzerine birleştirir.
    * pages dizisine dokunmaz; böylece bayat bir ekran state'i sayfa içeriklerini ezemez.
-   * @param {object} fields - DIARY_META_FIELDS içindeki alanlar
+   * @param {object} fields - NOTEBOOK_META_FIELDS içindeki alanlar
    */
   updateDiaryMeta: async (fields = {}) =>
-    withDiaryLock(async () => {
+    withJournalLock(async () => {
       try {
         const diary = await readDiary();
-        const safeFields = {};
-        for (const key of DIARY_META_FIELDS) {
-          if (Object.prototype.hasOwnProperty.call(fields, key)) {
-            safeFields[key] = fields[key];
-          }
-        }
-        return await writeDiary({ ...diary, ...safeFields });
+        return await writeDiary({ ...diary, ...pickNotebookMeta(fields) });
       } catch (error) {
         console.warn('StorageService.updateDiaryMeta hata:', error);
         return null;
@@ -269,25 +378,11 @@ export const StorageService = {
     }),
 
   addDiaryPage: async (pageData = {}) =>
-    withDiaryLock(async () => {
+    withJournalLock(async () => {
       try {
         const diary = await readDiary();
-        const newPageNumber = (diary.pages?.length || 0) + 1;
-        const newPage = {
-          pageId: pageData.pageId || `page_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-          pageNumber: newPageNumber,
-          paperTemplateId: pageData.paperTemplateId || diary.paperTemplateId || 'blank_lined',
-          createdAt: new Date().toISOString(),
-          drawings: pageData.drawings || [],
-          textBlocks: pageData.textBlocks || [],
-          stickers: pageData.stickers || [],
-          data: pageData.data || { content: '' },
-          ...pageData,
-        };
-        const updatedDiary = await writeDiary({
-          ...diary,
-          pages: [...(diary.pages || []), newPage],
-        });
+        const { notebook, newPage } = notebookWithAddedPage(diary, pageData);
+        const updatedDiary = await writeDiary(notebook);
         return { updatedDiary, newPage };
       } catch (error) {
         console.warn('StorageService.addDiaryPage hata:', error);
@@ -296,16 +391,10 @@ export const StorageService = {
     }),
 
   updateDiaryPage: async (pageId, pageUpdates) =>
-    withDiaryLock(async () => {
+    withJournalLock(async () => {
       try {
         const diary = await readDiary();
-        const updatedPages = (diary.pages || []).map((p) => {
-          if (p.pageId === pageId) {
-            return { ...p, ...pageUpdates };
-          }
-          return p;
-        });
-        return await writeDiary({ ...diary, pages: updatedPages });
+        return await writeDiary(notebookWithUpdatedPage(diary, pageId, pageUpdates));
       } catch (error) {
         console.warn('StorageService.updateDiaryPage hata:', error);
         return null;
@@ -313,18 +402,10 @@ export const StorageService = {
     }),
 
   deleteDiaryPage: async (pageId) =>
-    withDiaryLock(async () => {
+    withJournalLock(async () => {
       try {
         const diary = await readDiary();
-        let filtered = (diary.pages || []).filter((p) => p.pageId !== pageId);
-        // Günlükte en az 1 sayfa bulunmasını garantiye al
-        if (filtered.length === 0) {
-          filtered = [createEmptyDiaryPage(diary.paperTemplateId)];
-        } else {
-          // Sayfa numaralarını yeniden sırala
-          filtered = filtered.map((p, idx) => ({ ...p, pageNumber: idx + 1 }));
-        }
-        return await writeDiary({ ...diary, pages: filtered });
+        return await writeDiary(notebookWithDeletedPage(diary, pageId));
       } catch (error) {
         console.warn('StorageService.deleteDiaryPage hata:', error);
         return null;
@@ -337,17 +418,169 @@ export const StorageService = {
    * @param {number} index - Sayfanın eski sıra indeksi
    */
   restoreDiaryPage: async (page, index) =>
-    withDiaryLock(async () => {
+    withJournalLock(async () => {
       try {
         if (!page?.pageId) return null;
         const diary = await readDiary();
-        const pages = (diary.pages || []).filter((p) => p.pageId !== page.pageId);
-        const insertAt = Math.max(0, Math.min(typeof index === 'number' ? index : pages.length, pages.length));
-        pages.splice(insertAt, 0, page);
-        const renumbered = pages.map((p, idx) => ({ ...p, pageNumber: idx + 1 }));
-        return await writeDiary({ ...diary, pages: renumbered });
+        return await writeDiary(notebookWithRestoredPage(diary, page, index));
       } catch (error) {
         console.warn('StorageService.restoreDiaryPage hata:', error);
+        return null;
+      }
+    }),
+
+  // ─── Notlarım (Çoklu Defter) ───────────────────────────
+  /**
+   * Tüm defterleri en son düzenlenen üstte olacak şekilde döndürür.
+   */
+  getNotebooks: async () =>
+    withJournalLock(async () => {
+      try {
+        return sortNotebooksByUpdatedAt(await readNotebooks());
+      } catch (error) {
+        console.warn('StorageService.getNotebooks hata:', error);
+        return [];
+      }
+    }),
+
+  getNotebook: async (notebookId) =>
+    withJournalLock(async () => {
+      try {
+        const notebooks = await readNotebooks();
+        return notebooks.find((nb) => nb.id === notebookId) || null;
+      } catch (error) {
+        console.warn('StorageService.getNotebook hata:', error);
+        return null;
+      }
+    }),
+
+  /**
+   * Yeni defter oluşturur. Başlık boşsa oluşturulmaz (null döner).
+   * @param {{ title: string, coverTemplateId?: string }} data
+   */
+  createNotebook: async ({ title, coverTemplateId } = {}) =>
+    withJournalLock(async () => {
+      try {
+        const cleanTitle = typeof title === 'string' ? title.trim() : '';
+        if (!cleanTitle) return null;
+        const now = new Date().toISOString();
+        const notebook = {
+          id: `nb_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          title: cleanTitle,
+          coverTemplateId: coverTemplateId || DEFAULT_COVER_TEMPLATE_ID,
+          paperTemplateId: DEFAULT_PAPER_TEMPLATE_ID,
+          coverDrawings: [],
+          coverTextBlocks: [],
+          createdAt: now,
+          updatedAt: now,
+          pages: [createEmptyNotebookPage(DEFAULT_PAPER_TEMPLATE_ID)],
+        };
+        const notebooks = await readNotebooks();
+        await writeNotebooks([...notebooks, notebook]);
+        return notebook;
+      } catch (error) {
+        console.warn('StorageService.createNotebook hata:', error);
+        return null;
+      }
+    }),
+
+  /**
+   * Defterin yalnızca üst düzey alanlarını (ad, kapak, varsayılan şablon, kapak çizimi/metni) günceller.
+   */
+  updateNotebookMeta: async (notebookId, fields = {}) =>
+    withJournalLock(async () => {
+      try {
+        const result = await mutateNotebook(notebookId, (nb) => ({
+          notebook: { ...nb, ...pickNotebookMeta(fields) },
+        }));
+        return result ? result.notebook : null;
+      } catch (error) {
+        console.warn('StorageService.updateNotebookMeta hata:', error);
+        return null;
+      }
+    }),
+
+  /**
+   * Defteri siler ve silinen defter nesnesini döndürür (Geri Al için).
+   */
+  deleteNotebook: async (notebookId) =>
+    withJournalLock(async () => {
+      try {
+        const notebooks = await readNotebooks();
+        const deleted = notebooks.find((nb) => nb.id === notebookId);
+        if (!deleted) return null;
+        await writeNotebooks(notebooks.filter((nb) => nb.id !== notebookId));
+        return deleted;
+      } catch (error) {
+        console.warn('StorageService.deleteNotebook hata:', error);
+        return null;
+      }
+    }),
+
+  /**
+   * Silinen defteri içeriği ve son düzenlenme zamanıyla geri ekler (Geri Al).
+   */
+  restoreNotebook: async (notebook) =>
+    withJournalLock(async () => {
+      try {
+        if (!notebook?.id) return null;
+        const notebooks = await readNotebooks();
+        if (notebooks.some((nb) => nb.id === notebook.id)) return notebook;
+        await writeNotebooks([...notebooks, notebook]);
+        return notebook;
+      } catch (error) {
+        console.warn('StorageService.restoreNotebook hata:', error);
+        return null;
+      }
+    }),
+
+  addNotebookPage: async (notebookId, pageData = {}) =>
+    withJournalLock(async () => {
+      try {
+        const result = await mutateNotebook(notebookId, (nb) => notebookWithAddedPage(nb, pageData));
+        return result ? { updatedNotebook: result.notebook, newPage: result.newPage } : null;
+      } catch (error) {
+        console.warn('StorageService.addNotebookPage hata:', error);
+        return null;
+      }
+    }),
+
+  updateNotebookPage: async (notebookId, pageId, pageUpdates) =>
+    withJournalLock(async () => {
+      try {
+        const result = await mutateNotebook(notebookId, (nb) => ({
+          notebook: notebookWithUpdatedPage(nb, pageId, pageUpdates),
+        }));
+        return result ? result.notebook : null;
+      } catch (error) {
+        console.warn('StorageService.updateNotebookPage hata:', error);
+        return null;
+      }
+    }),
+
+  deleteNotebookPage: async (notebookId, pageId) =>
+    withJournalLock(async () => {
+      try {
+        const result = await mutateNotebook(notebookId, (nb) => ({
+          notebook: notebookWithDeletedPage(nb, pageId),
+        }));
+        return result ? result.notebook : null;
+      } catch (error) {
+        console.warn('StorageService.deleteNotebookPage hata:', error);
+        return null;
+      }
+    }),
+
+  restoreNotebookPage: async (notebookId, page, index) =>
+    withJournalLock(async () => {
+      try {
+        if (!page?.pageId) return null;
+        const result = await mutateNotebook(notebookId, (nb) => ({
+          notebook: notebookWithRestoredPage(nb, page, index),
+        }));
+        return result ? result.notebook : null;
+      } catch (error) {
+        console.warn('StorageService.restoreNotebookPage hata:', error);
         return null;
       }
     }),
