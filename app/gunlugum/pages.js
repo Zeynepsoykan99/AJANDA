@@ -200,6 +200,30 @@ export default function GunlugumPagesScreen() {
     [pages.length, currentPageIndex, windowWidth, remeasureActiveCanvas]
   );
 
+  // Bildirim + geri alınabilir işlem kaydı. Her bildirime benzersiz id verilir; böylece art arda gelen
+  // bildirimlerde otomatik kapanma süresi yeniden başlar ve Geri Al yalnızca son işlemi geri alır.
+  const undoActionRef = useRef(null);
+  const showUndoToast = useCallback((message, undoAction) => {
+    undoActionRef.current = undoAction || null;
+    setUndoToast({ visible: true, message, id: Date.now() });
+  }, []);
+
+  const handleDismissUndoToast = useCallback(() => {
+    undoActionRef.current = null;
+    setUndoToast({ visible: false, message: '' });
+  }, []);
+
+  // Belirtilen sayfaya (varsa animasyonla) kaydır
+  const scrollToPageIndex = useCallback(
+    (index, delay = 0) => {
+      setCurrentPageIndex(index);
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({ x: index * windowWidth, animated: true });
+      }, delay);
+    },
+    [windowWidth]
+  );
+
   // Yeni Sayfa Ekleme (+)
   const handleAddPage = useCallback(async (paperTemplateId) => {
     // Yeni sayfa, seçici sheet'te seçilen kağıt şablonuyla StorageService üzerinden eklenir
@@ -210,21 +234,13 @@ export default function GunlugumPagesScreen() {
     const { updatedDiary, newPage } = result;
     setDiary((prev) => ({ ...prev, pages: [...(prev?.pages || []), newPage] }));
 
-    const nextIndex = updatedDiary.pages.length - 1;
-    setCurrentPageIndex(nextIndex);
+    scrollToPageIndex(updatedDiary.pages.length - 1, 100);
 
-    setTimeout(() => {
-      scrollViewRef.current?.scrollTo({
-        x: nextIndex * windowWidth,
-        animated: true,
-      });
-    }, 100);
-
-    setUndoToast({
-      visible: true,
-      message: t('diary.pageAdded', 'Yeni sayfa eklendi'),
+    showUndoToast(t('diary.pageAdded', 'Yeni sayfa eklendi'), {
+      type: 'page_added',
+      pageId: newPage.pageId,
     });
-  }, [windowWidth, t]);
+  }, [scrollToPageIndex, showUndoToast, t]);
 
   // Sayfa Silme (Çöp Kutusu)
   const handleDeletePage = useCallback(() => {
@@ -237,19 +253,23 @@ export default function GunlugumPagesScreen() {
     }
 
     const executeDelete = async () => {
-      const pageToDelete = pages[currentPageIndex];
+      const deleteIndex = currentPageIndex;
+      // Ekrandaki sayfa nesnesi, debounce bekleyen son içerikleri de taşır; geri alma bununla yapılır
+      const pageToDelete = pages[deleteIndex];
       const updatedDiary = await StorageService.deleteDiaryPage(pageToDelete.pageId);
       if (updatedDiary) {
-        setDiary(updatedDiary);
-        const nextIndex = Math.max(0, Math.min(currentPageIndex, updatedDiary.pages.length - 1));
-        setCurrentPageIndex(nextIndex);
-        scrollViewRef.current?.scrollTo({
-          x: nextIndex * windowWidth,
-          animated: true,
-        });
-        setUndoToast({
-          visible: true,
-          message: t('diary.pageDeleted', 'Sayfa silindi'),
+        // Diğer sayfaların kaydedilmemiş değişiklikleri kaybolmasın diye yalnızca silinen sayfayı state'ten çıkar
+        setDiary((prev) => ({
+          ...prev,
+          pages: (prev?.pages || [])
+            .filter((p) => p.pageId !== pageToDelete.pageId)
+            .map((p, idx) => ({ ...p, pageNumber: idx + 1 })),
+        }));
+        scrollToPageIndex(Math.max(0, Math.min(deleteIndex, updatedDiary.pages.length - 1)));
+        showUndoToast(t('diary.pageDeleted', 'Sayfa silindi'), {
+          type: 'page_deleted',
+          page: pageToDelete,
+          index: deleteIndex,
         });
       }
     };
@@ -270,13 +290,16 @@ export default function GunlugumPagesScreen() {
         ]
       );
     }
-  }, [pages, currentPageIndex, windowWidth, t]);
+  }, [pages, currentPageIndex, scrollToPageIndex, showUndoToast, t]);
 
   // Aktif Sayfanın Kağıt Şablonunu Değiştir
   const handleChangePageTemplate = useCallback(
     (templateId) => {
       const pageToUpdate = pages[currentPageIndex];
       if (!pageToUpdate || !templateId) return;
+
+      const previousTemplateId = resolvePagePaperTemplateId(pageToUpdate, diary);
+      if (previousTemplateId === templateId) return;
 
       setDiary((prev) => ({
         ...prev,
@@ -286,13 +309,69 @@ export default function GunlugumPagesScreen() {
       }));
       StorageService.updateDiaryPage(pageToUpdate.pageId, { paperTemplateId: templateId });
 
-      setUndoToast({
-        visible: true,
-        message: t('diary.templateChanged', 'Sayfa şablonu güncellendi'),
+      showUndoToast(t('diary.templateChanged', 'Sayfa şablonu güncellendi'), {
+        type: 'template_changed',
+        pageId: pageToUpdate.pageId,
+        previousTemplateId,
       });
     },
-    [pages, currentPageIndex, t]
+    [pages, currentPageIndex, diary, showUndoToast, t]
   );
+
+  // Geri Al: bildirimdeki son işlemi tersine çevir
+  const handleUndoLastAction = useCallback(async () => {
+    const action = undoActionRef.current;
+    undoActionRef.current = null;
+    setUndoToast({ visible: false, message: '' });
+    if (!action) return;
+
+    switch (action.type) {
+      case 'page_added': {
+        const updatedDiary = await StorageService.deleteDiaryPage(action.pageId);
+        if (!updatedDiary) return;
+        const removedIndex = pages.findIndex((p) => p.pageId === action.pageId);
+        setDiary((prev) => ({
+          ...prev,
+          pages: (prev?.pages || [])
+            .filter((p) => p.pageId !== action.pageId)
+            .map((p, idx) => ({ ...p, pageNumber: idx + 1 })),
+        }));
+        const fallbackIndex = removedIndex > 0 ? removedIndex - 1 : 0;
+        scrollToPageIndex(Math.min(fallbackIndex, Math.max(0, updatedDiary.pages.length - 1)));
+        break;
+      }
+      case 'page_deleted': {
+        const updatedDiary = await StorageService.restoreDiaryPage(action.page, action.index);
+        if (!updatedDiary) return;
+        setDiary((prev) => {
+          const restoredPages = (prev?.pages || []).filter((p) => p.pageId !== action.page.pageId);
+          const insertAt = Math.max(0, Math.min(action.index, restoredPages.length));
+          restoredPages.splice(insertAt, 0, action.page);
+          return {
+            ...prev,
+            pages: restoredPages.map((p, idx) => ({ ...p, pageNumber: idx + 1 })),
+          };
+        });
+        const restoredIndex = updatedDiary.pages.findIndex((p) => p.pageId === action.page.pageId);
+        scrollToPageIndex(Math.max(0, restoredIndex), 100);
+        break;
+      }
+      case 'template_changed': {
+        setDiary((prev) => ({
+          ...prev,
+          pages: (prev?.pages || []).map((p) =>
+            p.pageId === action.pageId ? { ...p, paperTemplateId: action.previousTemplateId } : p
+          ),
+        }));
+        await StorageService.updateDiaryPage(action.pageId, {
+          paperTemplateId: action.previousTemplateId,
+        });
+        break;
+      }
+      default:
+        break;
+    }
+  }, [pages, scrollToPageIndex]);
 
   // Çizimleri Güncelle (Sayfa bazlı debounced auto-save)
   const handleDrawingsChange = useCallback(
@@ -917,9 +996,11 @@ export default function GunlugumPagesScreen() {
 
       {/* Geri Al / Bildirim Toast'ı */}
       <UndoToast
+        key={undoToast.id}
         visible={undoToast.visible}
         message={undoToast.message}
-        onDismiss={() => setUndoToast({ visible: false, message: '' })}
+        onUndo={handleUndoLastAction}
+        onDismiss={handleDismissUndoToast}
       />
 
       {/* Yüzen Çizim ve Metin Araç Çubuğu */}
