@@ -231,5 +231,26 @@
       "vintage": "Papier Vieilli",
       "vintageDesc": "Texture nostalgique de papier jauni"
     }
+  },
+  "notebooks": {
+    "addNotebook": "Ajouter un Carnet",
+    "nameLabel": "Nom du Carnet",
+    "namePlaceholder": "Donnez un nom à votre carnet",
+    "coverLabel": "Couverture",
+    "create": "Créer",
+    "rename": "Renommer",
+    "renameTitle": "Renommer le Carnet",
+    "deleted": "\"{{title}}\" supprimé",
+    "emptyTitle": "Aucun carnet pour le moment",
+    "emptyDesc": "Créez votre premier carnet avec le bouton + en haut à droite.",
+    "openButton": "📓 Ouvrir le Carnet",
+    "singlePageWarning": "Le carnet doit contenir au moins une page.",
+    "notFound": "Carnet introuvable",
+    "search": "Rechercher dans le Carnet",
+    "searchHint": "Recherche dans les textes saisis ou convertis depuis l'écriture manuscrite.",
+    "searchPlaceholder": "Rechercher des mots dans les pages...",
+    "noResults": "Aucun résultat",
+    "resultCount": "Correspondances sur {{count}} pages",
+    "matchCount": "{{count}} correspondances"
   }
 }

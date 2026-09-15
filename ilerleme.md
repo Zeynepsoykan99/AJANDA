@@ -4,6 +4,39 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-15] - Notlarım (Defterlerim) Modülü: Çoklu Defter, Kapak, Sayfa Şablonları ve Defter İçi Arama
+
+### 🧱 Mimari: Günlüğüm Altyapısının Ortaklaştırılması
+- Günlüğüm tek bir defter olduğu için Notlarım ayrı bir kopya yerine aynı altyapı üzerine kuruldu.
+- **Depolama (`services/storageService.js`):** Günlüğe özel normalleştirme (boş sayfa, şablon sabitleme, görünmez sticker temizliği) ve sayfa işlemleri (ekle/güncelle/sil/geri yükle), herhangi bir defter nesnesi üzerinde çalışan saf yardımcılara ayrıldı. Günlüğüm API imzaları değişmedi. Günlük ve defter işlemleri tek sıralı kuyrukta (`withJournalLock`) çalışır.
+- **Yeni anahtar `@ajanda_notebooks_v1`:** Günlükle aynı yapıdaki defterlerin dizisi (`id, title, coverTemplateId, paperTemplateId, coverDrawings, coverTextBlocks, createdAt, updatedAt, pages[]`). API: `getNotebooks` (en son düzenlenen üstte), `getNotebook`, `createNotebook` (boş ad reddedilir, 1 boş sayfayla oluşur), `updateNotebookMeta`, `deleteNotebook`, `restoreNotebook`, `add/update/delete/restoreNotebookPage`. Her düzenleme defterin `updatedAt` değerini günceller; silinip geri alınan defter eski yerine döner.
+- **Ortak ekranlar (`components/notebook/`):** `app/gunlugum/pages.js` gövdesi `NotebookPagesView`, `app/gunlugum/index.js` gövdesi `NotebookCoverView` olarak taşındı; veri işlemleri `storage` adaptörüyle verilir. Günlüğüm ekranları bu görünümleri kullanan ince sarmalayıcılara dönüştü (davranış değişmedi).
+- **`components/ui/BottomSheet.js`:** Yeni sheet'ler için genel amaçlı alttan açılan panel (ThemePicker/PaperTemplate deseniyle aynı animasyon).
+
+### 📚 Notlarım Ekranları
+- **`app/defterlerim/index.js` (Defter Rafı):** Kapak görselli ızgara (telefon 2, tablet 4 sütun), defter adı kapağın altında, en son düzenlenen üstte. Sağ üstte "Defter Ekle". Ekran her odaklandığında liste yenilenir. Boş durum mesajı.
+- **Defter ekleme (`NotebookFormSheet`):** Ad alanı + mevcut 6 kapaktan seçim; ad boşken oluşturulamaz. Örnek/varsayılan defter oluşturulmaz.
+- **Uzun basma menüsü (`NotebookActionSheet`):** Yeniden adlandır (aynı form sheet'i yalnızca ad alanıyla) ve Sil. Silme hemen uygulanır; "Geri Al" bildirimiyle defter içeriğiyle geri gelir.
+- **`app/defterlerim/[notebookId]/index.js`:** Günlüğüm gibi 3D kapak ekranı; başlıkta defter adı, kapak galerisi, yeni sayfalar için varsayılan kağıt şablonu, kapak çizimi/metni, "📓 Defteri Aç".
+- **`app/defterlerim/[notebookId]/pages.js`:** Günlüğüm ile aynı sayfa deneyimi (çizim, metin, sticker, el yazısını metne dönüştürme, zoom, sayfa bazlı 5 kağıt şablonu, geri alma) + sağ üstte arama butonu.
+- **Defter içi arama (`NotebookSearchSheet`, `searchNotebookPages`):** Yalnızca metin kutuları (klavyeyle yazılmış ve el yazısından dönüştürülmüş) taranır; internet gerekmez; Türkçe büyük/küçük harf duyarsız. Sonuçta sayfa numarası, alıntı ve eşleşme sayısı; sonuca dokununca o sayfaya gidilir ve arama kapanır. Ana ekrandaki genel arama değişmedi.
+- Silinmiş/olmayan defter adresinde kapak ve sayfa ekranları "Defter bulunamadı" gösterir.
+- Arama butonuyla 5 buton olan üst bar dar ekranlarda (< 480 px) sıkılaştırılır; uzun defter adı tek satırda kısaltılır.
+- `app/defterlerim.js` yer tutucusu kaldırıldı (ana menüdeki `/defterlerim` adresi aynı). Arayüz metinleri `notebooks.*` altında 5 dile eklendi.
+
+### 📁 Dosyalar
+- **Yeni:** `components/notebook/NotebookPagesView.js`, `NotebookCoverView.js`, `NotebookSearchSheet.js`, `NotebookFormSheet.js`, `NotebookActionSheet.js`, `components/ui/BottomSheet.js`, `app/defterlerim/_layout.js`, `app/defterlerim/index.js`, `app/defterlerim/[notebookId]/index.js`, `app/defterlerim/[notebookId]/pages.js`
+- **Değişen:** `services/storageService.js`, `services/searchService.js`, `app/gunlugum/index.js`, `app/gunlugum/pages.js`, `locales/*.json`, `CLAUDE.md`
+- **Silinen:** `app/defterlerim.js`
+
+### ✅ Doğrulama & Testler
+- Babel derleme (tüm dosyalar), tanımsız tanımlayıcı taraması 0, 5 dil anahtar eşitliği (212), `tests/zoomableCanvas.test.js` 6/6, web paketi derlemesi.
+- Sahte AsyncStorage testleri: Günlüğüm kilit/meta/geri yükleme ve sticker temizliği testleri tekrar geçti. Notlarım: oluşturma doğrulaması, sıralama, meta güncellemenin sayfaları korunması, 2 defter + günlük üzerinde eşzamanlı 6 yazma, sayfa ve defter silme/geri yükleme, olmayan defter, eski kayıt normalizasyonu.
+- Web (Playwright) Notlarım: boş durum; boş adla oluşturma engeli; kapak seçerek oluşturma; raf sırası; uzun basma menüsü; yeniden adlandırma (en üste taşındı); silme + geri alma; kapak ekranı başlığı, kapak değiştirme, varsayılan kağıt (mevcut sayfa etkilenmedi); "+" ile Noktalı sayfa; klavyeyle iki sayfaya metin; "IŞIK" araması iki sayfada eşleşti, olmayan kelimede "Sonuç bulunamadı", sonuca dokununca sayfa 2'ye gidildi; 375 px üst bar (butonlar ve gösterge sığıyor, başlık tek satır); iki sayfada çizim koordinatları birebir; sticker ekleme; sayfa silme + içerikle geri alma; iki renkli el yazısı dönüştürme (konum/renk/punto); olmayan defter adresi. Diğer defter ve günlük kaydı etkilenmedi.
+- Web Günlüğüm regresyonu: kapak ve sayfa başlıkları, arama butonu yok, şablonlu sayfa ekleme + geri alma, şablon değiştirme + geri alma, sayfa 2 çizim koordinatı, kapaktan varsayılan değiştirince sayfa ve çizimlerin korunması, sticker görünürlüğü. Konsol hatası 0.
+
+---
+
 ## 📅 [2026-09-15] - Günlüğüm: Sticker Ekleme Onarımı (Eklenen Sticker'ın Görünmemesi)
 
 ### 🐞 Hata ve Kök Neden

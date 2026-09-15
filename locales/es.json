@@ -231,5 +231,26 @@
       "vintage": "Papel Antiguo",
       "vintageDesc": "Textura nostálgica de papel amarillento"
     }
+  },
+  "notebooks": {
+    "addNotebook": "Añadir Cuaderno",
+    "nameLabel": "Nombre del Cuaderno",
+    "namePlaceholder": "Ponle un nombre a tu cuaderno",
+    "coverLabel": "Portada",
+    "create": "Crear",
+    "rename": "Renombrar",
+    "renameTitle": "Renombrar Cuaderno",
+    "deleted": "\"{{title}}\" eliminado",
+    "emptyTitle": "Aún no hay cuadernos",
+    "emptyDesc": "Crea tu primer cuaderno con el botón + de arriba a la derecha.",
+    "openButton": "📓 Abrir Cuaderno",
+    "singlePageWarning": "El cuaderno debe contener al menos una página.",
+    "notFound": "Cuaderno no encontrado",
+    "search": "Buscar en el Cuaderno",
+    "searchHint": "Busca en los textos escritos o convertidos desde escritura a mano.",
+    "searchPlaceholder": "Buscar palabras en las páginas...",
+    "noResults": "No se encontraron resultados",
+    "resultCount": "Coincidencias en {{count}} páginas",
+    "matchCount": "{{count}} coincidencias"
   }
 }

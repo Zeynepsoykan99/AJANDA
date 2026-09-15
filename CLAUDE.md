@@ -34,10 +34,11 @@ app/                  Ekranlar (expo-router)
   index.js            Ana menü (günlüğüm / ajandam / notlarım / yapılacaklar), dil, tema, global arama
   ajandam/            index.js (kapak) → pages.js (sayfa listesi) → [pageId].js (sayfa tuvali)
   todolist/           index.js (liste) → [pageId].js (to-do tuvali)
-  gunlugum/           index.js (kapak + kağıt şablonu) → pages.js (yatay kaydırmalı çoklu sayfa)
-  defterlerim.js      Yer tutucu ekran (yalnızca başlık)
+  gunlugum/           index.js (kapak) → pages.js (çoklu sayfa); ortak defter görünümlerinin ince sarmalayıcıları
+  defterlerim/        Notlarım: index.js (defter rafı) → [notebookId]/index.js (kapak) → [notebookId]/pages.js (sayfalar + arama)
 components/           drawing/ (DrawingCanvas, Toolbar, ZoomableCanvas, Lasso, Recognition modal),
-                      text/TextCanvas, stickers/, stationery/ (kağıt/defter görselleri), pages/, ui/, modallar
+                      text/TextCanvas, stickers/, stationery/ (kağıt/defter görselleri), pages/, ui/, modallar,
+                      notebook/ (NotebookPagesView, NotebookCoverView: Günlüğüm + Notlarım ortak ekranları; sheet'ler)
 constants/            pageTemplates, coverTemplates, themes, fonts, stickerPacks, colors (eski uyumluluk)
 context/ThemeContext  Tek global state: tema (AsyncStorage'a kalıcı)
 services/             storageService (tüm AsyncStorage CRUD), searchService (global arama),
@@ -50,11 +51,13 @@ Veri akışı: Ekran `useState` ile veriyi tutar → değişiklikte debounce'lu 
 `StorageService` çağrısı → AsyncStorage'a tüm JSON yeniden yazılır. Global store/cache yok (tema hariç).
 
 AsyncStorage anahtarları: `@ajanda_theme`, `@ajanda_language`, `@ajanda_cover` (ajanda kapağı),
-`@ajanda_pages` (ajanda + to-do sayfaları tek dizide, `category` ile ayrılır), `@ajanda_diary_v1` (günlük).
+`@ajanda_pages` (ajanda + to-do sayfaları tek dizide, `category` ile ayrılır), `@ajanda_diary_v1` (günlük),
+`@ajanda_notebooks_v1` (Notlarım defter dizisi; her defter günlükle aynı yapıda). Günlük ve defter işlemleri
+`StorageService` içinde tek sıralı kuyrukta çalışır; kapak ekranları yalnızca üst düzey alanları yazar.
 
 ## Kod Konvansiyonları
 - Fonksiyonel bileşenler + hook'lar; bileşen başına bir dosya, `export default`. Stiller dosya sonunda `StyleSheet.create`.
-- Dosya adları: bileşenler PascalCase (`DrawingCanvas.js`), servis/hook/util camelCase. Rota klasörleri Türkçe (`ajandam`, `gunlugum`, `todolist`).
+- Dosya adları: bileşenler PascalCase (`DrawingCanvas.js`), servis/hook/util camelCase. Rota klasörleri Türkçe (`ajandam`, `gunlugum`, `defterlerim`, `todolist`).
 - Kod içi yorumlar, JSDoc başlıkları, `console.warn` mesajları ve varsayılan metinler Türkçe; değişken/fonksiyon adları İngilizce.
 - UI metinleri `t('anahtar', 'Türkçe varsayılan')` ile; yeni anahtar 5 dil dosyasının hepsine eklenmeli.
 - ID üretimi: `${prefix}_${Date.now()}_${random}` (`page_`, `stroke_`, `text_`, `stk_`).

@@ -231,5 +231,26 @@
       "vintage": "Vintage Paper",
       "vintageDesc": "Nostalgic yellow aged paper texture"
     }
+  },
+  "notebooks": {
+    "addNotebook": "Add Notebook",
+    "nameLabel": "Notebook Name",
+    "namePlaceholder": "Give your notebook a name",
+    "coverLabel": "Cover",
+    "create": "Create",
+    "rename": "Rename",
+    "renameTitle": "Rename Notebook",
+    "deleted": "\"{{title}}\" deleted",
+    "emptyTitle": "No notebooks yet",
+    "emptyDesc": "Create your first notebook with the + button at the top right.",
+    "openButton": "📓 Open Notebook",
+    "singlePageWarning": "The notebook must contain at least one page.",
+    "notFound": "Notebook not found",
+    "search": "Search Notebook",
+    "searchHint": "Searches text you typed or converted from handwriting.",
+    "searchPlaceholder": "Search words in note pages...",
+    "noResults": "No results found",
+    "resultCount": "Matches on {{count}} pages",
+    "matchCount": "{{count}} matches"
   }
 }

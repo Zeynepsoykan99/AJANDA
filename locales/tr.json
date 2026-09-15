@@ -231,5 +231,26 @@
       "vintage": "Eskitme Kağıt",
       "vintageDesc": "Nostaljik sarı eskitme kağıt dokusu"
     }
+  },
+  "notebooks": {
+    "addNotebook": "Defter Ekle",
+    "nameLabel": "Defter Adı",
+    "namePlaceholder": "Defterine bir ad ver",
+    "coverLabel": "Kapak",
+    "create": "Oluştur",
+    "rename": "Yeniden Adlandır",
+    "renameTitle": "Defteri Yeniden Adlandır",
+    "deleted": "\"{{title}}\" silindi",
+    "emptyTitle": "Henüz defter yok",
+    "emptyDesc": "Sağ üstteki + butonuyla ilk defterini oluştur.",
+    "openButton": "📓 Defteri Aç",
+    "singlePageWarning": "Defterde en az bir sayfa bulunmalıdır.",
+    "notFound": "Defter bulunamadı",
+    "search": "Defterde Ara",
+    "searchHint": "Yazdığın ve el yazısından dönüştürdüğün metinlerde arar.",
+    "searchPlaceholder": "Not sayfalarında kelime ara...",
+    "noResults": "Sonuç bulunamadı",
+    "resultCount": "{{count}} sayfada eşleşme",
+    "matchCount": "{{count}} eşleşme"
   }
 }
