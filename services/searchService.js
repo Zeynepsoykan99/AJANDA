@@ -265,3 +265,35 @@ export const searchAllData = async (
     return timeB - timeA;
   });
 };
+
+/**
+ * Tek bir defterin (Notlarım) sayfalarında arama yapar.
+ * Yalnızca metin kutuları (textBlocks) taranır: klavyeyle yazılmış ve el yazısından dönüştürülmüş metinler.
+ * İnternet gerektirmez; ekrandaki güncel sayfa dizisi üzerinde çalışır.
+ *
+ * @param {Array} pages - Defter sayfaları
+ * @param {string} rawQuery - Aranan kelime
+ * @returns {Array<{ pageId: string, pageIndex: number, pageNumber: number, snippet: string, matchCount: number }>}
+ */
+export const searchNotebookPages = (pages, rawQuery) => {
+  const query = normalizeTurkish(rawQuery);
+  if (!query || !Array.isArray(pages)) return [];
+
+  const results = [];
+  pages.forEach((page, pageIndex) => {
+    const matchingTexts = (Array.isArray(page?.textBlocks) ? page.textBlocks : [])
+      .map((block) => (typeof block?.text === 'string' ? block.text : ''))
+      .filter((text) => text && normalizeTurkish(text).includes(query));
+
+    if (matchingTexts.length > 0) {
+      results.push({
+        pageId: page.pageId,
+        pageIndex,
+        pageNumber: page.pageNumber || pageIndex + 1,
+        snippet: extractSnippet(matchingTexts[0], rawQuery),
+        matchCount: matchingTexts.length,
+      });
+    }
+  });
+  return results;
+};
