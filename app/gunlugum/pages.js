@@ -20,8 +20,10 @@ import { useTheme } from '../../context/ThemeContext';
 import { StorageService } from '../../services/storageService';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 import useDynamicEdgeColor from '../../hooks/useDynamicEdgeColor';
+import { getPaperTemplate, resolvePagePaperTemplateId } from '../../constants/pageTemplates';
 
 import PaperSheet from '../../components/stationery/PaperSheet';
+import PaperTemplateModal from '../../components/PaperTemplateModal';
 import NotebookContainer from '../../components/stationery/NotebookContainer';
 import DrawingCanvas from '../../components/drawing/DrawingCanvas';
 import DrawingToolbar from '../../components/drawing/DrawingToolbar';
@@ -62,6 +64,7 @@ export default function GunlugumPagesScreen() {
 
   // Sticker Menüsü ve Toast
   const [isStickerMenuVisible, setIsStickerMenuVisible] = useState(false);
+  const [isTemplateModalVisible, setIsTemplateModalVisible] = useState(false);
   const [undoToast, setUndoToast] = useState({ visible: false, message: '' });
 
   // Kement (Lasso) Seçim Durumu
@@ -82,10 +85,6 @@ export default function GunlugumPagesScreen() {
   const scrollViewRef = useRef(null);
   const saveTimeoutRef = useRef(null);
 
-  // Arka plan rengi (Krem defter rengi ile bütünleşik)
-  const targetEdgeColor = '#FFFDF9';
-  const { animatedStyle: animatedBgStyle } = useDynamicEdgeColor(targetEdgeColor, colors.background, 300);
-
   // Günlük verilerini yükle
   useEffect(() => {
     (async () => {
@@ -103,16 +102,13 @@ export default function GunlugumPagesScreen() {
   const pages = diary?.pages || [];
   const activePage = pages[currentPageIndex] || pages[0];
 
-  // Kağıt Dokusu (Lined, Grid, Dotted, Blank)
-  const paperTemplateId = diary?.paperTemplateId || 'blank_lined';
-  const ruling =
-    paperTemplateId === 'blank_grid'
-      ? 'grid'
-      : paperTemplateId === 'blank_dotted'
-      ? 'dotted'
-      : paperTemplateId === 'blank_plain'
-      ? 'blank'
-      : 'lined';
+  // Aktif sayfanın kağıt şablonu (sayfanın kendi şablonu -> günlük varsayılanı -> çizgili)
+  const activePaperTemplateId = resolvePagePaperTemplateId(activePage, diary);
+  const activePaperTemplate = getPaperTemplate(activePaperTemplateId);
+
+  // Seamless Blend: Ekran arka planı aktif sayfanın kağıt rengiyle birebir eşleşir
+  const targetEdgeColor = activePaperTemplate.paper.paperColor;
+  const { animatedStyle: animatedBgStyle } = useDynamicEdgeColor(targetEdgeColor, colors.background, 300);
 
   // Sayfa Değiştirme
   const goToPage = useCallback(
@@ -142,26 +138,15 @@ export default function GunlugumPagesScreen() {
 
   // Yeni Sayfa Ekleme (+)
   const handleAddPage = useCallback(async () => {
-    const newPage = {
-      pageId: `page_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      pageNumber: pages.length + 1,
-      createdAt: new Date().toISOString(),
-      drawings: [],
-      textBlocks: [],
-      stickers: [],
-      data: { content: '' },
-    };
+    // Yeni sayfa, günlüğün varsayılan kağıt şablonunu StorageService üzerinden alır
+    const result = await StorageService.addDiaryPage();
+    if (!result) return;
 
-    const updatedPages = [...pages, newPage];
-    const updatedDiary = {
-      ...diary,
-      pages: updatedPages,
-    };
+    // Henüz kaydedilmemiş (debounce bekleyen) çizimler kaybolmasın diye yalnızca yeni sayfayı state'e ekle
+    const { updatedDiary, newPage } = result;
+    setDiary((prev) => ({ ...prev, pages: [...(prev?.pages || []), newPage] }));
 
-    setDiary(updatedDiary);
-    await StorageService.saveDiary(updatedDiary);
-
-    const nextIndex = updatedPages.length - 1;
+    const nextIndex = updatedDiary.pages.length - 1;
     setCurrentPageIndex(nextIndex);
 
     setTimeout(() => {
@@ -175,7 +160,7 @@ export default function GunlugumPagesScreen() {
       visible: true,
       message: t('diary.pageAdded', 'Yeni sayfa eklendi'),
     });
-  }, [diary, pages, windowWidth, t]);
+  }, [windowWidth, t]);
 
   // Sayfa Silme (Çöp Kutusu)
   const handleDeletePage = useCallback(() => {
@@ -222,6 +207,28 @@ export default function GunlugumPagesScreen() {
       );
     }
   }, [pages, currentPageIndex, windowWidth, t]);
+
+  // Aktif Sayfanın Kağıt Şablonunu Değiştir
+  const handleChangePageTemplate = useCallback(
+    (templateId) => {
+      const pageToUpdate = pages[currentPageIndex];
+      if (!pageToUpdate || !templateId) return;
+
+      setDiary((prev) => ({
+        ...prev,
+        pages: (prev?.pages || []).map((p) =>
+          p.pageId === pageToUpdate.pageId ? { ...p, paperTemplateId: templateId } : p
+        ),
+      }));
+      StorageService.updateDiaryPage(pageToUpdate.pageId, { paperTemplateId: templateId });
+
+      setUndoToast({
+        visible: true,
+        message: t('diary.templateChanged', 'Sayfa şablonu güncellendi'),
+      });
+    },
+    [pages, currentPageIndex, t]
+  );
 
   // Çizimleri Güncelle (Sayfa bazlı debounced auto-save)
   const handleDrawingsChange = useCallback(
@@ -557,7 +564,7 @@ export default function GunlugumPagesScreen() {
           </View>
         </View>
 
-        {/* Sağ Buton Grubu: Yeni Sayfa (+), Sticker (🎀), Silme (🗑️) */}
+        {/* Sağ Buton Grubu: Yeni Sayfa (+), Şablon, Sticker (🎀), Silme (🗑️) */}
         <View style={styles.headerRightGroup}>
           <TouchableOpacity
             activeOpacity={0.7}
@@ -566,6 +573,15 @@ export default function GunlugumPagesScreen() {
             accessibilityLabel={t('diary.addPage', 'Yeni Sayfa Ekle')}
           >
             <MaterialCommunityIcons name="plus" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => setIsTemplateModalVisible(true)}
+            style={[styles.headerButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+            accessibilityLabel={t('diary.changeTemplate', 'Şablon Değiştir')}
+          >
+            <MaterialCommunityIcons name="file-document-edit-outline" size={19} color={colors.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -601,6 +617,7 @@ export default function GunlugumPagesScreen() {
       >
         {pages.map((p, index) => {
           const isActive = index === currentPageIndex;
+          const { paper } = getPaperTemplate(resolvePagePaperTemplateId(p, diary));
 
           return (
             <View
@@ -627,10 +644,10 @@ export default function GunlugumPagesScreen() {
                   showSpiral={!isTwoPage}
                 >
                   <PaperSheet
-                    ruling={ruling}
-                    paperColor="#FFFDF9"
-                    lineColor="#F8BBD040"
-                    showMargin={ruling === 'lined'}
+                    ruling={paper.ruling}
+                    paperColor={paper.paperColor}
+                    lineColor={paper.lineColor}
+                    showMargin={paper.ruling === 'lined'}
                     style={styles.paperSheet}
                   >
                     {/* Boş alan - PaperSheet ruling dokusu içerir */}
@@ -708,6 +725,15 @@ export default function GunlugumPagesScreen() {
           );
         })}
       </ScrollView>
+
+      {/* Aktif Sayfanın Kağıt Şablonu Seçici */}
+      <PaperTemplateModal
+        visible={isTemplateModalVisible}
+        onClose={() => setIsTemplateModalVisible(false)}
+        currentTemplateId={activePaperTemplateId}
+        onSelectTemplate={handleChangePageTemplate}
+        mode="editPage"
+      />
 
       {/* Sticker Menüsü */}
       <StickerMenu

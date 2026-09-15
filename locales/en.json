@@ -214,11 +214,21 @@
     "pageAdded": "New page added",
     "pageDeleted": "Page deleted",
     "singlePageWarning": "The diary must contain at least one page.",
+    "changeTemplate": "Page Template",
+    "templateChanged": "Page template updated",
+    "templateDesc": "Choose the paper layout used by default for newly added pages:",
+    "editTemplateDesc": "Choose the paper layout for this page:",
     "templates": {
       "lined": "Lined Page",
+      "linedDesc": "For tidy writing and daily notes",
       "grid": "Grid Page",
+      "gridDesc": "For math, planning and sketches",
       "dotted": "Dotted Page",
-      "plain": "Plain Page"
+      "dottedDesc": "For bullet journaling and free layouts",
+      "plain": "Plain Page",
+      "plainDesc": "A completely blank canvas for free drawing",
+      "vintage": "Vintage Paper",
+      "vintageDesc": "Nostalgic yellow aged paper texture"
     }
   }
 }

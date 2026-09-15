@@ -214,11 +214,21 @@
     "pageAdded": "Nueva página añadida",
     "pageDeleted": "Página eliminada",
     "singlePageWarning": "El diario debe contener al menos una página.",
+    "changeTemplate": "Plantilla de Página",
+    "templateChanged": "Plantilla de página actualizada",
+    "templateDesc": "Elige el diseño de papel que se usará por defecto en las páginas nuevas:",
+    "editTemplateDesc": "Elige el diseño de papel para esta página:",
     "templates": {
       "lined": "Página Rayada",
+      "linedDesc": "Para escritura ordenada y notas diarias",
       "grid": "Página Cuadriculada",
+      "gridDesc": "Para matemáticas, planificación y bocetos",
       "dotted": "Página Punteada",
-      "plain": "Página Lisa"
+      "dottedDesc": "Para bullet journal y diseños libres",
+      "plain": "Página Lisa",
+      "plainDesc": "Un lienzo totalmente en blanco para dibujar libremente",
+      "vintage": "Papel Antiguo",
+      "vintageDesc": "Textura nostálgica de papel amarillento"
     }
   }
 }

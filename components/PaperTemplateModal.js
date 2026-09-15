@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,53 +12,32 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
 import PaperSheet from './stationery/PaperSheet';
+import { getPaperTemplates, DEFAULT_PAPER_TEMPLATE_ID } from '../constants/pageTemplates';
 
-const PAPER_OPTIONS = [
-  {
-    id: 'blank_lined',
-    titleKey: 'diary.templates.lined',
-    defaultTitle: 'Çizgili Sayfa',
-    ruling: 'lined',
-    icon: 'format-line-spacing',
-    desc: 'Düzenli yazı ve günlük notlar için',
-  },
-  {
-    id: 'blank_grid',
-    titleKey: 'diary.templates.grid',
-    defaultTitle: 'Kareli Sayfa',
-    ruling: 'grid',
-    icon: 'grid',
-    desc: 'Matematik, planlama ve çizimler için',
-  },
-  {
-    id: 'blank_dotted',
-    titleKey: 'diary.templates.dotted',
-    defaultTitle: 'Noktalı Sayfa',
-    ruling: 'dotted',
-    icon: 'dots-grid',
-    desc: 'Bullet journal ve serbest tasarımlar için',
-  },
-  {
-    id: 'blank_plain',
-    titleKey: 'diary.templates.plain',
-    defaultTitle: 'Düz Sayfa',
-    ruling: 'blank',
-    icon: 'file-outline',
-    desc: 'Tamamen boş serbest çizim tuvali',
-  },
-];
+const PAPER_OPTIONS = getPaperTemplates();
 
+/**
+ * PaperTemplateModal - Günlüğüm kağıt şablonu seçici
+ * @param {'diaryDefault'|'editPage'} mode - Günlüğün yeni sayfa varsayılanı mı, aktif sayfa mı düzenleniyor
+ */
 export default function PaperTemplateModal({
   visible,
   onClose,
-  currentTemplateId = 'blank_lined',
+  currentTemplateId = DEFAULT_PAPER_TEMPLATE_ID,
   onSelectTemplate,
+  mode = 'diaryDefault',
 }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const { isTablet } = useResponsiveLayout();
 
   const [selectedId, setSelectedId] = useState(currentTemplateId);
+
+  useEffect(() => {
+    if (visible) {
+      setSelectedId(currentTemplateId);
+    }
+  }, [visible, currentTemplateId]);
 
   const handleSave = () => {
     onSelectTemplate(selectedId);
@@ -83,7 +62,9 @@ export default function PaperTemplateModal({
             />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-            {t('diary.selectTemplate', 'Sayfa Şablonu Seç')}
+            {mode === 'editPage'
+              ? t('diary.changeTemplate', 'Şablon Değiştir')
+              : t('diary.selectTemplate', 'Sayfa Şablonu Seç')}
           </Text>
           <TouchableOpacity
             onPress={handleSave}
@@ -102,7 +83,9 @@ export default function PaperTemplateModal({
           showsVerticalScrollIndicator={false}
         >
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            {t('diary.templateDesc', 'Günlüğün tüm sayfalarında kullanılacak iç kağıt düzenini belirleyin:')}
+            {mode === 'editPage'
+              ? t('diary.editTemplateDesc', 'Bu sayfanın kağıt düzenini seçin:')
+              : t('diary.templateDesc', 'Yeni eklenen sayfalarda varsayılan olarak kullanılacak kağıt düzenini belirleyin:')}
           </Text>
 
           <View style={styles.grid}>
@@ -125,9 +108,10 @@ export default function PaperTemplateModal({
                   {/* Mini Önizleme Tuvali */}
                   <View style={styles.previewContainer}>
                     <PaperSheet
-                      ruling={item.ruling}
-                      paperColor="#FFFDF9"
-                      lineColor="#F8BBD060"
+                      ruling={item.paper.ruling}
+                      paperColor={item.paper.paperColor}
+                      lineColor={item.paper.lineColor}
+                      showMargin={item.paper.ruling === 'lined'}
                       style={styles.miniSheet}
                     >
                       <View style={styles.previewCenterIcon}>
@@ -153,10 +137,10 @@ export default function PaperTemplateModal({
                         { color: isSelected ? colors.accent : colors.textPrimary },
                       ]}
                     >
-                      {t(item.titleKey, item.defaultTitle)}
+                      {t(item.titleKey, item.name)}
                     </Text>
                     <Text style={[styles.cardDesc, { color: colors.textSecondary }]}>
-                      {item.desc}
+                      {t(item.descKey, item.defaultDesc)}
                     </Text>
                   </View>
                 </TouchableOpacity>

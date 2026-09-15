@@ -214,11 +214,21 @@
     "pageAdded": "Nouvelle page ajoutée",
     "pageDeleted": "Page supprimée",
     "singlePageWarning": "Le journal doit contenir au moins une page.",
+    "changeTemplate": "Modèle de Page",
+    "templateChanged": "Modèle de page mis à jour",
+    "templateDesc": "Choisissez la mise en page du papier utilisée par défaut pour les nouvelles pages :",
+    "editTemplateDesc": "Choisissez la mise en page du papier pour cette page :",
     "templates": {
       "lined": "Page Lignée",
+      "linedDesc": "Pour une écriture soignée et les notes quotidiennes",
       "grid": "Page Quadrillée",
+      "gridDesc": "Pour les maths, la planification et les croquis",
       "dotted": "Page Pointillée",
-      "plain": "Page Blanche"
+      "dottedDesc": "Pour le bullet journal et les mises en page libres",
+      "plain": "Page Blanche",
+      "plainDesc": "Une toile entièrement vierge pour dessiner librement",
+      "vintage": "Papier Vieilli",
+      "vintageDesc": "Texture nostalgique de papier jauni"
     }
   }
 }

@@ -238,6 +238,8 @@ export const PAGE_TEMPLATES = {
       aspectRatio: 0.70,
     },
   ],
+  // `colors`, `edgeColor` ve `lineStyle` eski Ajandam "blank" sayfaları (BlankPage) içindir.
+  // `paper` alanı Günlüğüm kağıt şablonlarının tek kaynağıdır (önizleme, sayfa ve kenar rengi).
   blank: [
     {
       id: 'blank_lined',
@@ -245,6 +247,11 @@ export const PAGE_TEMPLATES = {
       colors: { bg: '#FFFFFF', accent: '#C2185B', line: '#FCE4EC' },
       edgeColor: '#FFFFFF',
       lineStyle: 'horizontal',
+      paper: { ruling: 'lined', paperColor: '#FFFDF9', lineColor: '#F8BBD040' },
+      icon: 'format-line-spacing',
+      titleKey: 'diary.templates.lined',
+      descKey: 'diary.templates.linedDesc',
+      defaultDesc: 'Düzenli yazı ve günlük notlar için',
     },
     {
       id: 'blank_grid',
@@ -252,6 +259,11 @@ export const PAGE_TEMPLATES = {
       colors: { bg: '#FFFFFF', accent: '#3F51B5', line: '#E8EAF6' },
       edgeColor: '#FFFFFF',
       lineStyle: 'grid',
+      paper: { ruling: 'grid', paperColor: '#FFFDF9', lineColor: '#E8EAF680' },
+      icon: 'grid',
+      titleKey: 'diary.templates.grid',
+      descKey: 'diary.templates.gridDesc',
+      defaultDesc: 'Matematik, planlama ve çizimler için',
     },
     {
       id: 'blank_dotted',
@@ -259,6 +271,11 @@ export const PAGE_TEMPLATES = {
       colors: { bg: '#FFFFFF', accent: '#7B1FA2', line: '#F3E5F5' },
       edgeColor: '#FFFFFF',
       lineStyle: 'dots',
+      paper: { ruling: 'dotted', paperColor: '#FFFDF9', lineColor: '#F3E5F580' },
+      icon: 'dots-grid',
+      titleKey: 'diary.templates.dotted',
+      descKey: 'diary.templates.dottedDesc',
+      defaultDesc: 'Bullet journal ve serbest tasarımlar için',
     },
     {
       id: 'blank_plain',
@@ -266,9 +283,55 @@ export const PAGE_TEMPLATES = {
       colors: { bg: '#FFFFFF', accent: '#2E7D32', line: 'transparent' },
       edgeColor: '#FFFFFF',
       lineStyle: 'none',
+      paper: { ruling: 'blank', paperColor: '#FFFFFF', lineColor: 'transparent' },
+      icon: 'file-outline',
+      titleKey: 'diary.templates.plain',
+      descKey: 'diary.templates.plainDesc',
+      defaultDesc: 'Tamamen boş serbest çizim tuvali',
+    },
+    {
+      id: 'blank_vintage',
+      name: 'Eskitme Kağıt',
+      colors: { bg: '#F5ECD7', accent: '#8D6E63', line: '#E6D7B8' },
+      edgeColor: '#F5ECD7',
+      lineStyle: 'horizontal',
+      paper: { ruling: 'lined', paperColor: '#F5ECD7', lineColor: '#D7C4A580' },
+      icon: 'feather',
+      titleKey: 'diary.templates.vintage',
+      descKey: 'diary.templates.vintageDesc',
+      defaultDesc: 'Nostaljik sarı eskitme kağıt dokusu',
     },
   ],
 };
+
+export const DEFAULT_PAPER_TEMPLATE_ID = 'blank_lined';
+
+/**
+ * Günlüğüm kağıt şablonlarının listesini döndürür.
+ */
+export function getPaperTemplates() {
+  return PAGE_TEMPLATES.blank.filter((tmpl) => tmpl.paper);
+}
+
+/**
+ * ID'ye göre Günlüğüm kağıt şablonunu döndürür.
+ * Bilinmeyen veya boş ID için varsayılan (çizgili) şablona düşer.
+ */
+export function getPaperTemplate(templateId) {
+  const templates = getPaperTemplates();
+  return (
+    templates.find((tmpl) => tmpl.id === templateId) ||
+    templates.find((tmpl) => tmpl.id === DEFAULT_PAPER_TEMPLATE_ID)
+  );
+}
+
+/**
+ * Günlük sayfasının geçerli kağıt şablonu ID'sini çözer.
+ * Öncelik: sayfanın kendi şablonu -> günlüğün varsayılanı -> çizgili.
+ */
+export function resolvePagePaperTemplateId(page, diary) {
+  return page?.paperTemplateId || diary?.paperTemplateId || DEFAULT_PAPER_TEMPLATE_ID;
+}
 
 /**
  * Şablonun dış kenar rengini (edgeColor) döndürür.

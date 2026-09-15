@@ -147,6 +147,7 @@ export const StorageService = {
             {
               pageId: `page_${Date.now()}`,
               pageNumber: 1,
+              paperTemplateId: diary.paperTemplateId || 'blank_lined',
               createdAt: new Date().toISOString(),
               drawings: [],
               textBlocks: [],
@@ -154,6 +155,15 @@ export const StorageService = {
               data: { content: '' },
             },
           ];
+        } else if (diary.pages.some((p) => !p.paperTemplateId)) {
+          // Kendi şablonu olmayan eski sayfalar, günlük varsayılanı sonradan değişse
+          // bile görünümlerini korusunlar diye mevcut varsayılanı sayfaya sabitle
+          diary.pages = diary.pages.map((p) =>
+            p.paperTemplateId
+              ? p
+              : { ...p, paperTemplateId: diary.paperTemplateId || 'blank_lined' }
+          );
+          await AsyncStorage.setItem(KEYS.DIARY, JSON.stringify(diary));
         }
         return diary;
       }
@@ -171,6 +181,7 @@ export const StorageService = {
           {
             pageId: `page_${Date.now()}`,
             pageNumber: 1,
+            paperTemplateId: 'blank_lined',
             createdAt: new Date().toISOString(),
             drawings: [],
             textBlocks: [],
@@ -208,6 +219,7 @@ export const StorageService = {
       const newPage = {
         pageId: pageData.pageId || `page_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         pageNumber: newPageNumber,
+        paperTemplateId: pageData.paperTemplateId || diary.paperTemplateId || 'blank_lined',
         createdAt: new Date().toISOString(),
         drawings: pageData.drawings || [],
         textBlocks: pageData.textBlocks || [],
@@ -261,6 +273,7 @@ export const StorageService = {
           {
             pageId: `page_${Date.now()}`,
             pageNumber: 1,
+            paperTemplateId: diary.paperTemplateId || 'blank_lined',
             createdAt: new Date().toISOString(),
             drawings: [],
             textBlocks: [],

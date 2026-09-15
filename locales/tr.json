@@ -214,11 +214,21 @@
     "pageAdded": "Yeni sayfa eklendi",
     "pageDeleted": "Sayfa silindi",
     "singlePageWarning": "Günlükte en az bir sayfa bulunmalıdır.",
+    "changeTemplate": "Şablon Değiştir",
+    "templateChanged": "Sayfa şablonu güncellendi",
+    "templateDesc": "Yeni eklenen sayfalarda varsayılan olarak kullanılacak kağıt düzenini belirleyin:",
+    "editTemplateDesc": "Bu sayfanın kağıt düzenini seçin:",
     "templates": {
       "lined": "Çizgili Sayfa",
+      "linedDesc": "Düzenli yazı ve günlük notlar için",
       "grid": "Kareli Sayfa",
+      "gridDesc": "Matematik, planlama ve çizimler için",
       "dotted": "Noktalı Sayfa",
-      "plain": "Düz Sayfa"
+      "dottedDesc": "Bullet journal ve serbest tasarımlar için",
+      "plain": "Düz Sayfa",
+      "plainDesc": "Tamamen boş serbest çizim tuvali",
+      "vintage": "Eskitme Kağıt",
+      "vintageDesc": "Nostaljik sarı eskitme kağıt dokusu"
     }
   }
 }
