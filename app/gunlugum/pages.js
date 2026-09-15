@@ -447,17 +447,19 @@ export default function GunlugumPagesScreen() {
   }, [activePage, currentPageIndex, handleDrawingsChange]);
 
   // Sticker Ekleme
+  // Kayıt yapısı DraggableSticker'ın okuduğu alanlarla (type, content, stickerId, scale) ve Ajandam ile aynıdır.
+  // Görsel sticker'ın kaynağı kayda yazılmaz; çizilirken stickerId ile STICKER_PACKS'ten bulunur.
   const handleSelectSticker = useCallback(
     (sticker) => {
       setIsStickerMenuVisible(false);
       const newSticker = {
-        id: `sticker_${Date.now()}`,
-        source: sticker.source,
-        name: sticker.name,
+        id: `stk_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        stickerId: sticker.id,
+        type: sticker.type,
+        content: sticker.content,
         x: 100,
         y: 150,
-        width: 80,
-        height: 80,
+        scale: 1.0,
         rotation: 0,
       };
 
@@ -508,15 +510,16 @@ export default function GunlugumPagesScreen() {
     [currentPageIndex]
   );
 
+  // DraggableSticker boyutlandırma bitince onResize(id, scale) çağırır
   const handleStickerResize = useCallback(
-    (stickerId, width, height, rotation) => {
+    (stickerId, newScale) => {
       setDiary((prev) => {
         const currentPages = [...(prev?.pages || [])];
         const pageToUpdate = currentPages[currentPageIndex];
         if (!pageToUpdate) return prev;
 
         const updatedStickers = (pageToUpdate.stickers || []).map((s) =>
-          s.id === stickerId ? { ...s, width, height, rotation } : s
+          s.id === stickerId ? { ...s, scale: newScale } : s
         );
         currentPages[currentPageIndex] = {
           ...pageToUpdate,

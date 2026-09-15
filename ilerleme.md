@@ -4,6 +4,26 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-15] - Günlüğüm: Sticker Ekleme Onarımı (Eklenen Sticker'ın Görünmemesi)
+
+### 🐞 Hata ve Kök Neden
+- **Bildirim:** Sticker'lar seçicide görünüyor ama sayfaya eklenemiyor.
+- **Web'de yeniden üretildi:** Sticker aslında state'e ve depolamaya ekleniyordu ancak sayfada boş, 8×8 px bir kutu olarak çiziliyordu; kullanıcı eklendiğini göremiyordu. Devralma raporunda tespit edilen alan uyuşmazlığıyla **aynı kök neden**.
+- **Kaynak:** `app/gunlugum/pages.js` → `handleSelectSticker` yeni sticker'ı `source` ve `name` alanlarıyla oluşturuyordu (seçicideki sticker'larda `name` yok, emoji sticker'larda `source` da yok). `components/stickers/DraggableSticker.js` ise `type`, `content`, `stickerId` ve `scale` okuyor; emoji için `content` boş, görsel için `stickerId` bulunamadığından hiçbir şey çizilmiyordu.
+- **Aynı akıştaki ikinci hata:** `handleStickerResize` `(stickerId, width, height, rotation)` bekliyordu; `DraggableSticker` ise `onResize(id, scale)` çağırıyor. Boyut `width` alanına yazılıyor, `scale` hiç kaydedilmiyordu.
+
+### 🔧 Düzeltmeler
+- **`app/gunlugum/pages.js`:** `handleSelectSticker` artık Ajandam ile aynı yapıyı yazar: `{ id: stk_<zaman>_<rastgele>, stickerId, type, content, x, y, scale: 1, rotation: 0 }`. Görsel sticker'ın kaynağı kayda yazılmaz (mobilde derlemeye bağlı bir sayıdır); çizilirken `stickerId` ile bulunur. `handleStickerResize` imzası `(stickerId, newScale)` oldu ve `scale` kaydedilir.
+- **`services/storageService.js`:** Günlük okunurken `type`, `content` ve `stickerId` alanlarının hiçbirini taşımayan (kurtarılamayan, hiç görünmemiş) sticker kayıtları bir kez temizlenir; temiz veride tekrar yazma yapılmaz.
+- Ajandam, Yapılacaklar ve sticker bileşenlerine dokunulmadı.
+
+### ✅ Doğrulama & Testler
+- Tanımsız tanımlayıcı taraması 0; web paketi hatasız derlendi; konsol hatası 0.
+- Sahte AsyncStorage testi: 2 eski görünmez kayıt silindi, 3 geçerli emoji/görsel kaydı korundu, temizlik tek yazmayla yapıldı, sonraki okumalarda yazma olmadı. Önceki depolama kilidi testi de geçti.
+- Web (Playwright): 2 eski görünmez kayıtla açılan sayfada kayıtlar temizlendi; emoji (❤️) ve görsel sticker eklendi ve görünür oldu; görsel sticker sürüklenip (204, 306) konumu kaydedildi; emoji 1.5× büyütülüp `scale` kaydedildi; sayfa yeniden yüklendiğinde konum, boyut ve görünürlük korundu.
+
+---
+
 ## 📅 [2026-09-15] - Noktalı Kağıtta Dinamik Sütun Sayısı ve Kare Nokta Izgarası
 
 ### 🚀 Değişiklik (`components/stationery/PaperSheet.js`)

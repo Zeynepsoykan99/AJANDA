@@ -37,6 +37,10 @@ const createEmptyDiaryPage = (paperTemplateId) => ({
   data: { content: '' },
 });
 
+// Eski hatalı ekleme akışının yazdığı, hangi sticker olduğu bilgisini taşımayan (hiç görünmeyen) kayıt
+const isUnrenderableSticker = (sticker) =>
+  !sticker || (!sticker.type && !sticker.content && !sticker.stickerId);
+
 // Kilitsiz okuma: yalnızca withDiaryLock içinden çağrılmalıdır
 const readDiary = async () => {
   const data = await AsyncStorage.getItem(KEYS.DIARY);
@@ -44,15 +48,33 @@ const readDiary = async () => {
     const diary = JSON.parse(data);
     if (!diary.pages || !Array.isArray(diary.pages) || diary.pages.length === 0) {
       diary.pages = [createEmptyDiaryPage(diary.paperTemplateId)];
-    } else if (diary.pages.some((p) => !p.paperTemplateId)) {
-      // Kendi şablonu olmayan eski sayfalar, günlük varsayılanı sonradan değişse
-      // bile görünümlerini korusunlar diye mevcut varsayılanı sayfaya sabitle
-      diary.pages = diary.pages.map((p) =>
-        p.paperTemplateId
-          ? p
-          : { ...p, paperTemplateId: diary.paperTemplateId || 'blank_lined' }
-      );
-      await AsyncStorage.setItem(KEYS.DIARY, JSON.stringify(diary));
+    } else {
+      let needsWrite = false;
+
+      if (diary.pages.some((p) => !p.paperTemplateId)) {
+        // Kendi şablonu olmayan eski sayfalar, günlük varsayılanı sonradan değişse
+        // bile görünümlerini korusunlar diye mevcut varsayılanı sayfaya sabitle
+        diary.pages = diary.pages.map((p) =>
+          p.paperTemplateId
+            ? p
+            : { ...p, paperTemplateId: diary.paperTemplateId || 'blank_lined' }
+        );
+        needsWrite = true;
+      }
+
+      if (diary.pages.some((p) => Array.isArray(p.stickers) && p.stickers.some(isUnrenderableSticker))) {
+        // Kurtarılamayan görünmez sticker kayıtlarını bir kez temizle
+        diary.pages = diary.pages.map((p) =>
+          Array.isArray(p.stickers) && p.stickers.some(isUnrenderableSticker)
+            ? { ...p, stickers: p.stickers.filter((s) => !isUnrenderableSticker(s)) }
+            : p
+        );
+        needsWrite = true;
+      }
+
+      if (needsWrite) {
+        await AsyncStorage.setItem(KEYS.DIARY, JSON.stringify(diary));
+      }
     }
     return diary;
   }
