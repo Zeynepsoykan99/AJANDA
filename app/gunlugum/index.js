@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
@@ -60,81 +60,71 @@ export default function GunlugumCoverScreen() {
   const [textColor, setTextColor] = useState('#4E342E');
   const [textFontSize, setTextFontSize] = useState(24);
 
-  const saveTimeoutRef = useRef(null);
+  // Kapak çizimleri ve metinleri ayrı alanlara yazıldığı için ayrı debounce zamanlayıcıları kullanılır
+  const drawingsSaveTimeoutRef = useRef(null);
+  const textBlocksSaveTimeoutRef = useRef(null);
 
-  // Günlük verilerini yükle
-  useEffect(() => {
-    (async () => {
-      try {
-        const savedDiary = await StorageService.getDiary();
-        setDiary(savedDiary);
-      } catch (error) {
-        console.warn('Günlük yüklenirken hata:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    })();
-  }, []);
+  // Günlük verilerini yükle: ekran her odaklandığında güncel kayıt okunur.
+  // Sayfalar ekranından geri dönüldüğünde kapak state'i bayat kalmaz.
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+      (async () => {
+        try {
+          const savedDiary = await StorageService.getDiary();
+          if (isActive && savedDiary) setDiary(savedDiary);
+        } catch (error) {
+          console.warn('Günlük yüklenirken hata:', error);
+        } finally {
+          if (isActive) setIsLoading(false);
+        }
+      })();
+      return () => {
+        isActive = false;
+      };
+    }, [])
+  );
 
-  // Kapak şablonunu güncelle ve kaydet
+  // Kapak şablonunu güncelle ve kaydet (yalnızca kapak alanı; sayfalara dokunulmaz)
   const handleSaveCover = useCallback(async (newCoverData) => {
-    setDiary((prev) => {
-      const updated = {
-        ...prev,
-        coverTemplateId: newCoverData.templateId,
-      };
-      StorageService.saveDiary(updated);
-      return updated;
-    });
+    setDiary((prev) => ({ ...prev, coverTemplateId: newCoverData.templateId }));
+    await StorageService.updateDiaryMeta({ coverTemplateId: newCoverData.templateId });
   }, []);
 
-  // İç sayfa şablonunu güncelle ve kaydet
+  // Yeni sayfaların varsayılan kağıt şablonunu güncelle ve kaydet
   const handleSelectPaperTemplate = useCallback(async (templateId) => {
-    setDiary((prev) => {
-      const updated = {
-        ...prev,
-        paperTemplateId: templateId,
-      };
-      StorageService.saveDiary(updated);
-      return updated;
-    });
+    setDiary((prev) => ({ ...prev, paperTemplateId: templateId }));
+    await StorageService.updateDiaryMeta({ paperTemplateId: templateId });
   }, []);
 
   // Kapak çizimlerini güncelle (debounced auto-save)
   const handleDrawingsChange = useCallback((newDrawings) => {
-    setDiary((prev) => {
-      const updated = { ...prev, coverDrawings: newDrawings };
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(async () => {
-        await StorageService.saveDiary(updated);
-      }, 500);
-      return updated;
-    });
+    setDiary((prev) => ({ ...prev, coverDrawings: newDrawings }));
+    if (drawingsSaveTimeoutRef.current) clearTimeout(drawingsSaveTimeoutRef.current);
+    drawingsSaveTimeoutRef.current = setTimeout(() => {
+      StorageService.updateDiaryMeta({ coverDrawings: newDrawings });
+    }, 500);
   }, []);
 
   // Kapak serbest metin kutularını güncelle (debounced auto-save)
   const handleTextBlocksChange = useCallback((newTextBlocks) => {
-    setDiary((prev) => {
-      const updated = { ...prev, coverTextBlocks: newTextBlocks };
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(async () => {
-        await StorageService.saveDiary(updated);
-      }, 400);
-      return updated;
-    });
+    setDiary((prev) => ({ ...prev, coverTextBlocks: newTextBlocks }));
+    if (textBlocksSaveTimeoutRef.current) clearTimeout(textBlocksSaveTimeoutRef.current);
+    textBlocksSaveTimeoutRef.current = setTimeout(() => {
+      StorageService.updateDiaryMeta({ coverTextBlocks: newTextBlocks });
+    }, 400);
   }, []);
 
   // Son çizgiyi geri al
   const handleUndoDrawing = useCallback(() => {
-    setDiary((prev) => {
-      const current = prev?.coverDrawings || [];
-      if (current.length === 0) return prev;
-      const updatedDrawings = current.slice(0, current.length - 1);
-      const updated = { ...prev, coverDrawings: updatedDrawings };
-      StorageService.saveDiary(updated);
-      return updated;
-    });
-  }, []);
+    const current = diary?.coverDrawings || [];
+    if (current.length === 0) return;
+    const updatedDrawings = current.slice(0, current.length - 1);
+    // Bekleyen çizim kaydı geri alınan çizgiyi tekrar yazmasın
+    if (drawingsSaveTimeoutRef.current) clearTimeout(drawingsSaveTimeoutRef.current);
+    setDiary((prev) => ({ ...prev, coverDrawings: updatedDrawings }));
+    StorageService.updateDiaryMeta({ coverDrawings: updatedDrawings });
+  }, [diary?.coverDrawings]);
 
   // Günlüğün sayfalarını aç
   const handleOpenDiary = useCallback(() => {
