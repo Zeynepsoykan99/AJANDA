@@ -15,7 +15,7 @@ export function useResponsiveLayout() {
   const isTwoPage = isTablet && width >= 800;
 
   // İçerik genişliği hesaplama (tablet ekranlarında defteri ortalamak ve estetik tutmak için)
-  const maxContentWidth = isTablet ? Math.min(width * 0.94, 1100) : width;
+  const maxContentWidth = isTablet ? Math.min(width * 0.98, 1400) : width;
   const maxContentHeight = isTablet ? Math.min(height * 0.90, 850) : height;
 
   return {

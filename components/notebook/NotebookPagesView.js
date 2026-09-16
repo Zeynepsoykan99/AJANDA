@@ -121,6 +121,7 @@ export default function NotebookPagesView({
 
   const scrollViewRef = useRef(null);
   const saveTimeoutRef = useRef(null);
+  const lastPageSaveRef = useRef(null);
 
   // Sayfa başına ZoomableCanvas referansları (pageId -> ref)
   const canvasRefs = useRef({});
@@ -154,6 +155,9 @@ export default function NotebookPagesView({
           if (foundIdx >= 0) targetIdx = foundIdx;
         } else if (typeof initialPageIndex === 'number' && initialPageIndex >= 0 && initialPageIndex < pList.length) {
           targetIdx = initialPageIndex;
+        } else if (typeof savedNotebook?.lastPageIndex === 'number' && savedNotebook.lastPageIndex >= 0 && savedNotebook.lastPageIndex < pList.length) {
+          // Arama sonucundan gelmiyorsa, son kalınan sayfaya konumlan
+          targetIdx = savedNotebook.lastPageIndex;
         }
 
         if (targetIdx > 0 && targetIdx < pList.length) {
@@ -279,6 +283,18 @@ export default function NotebookPagesView({
     },
     [pages.length, currentPageIndex, windowWidth, remeasureActiveCanvas]
   );
+
+  // Son kalınan sayfa indeksini AsyncStorage'a debounced kaydet
+  useEffect(() => {
+    if (!notebook || isLoading) return;
+    if (lastPageSaveRef.current) clearTimeout(lastPageSaveRef.current);
+    lastPageSaveRef.current = setTimeout(() => {
+      storageRef.current.updateMeta?.({ lastPageIndex: currentPageIndex });
+    }, 500);
+    return () => {
+      if (lastPageSaveRef.current) clearTimeout(lastPageSaveRef.current);
+    };
+  }, [currentPageIndex, notebook, isLoading]);
 
   // Bildirim + geri alınabilir işlem kaydı. Her bildirime benzersiz id verilir; böylece art arda gelen
   // bildirimlerde otomatik kapanma süresi yeniden başlar ve Geri Al yalnızca son işlemi geri alır.
@@ -992,7 +1008,7 @@ export default function NotebookPagesView({
                     maxWidth: maxContentWidth,
                     alignSelf: 'center',
                     width: '100%',
-                    paddingVertical: 10,
+                    paddingVertical: 4,
                   },
                 ]}
               >

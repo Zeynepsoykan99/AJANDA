@@ -26,7 +26,7 @@ const withJournalLock = (task) => {
 };
 
 // Kapak ekranının yazabileceği üst düzey defter alanları (pages asla buradan yazılmaz)
-const NOTEBOOK_META_FIELDS = ['title', 'coverTemplateId', 'paperTemplateId', 'coverDrawings', 'coverTextBlocks'];
+const NOTEBOOK_META_FIELDS = ['title', 'coverTemplateId', 'paperTemplateId', 'coverDrawings', 'coverTextBlocks', 'lastPageIndex'];
 
 const DEFAULT_PAPER_TEMPLATE_ID = 'blank_lined';
 const DEFAULT_COVER_TEMPLATE_ID = 'cover_1';
@@ -394,7 +394,8 @@ export const StorageService = {
     withJournalLock(async () => {
       try {
         const diary = await readDiary();
-        return await writeDiary({ ...diary, ...pickNotebookMeta(fields) });
+        const merged = { ...diary, ...pickNotebookMeta(fields) };
+        return await writeDiary(notebookWithDefaultPaperApplied(diary, merged));
       } catch (error) {
         console.warn('StorageService.updateDiaryMeta hata:', error);
         return null;

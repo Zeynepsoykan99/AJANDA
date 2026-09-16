@@ -162,6 +162,12 @@ export default function DraggableSticker({
     zIndex: isSelected || isActive.value ? 100 : 10,
   }));
 
+  // Ters Ölçek (Inverse Scale): Silme ve boyutlandırma butonları sticker büyüse de
+  // sabit piksel boyutunda kalır; böylece devasa buton sorunu ortadan kalkar.
+  const inverseScaleStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 / scale.value }],
+  }));
+
   let imageSource = null;
   if (sticker.type === 'image') {
     for (const pack of STICKER_PACKS) {
@@ -194,16 +200,16 @@ export default function DraggableSticker({
         <>
           {/* Silme Butonu */}
           <GestureDetector gesture={deleteTapGesture}>
-            <View style={styles.deleteButton}>
+            <Animated.View style={[styles.deleteButton, inverseScaleStyle]}>
               <MaterialCommunityIcons name="close" size={16} color="#FFF" />
-            </View>
+            </Animated.View>
           </GestureDetector>
 
           {/* Boyutlandırma Butonu */}
           <GestureDetector gesture={resizePanGesture}>
-            <View style={styles.resizeButton}>
+            <Animated.View style={[styles.resizeButton, inverseScaleStyle]}>
               <MaterialCommunityIcons name="resize-bottom-right" size={16} color="#FFF" />
-            </View>
+            </Animated.View>
           </GestureDetector>
         </>
       )}

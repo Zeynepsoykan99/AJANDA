@@ -16,6 +16,7 @@ export default function NotebookPagesScreen() {
   const storage = useMemo(
     () => ({
       load: () => StorageService.getNotebook(notebookId),
+      updateMeta: (fields) => StorageService.updateNotebookMeta(notebookId, fields),
       addPage: async (pageData) => {
         const result = await StorageService.addNotebookPage(notebookId, pageData);
         return result ? { notebook: result.updatedNotebook, newPage: result.newPage } : null;

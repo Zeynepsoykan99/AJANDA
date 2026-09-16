@@ -287,19 +287,6 @@ export default function NotebookCoverView({ storage, getTitle, openButtonLabel, 
           </ImageWithSkeleton>
         </InteractiveCover3D>
 
-        {/* Defteri Aç Butonu (Girly CTA) */}
-        {activeMode === 'none' && (
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={handleOpenNotebook}
-            style={[styles.openNotebookBtn, { backgroundColor: colors.accent }]}
-          >
-            <Text style={styles.openNotebookBtnText}>
-              {openButtonLabel}
-            </Text>
-            <MaterialCommunityIcons name="book-open-page-variant" size={18} color="#FFFFFF" />
-          </TouchableOpacity>
-        )}
       </View>
 
       {/* Kapak Seçim Modalı */}
@@ -422,27 +409,7 @@ const styles = StyleSheet.create({
   fullBleedCanvas: {
     ...StyleSheet.absoluteFillObject,
   },
-  openNotebookBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 24,
-    marginTop: 18,
-    gap: 8,
-    shadowColor: '#C2185B',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  openNotebookBtnText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
+
   floatingToolbarContainer: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 990,

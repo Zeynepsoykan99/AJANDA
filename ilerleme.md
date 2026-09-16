@@ -4,6 +4,53 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-16] - Günlüğüm UX/UI Düzeltmeleri ve iPad Layout Optimizasyonu (5 Kritik Sorun)
+
+### 🔍 Kapsam ve İhtiyaç
+- **Tespit:** Günlüğüm modülünde ve genel tablet (iPad) arayüzünde 5 kritik UX/UI sorunu bulundu: gereksiz açma butonu, şablon seçiminin ilk sayfaya yansımaması, sticker butonlarının orantısız büyümesi, son kalınan sayfanın hatırlanmaması ve iPad kenar boşlukları.
+
+### 🔧 Yapılan Düzeltmeler ve Eklemeler
+
+#### 1. Gereksiz "Günlüğümü Aç" Butonunun Kaldırılması
+- **`components/notebook/NotebookCoverView.js`:**
+  - Kapağa tıklayarak açma zaten çalıştığı için `openNotebookBtn` JSX bloğu ve tüm ilgili stiller (`openNotebookBtn`, `openNotebookBtnText`) tamamen silindi.
+  - Değişiklik hem Günlüğüm hem Notlarım kapak ekranlarını etkiler (ortak bileşen).
+
+#### 2. Kapaktaki Şablon Seçiminin Günlük İlk Sayfasına Uygulanması
+- **`services/storageService.js` (`updateDiaryMeta`):**
+  - `updateDiaryMeta` fonksiyonuna `notebookWithDefaultPaperApplied(diary, merged)` çağrısı eklendi.
+  - Bu mantık Notlarım'da (`updateNotebookMeta`) zaten mevcuttu ama Günlüğüm'de eksikti.
+  - Artık kapak ekranında şablon değiştirildiğinde, günlüğün tek boş sayfası varsa o sayfanın şablonu da otomatik güncellenir.
+
+#### 3. Sticker Silme/Boyutlandırma Butonları Inverse Scaling
+- **`components/stickers/DraggableSticker.js`:**
+  - Silme (❌) ve boyutlandırma (↔) butonlarına `useAnimatedStyle(() => ({ transform: [{ scale: 1 / scale.value }] }))` ters ölçek uygulandı.
+  - `<View>` etiketleri `<Animated.View>` olarak değiştirildi.
+  - Sticker ne kadar büyütülürse büyütülsün, butonlar her zaman sabit piksel boyutunda kalır.
+
+#### 4. Son Kalınan Sayfayı Hatırlama (State Persistence)
+- **`services/storageService.js`:**
+  - `NOTEBOOK_META_FIELDS` dizisine `'lastPageIndex'` eklendi.
+- **`components/notebook/NotebookPagesView.js`:**
+  - İlk yüklemede `notebook.lastPageIndex` okunuyor; arama parametresi (`initialPageId/initialPageIndex`) sağlanmamışsa son kalınan sayfaya konumlanıyor.
+  - Sayfa her değiştiğinde debounced (500ms) `storage.updateMeta?.({ lastPageIndex })` ile AsyncStorage'a kaydediliyor.
+- **`app/gunlugum/pages.js`:** `storage` objesine `updateMeta: (fields) => StorageService.updateDiaryMeta(fields)` eklendi.
+- **`app/defterlerim/[notebookId]/pages.js`:** `storage` objesine `updateMeta: (fields) => StorageService.updateNotebookMeta(notebookId, fields)` eklendi.
+
+#### 5. iPad Kenar Boşlukları Optimizasyonu
+- **`hooks/useResponsiveLayout.js`:**
+  - `maxContentWidth` değeri `Math.min(width * 0.94, 1100)` → `Math.min(width * 0.98, 1400)` olarak genişletildi.
+- **`components/notebook/NotebookPagesView.js`:**
+  - Tablet `paddingVertical` değeri `10` → `4` olarak azaltıldı.
+
+### ✅ Doğrulama
+- `node tests/zoomableCanvas.test.js`: 6/6 test başarılı
+- Babel AST parse: 7/7 dosya sözdizimi hatasız
+- Değişiklik Ajanda ve To-Do modüllerinin tasarımını bozmuyor (maxContentWidth yalnızca defter sayfalarında kullanılıyor)
+
+---
+
+
 ## 📅 [2026-09-16] - Global Arama (Spotlight Search) Genişletmesi: Günlüğüm ve Notlarım Entegrasyonu, Doğrudan Sayfaya Atlama ve 300ms Debounce
 
 ### 🔍 Kapsam ve İhtiyaç

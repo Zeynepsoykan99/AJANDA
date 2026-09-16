@@ -15,6 +15,7 @@ export default function GunlugumPagesScreen() {
   const storage = useMemo(
     () => ({
       load: () => StorageService.getDiary(),
+      updateMeta: (fields) => StorageService.updateDiaryMeta(fields),
       addPage: async (pageData) => {
         const result = await StorageService.addDiaryPage(pageData);
         return result ? { notebook: result.updatedDiary, newPage: result.newPage } : null;
