@@ -254,5 +254,20 @@
     "noResults": "No results found",
     "resultCount": "Matches on {{count}} pages",
     "matchCount": "{{count}} matches"
+  },
+  "security": {
+    "lockNotebook": "Lock This Notebook",
+    "unlockNotebook": "Remove Lock",
+    "lockedNotebook": "Locked Notebook",
+    "lockedDesc": "The pages and personal notes in this notebook are protected by your device's security.",
+    "unlockPrompt": "Authenticate to access content",
+    "unlockPromptWithTitle": "Authenticate to unlock \"{{title}}\"",
+    "unlockToOpen": "Authenticate to open notebook",
+    "unlockToRemoveLock": "Authenticate to remove lock",
+    "lockConfirm": "Authenticate to lock this notebook",
+    "fallbackPasscode": "Use Passcode",
+    "unlockWithBiometric": "Unlock with {{type}}",
+    "authFailed": "Authentication failed. Please try again.",
+    "biometricNotAvailable": "Biometric authentication or passcode is not set up on your device."
   }
 }

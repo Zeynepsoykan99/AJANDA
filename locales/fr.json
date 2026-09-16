@@ -254,5 +254,20 @@
     "noResults": "Aucun résultat",
     "resultCount": "Correspondances sur {{count}} pages",
     "matchCount": "{{count}} correspondances"
+  },
+  "security": {
+    "lockNotebook": "Verrouiller ce carnet",
+    "unlockNotebook": "Supprimer le verrouillage",
+    "lockedNotebook": "Carnet verrouillé",
+    "lockedDesc": "Les pages et notes personnelles de ce carnet sont protégées par la sécurité de votre appareil.",
+    "unlockPrompt": "Authentifiez-vous pour accéder au contenu",
+    "unlockPromptWithTitle": "Authentifiez-vous pour déverrouiller « {{title}} »",
+    "unlockToOpen": "Authentifiez-vous pour ouvrir le carnet",
+    "unlockToRemoveLock": "Authentifiez-vous pour supprimer le verrouillage",
+    "lockConfirm": "Authentifiez-vous pour verrouiller ce carnet",
+    "fallbackPasscode": "Utiliser le code de l'appareil",
+    "unlockWithBiometric": "Déverrouiller avec {{type}}",
+    "authFailed": "Échec de l'authentification. Veuillez réessayer.",
+    "biometricNotAvailable": "Aucun verrouillage biométrique ou code n'est configuré sur votre appareil."
   }
 }

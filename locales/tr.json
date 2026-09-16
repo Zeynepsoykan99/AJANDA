@@ -254,5 +254,20 @@
     "noResults": "Sonuç bulunamadı",
     "resultCount": "{{count}} sayfada eşleşme",
     "matchCount": "{{count}} eşleşme"
+  },
+  "security": {
+    "lockNotebook": "Bu Defteri Kilitle",
+    "unlockNotebook": "Kilidi Kaldır",
+    "lockedNotebook": "Kilitli Defter",
+    "lockedDesc": "Bu defterin sayfaları ve kişisel notları cihazınızın yerel güvenliğiyle korunmaktadır.",
+    "unlockPrompt": "İçeriğe erişmek için kimliğinizi doğrulayın",
+    "unlockPromptWithTitle": "\"{{title}}\" kilidini açmak için kimliğinizi doğrulayın",
+    "unlockToOpen": "Defteri açmak için kimliğinizi doğrulayın",
+    "unlockToRemoveLock": "Kilidi kaldırmak için kimliğinizi doğrulayın",
+    "lockConfirm": "Bu defteri kilitlemek için kimliğinizi doğrulayın",
+    "fallbackPasscode": "Cihaz Parolasını Kullan",
+    "unlockWithBiometric": "{{type}} ile Kilidi Aç",
+    "authFailed": "Kimlik doğrulanamadı. Lütfen tekrar deneyin.",
+    "biometricNotAvailable": "Cihazınızda biyometrik kilit veya ekran parolası tanımlı değil."
   }
 }

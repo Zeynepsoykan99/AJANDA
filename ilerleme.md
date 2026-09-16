@@ -4,6 +4,57 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-16] - Günlük ve Defterler İçin Biyometrik Kilit (Face ID / Touch ID / PIN) Entegrasyonu
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Günlüğüm ve Notlarım gibi özel ve kişisel alanlara yetkisiz kişilerin erişmesini engellemek için cihazın yerel donanım güvenliğini (Face ID, Touch ID, Android Biyometri, PIN/Parola) kullanan kurumsal seviyede bir güvenlik katmanı eklendi.
+
+### 🔧 Yapılan Düzeltmeler ve Eklemeler
+
+#### 1. Kütüphane & Yerel Konfigürasyon
+- `npx expo install expo-local-authentication` ile SDK 54 uyumlu `expo-local-authentication (~17.0.9)` kuruldu.
+- `app.json`: iOS `infoPlist` altına `NSFaceIDUsageDescription` ("Günlüğünüzü ve kişisel defterlerinizi korumak için Face ID doğrulaması kullanılır.") ve `expo-local-authentication` eklentisi tanımlandı.
+
+#### 2. Biyometrik Güvenlik Servisi (`services/biometricService.js`)
+- `checkBiometricsAvailability()`: Donanım ve kayıtlı biyometrik kontrolü.
+- `getBiometricTypeInfo()`: Cihaz tipine göre dinamik ikon ve etiket ('face' -> Face ID, 'fingerprint' -> Touch ID/Parmak İzi, 'passcode' -> Cihaz Parolası).
+- `authenticateWithBiometrics()`: Yerel sistem doğrulama arayüzünü tetikler (cihaz parolası yedeğiyle).
+- `unlockSession()`, `lockSession()`, `isSessionUnlocked()`: Açılan defter için oturum süresince in-memory açık kilit yönetimi.
+
+#### 3. Depolama & Veri Modeli (`services/storageService.js`)
+- `NOTEBOOK_META_FIELDS` dizisine `'isLocked'` alanı dahil edildi (`updateDiaryMeta` ve `updateNotebookMeta` ile tam uyumlu).
+
+#### 4. Güvenlik Duvarı Bileşeni (`components/notebook/NotebookLockGate.js`)
+- Kilitli defterler için özel tam ekran güvenlik ekranı.
+- Şık kilit animasyon alanı, cihaz türüne göre dinamik buton ("Face ID ile Kilidi Aç", "Touch ID ile Kilidi Aç"), hata yönetimi, otomatik biyometrik tetikleme ve geri dönüş butonu.
+
+#### 5. Kapak Ekranı Entegrasyonu (`components/notebook/NotebookCoverView.js`)
+- Kapak üst barı sağ araç grubuna kilit butonu eklendi (kilit açık: `lock-open-outline`, kilitli: vurgulu renk ve `lock` ikonu).
+- Kilit açma ve kilitleme eylemleri öncesinde cihaz sahibinin biyometrisi zorunlu kılındı.
+- 3D interaktif kapak üzerine cam efektli 🔒 rozeti eklendi.
+- Kapağa tıklandığında kilitliyse sayfalar açılmadan önce anında yerel Face ID/PIN promptu tetikleniyor.
+
+#### 6. Sayfalar Ekranı Koruması (`components/notebook/NotebookPagesView.js`)
+- Sayfalar açıldığında `notebook.isLocked && !isUnlocked` ise hiçbir sayfa, metin veya çizim tuvali DOM/ekrana render edilmeden `NotebookLockGate` güvenlik duvarı devreye sokuluyor.
+
+#### 7. Defter Rafı & Eylem Menüsü
+- `components/notebook/NotebookActionSheet.js`: Deftere uzun basıldığında "Kilitle" / "Kilidi Kaldır" eylem butonu eklendi.
+- `app/defterlerim/index.js`: Defter rafındaki kilitli defterlerin kapak köşelerine `shelfLockBadge` 🔒 eklendi.
+
+#### 8. Spotlight Arama Gizliliği (`services/searchService.js`)
+- Kilitli günlük veya defterlerin sayfaları ve kapak notları genel arama sonuçlarında açık metin olarak sızdırılmayacak şekilde maskelendi (`[🔒 Kilitli İçerik]`).
+
+#### 9. Çoklu Dil Desteği (`locales/*.json`)
+- TR, EN, DE, ES, FR dil dosyalarına tüm güvenlik, kilit ve biyometri metinleri eklendi.
+
+### ✅ Doğrulama
+- `node tests/zoomableCanvas.test.js`: 6/6 test başarılı
+- Babel AST parse: 8/8 dosya sözdizimi hatasız derlendi
+- Arama gizlilik testi: Kilitli defterlerin metin maskelemesi test edildi ve onaylandı
+- i18n JSON geçerlilik kontrolü: 5/5 dil dosyası doğrulandı
+
+---
+
 ## 📅 [2026-09-16] - Günlüğüm UX/UI Düzeltmeleri ve iPad Layout Optimizasyonu (5 Kritik Sorun)
 
 ### 🔍 Kapsam ve İhtiyaç

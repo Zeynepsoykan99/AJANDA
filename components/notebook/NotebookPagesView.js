@@ -38,6 +38,8 @@ import UndoToast from '../../components/ui/UndoToast';
 import LassoActionMenu from '../../components/drawing/LassoActionMenu';
 import RecognitionConfirmationModal from '../../components/drawing/RecognitionConfirmationModal';
 import NotebookSearchSheet from './NotebookSearchSheet';
+import NotebookLockGate from './NotebookLockGate';
+import { isSessionUnlocked } from '../../services/biometricService';
 import { recognizeSelectedStrokes } from '../../services/handwritingService';
 import { fitTextToBounds, clusterStrokesByColorAndProximity } from '../../utils/lassoGeometry';
 
@@ -80,6 +82,7 @@ export default function NotebookPagesView({
 
   const [notebook, setNotebook] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUnlocked, setIsUnlocked] = useState(false);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
 
   // Araç Çubuğu Aktif Mod: 'none' | 'drawing' | 'text'
@@ -146,6 +149,15 @@ export default function NotebookPagesView({
       try {
         const savedNotebook = await storageRef.current.load();
         setNotebook(savedNotebook);
+
+        const targetId = savedNotebook?.id || 'diary';
+        if (savedNotebook?.isLocked) {
+          if (isSessionUnlocked(targetId)) {
+            setIsUnlocked(true);
+          }
+        } else {
+          setIsUnlocked(true);
+        }
 
         // Doğrudan arama sonucundan gelen sayfaya konumlan
         const pList = savedNotebook?.pages || [];
@@ -849,6 +861,21 @@ export default function NotebookPagesView({
           </TouchableOpacity>
         </View>
       </AnimatedSafeAreaView>
+    );
+  }
+
+  // Biyometrik Kilit Güvenlik Duvarı
+  const targetId = notebook?.id || 'diary';
+  if (notebook?.isLocked && !isUnlocked) {
+    const pageTitle = typeof title === 'function' ? title(notebook) : title;
+    return (
+      <NotebookLockGate
+        targetId={targetId}
+        title={pageTitle}
+        edgeColor={targetEdgeColor}
+        onUnlock={() => setIsUnlocked(true)}
+        onBack={() => router.back()}
+      />
     );
   }
 

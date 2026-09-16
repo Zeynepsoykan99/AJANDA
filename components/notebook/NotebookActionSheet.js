@@ -15,7 +15,15 @@ import BottomSheet from '../ui/BottomSheet';
  * @param {function} onRename
  * @param {function} onDelete
  */
-export default function NotebookActionSheet({ visible, notebookTitle, onClose, onRename, onDelete }) {
+export default function NotebookActionSheet({
+  visible,
+  notebookTitle,
+  isLocked = false,
+  onClose,
+  onRename,
+  onToggleLock,
+  onDelete,
+}) {
   const { t } = useTranslation();
   const { colors } = useTheme();
 
@@ -32,6 +40,25 @@ export default function NotebookActionSheet({ visible, notebookTitle, onClose, o
             {t('notebooks.rename', 'Yeniden Adlandır')}
           </Text>
         </TouchableOpacity>
+
+        {onToggleLock ? (
+          <TouchableOpacity
+            activeOpacity={0.75}
+            onPress={onToggleLock}
+            style={[styles.actionRow, { borderColor: colors.border + '80', backgroundColor: colors.card }]}
+          >
+            <MaterialCommunityIcons
+              name={isLocked ? 'lock-open-outline' : 'lock-outline'}
+              size={20}
+              color={colors.accent}
+            />
+            <Text style={[styles.actionText, { color: colors.textPrimary }]}>
+              {isLocked
+                ? t('security.unlockNotebook', 'Kilidi Kaldır')
+                : t('security.lockNotebook', 'Bu Defteri Kilitle')}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
 
         <TouchableOpacity
           activeOpacity={0.75}

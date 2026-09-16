@@ -254,5 +254,20 @@
     "noResults": "Keine Ergebnisse gefunden",
     "resultCount": "Treffer auf {{count}} Seiten",
     "matchCount": "{{count}} Treffer"
+  },
+  "security": {
+    "lockNotebook": "Dieses Notizbuch sperren",
+    "unlockNotebook": "Sperre aufheben",
+    "lockedNotebook": "Gesperrtes Notizbuch",
+    "lockedDesc": "Die Seiten und persönlichen Notizen dieses Notizbuchs sind durch die Gerätesicherheit geschützt.",
+    "unlockPrompt": "Authentifizieren, um auf den Inhalt zuzugreifen",
+    "unlockPromptWithTitle": "Authentifizieren, um „{{title}}“ zu entsperren",
+    "unlockToOpen": "Authentifizieren, um das Notizbuch zu öffnen",
+    "unlockToRemoveLock": "Authentifizieren, um die Sperre aufzuheben",
+    "lockConfirm": "Authentifizieren, um dieses Notizbuch zu sperren",
+    "fallbackPasscode": "Gerätecode verwenden",
+    "unlockWithBiometric": "Mit {{type}} entsperren",
+    "authFailed": "Authentifizierung fehlgeschlagen. Bitte erneut versuchen.",
+    "biometricNotAvailable": "Auf Ihrem Gerät ist keine biometrische Sperre oder ein Passcode eingerichtet."
   }
 }

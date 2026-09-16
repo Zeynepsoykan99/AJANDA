@@ -4,7 +4,9 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
@@ -12,6 +14,12 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
+import {
+  authenticateWithBiometrics,
+  isSessionUnlocked,
+  unlockSession,
+  lockSession,
+} from '../../services/biometricService';
 import {
   DEFAULT_COVER_TEMPLATE_ID,
   getCoverTemplateById,
@@ -140,10 +148,64 @@ export default function NotebookCoverView({ storage, getTitle, openButtonLabel, 
     storageRef.current.updateMeta({ coverDrawings: updatedDrawings });
   }, [notebook?.coverDrawings]);
 
-  // Defterin sayfalarını aç
-  const handleOpenNotebook = useCallback(() => {
+  // Kilit durumunu değiştir (biyometrik onay gerektirir)
+  const handleToggleLock = useCallback(async () => {
+    if (!notebook) return;
+    const targetId = notebook?.id || 'diary';
+    const isCurrentlyLocked = !!notebook?.isLocked;
+
+    const promptMessage = isCurrentlyLocked
+      ? t('security.unlockToRemoveLock', 'Kilidi kaldırmak için kimliğinizi doğrulayın')
+      : t('security.lockConfirm', 'Bu defteri kilitlemek için kimliğinizi doğrulayın');
+
+    const result = await authenticateWithBiometrics({
+      promptMessage,
+      fallbackLabel: t('security.fallbackPasscode', 'Cihaz Parolasını Kullan'),
+      cancelLabel: t('common.cancel', 'Vazgeç'),
+    });
+
+    if (result.success) {
+      const nextLocked = !isCurrentlyLocked;
+      setNotebook((prev) => ({ ...prev, isLocked: nextLocked }));
+      await storageRef.current.updateMeta({ isLocked: nextLocked });
+      if (nextLocked) {
+        unlockSession(targetId);
+      } else {
+        lockSession(targetId);
+      }
+      try {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch (e) {}
+    } else if (result.error && result.error !== 'user_cancel' && result.error !== 'system_cancel') {
+      Alert.alert(
+        t('common.error', 'Hata'),
+        t('security.authFailed', 'Kimlik doğrulanamadı. Lütfen tekrar deneyin.')
+      );
+    }
+  }, [notebook, t]);
+
+  // Defterin sayfalarını aç (kilitliyse önce doğrula)
+  const handleOpenNotebook = useCallback(async () => {
+    if (!notebook) return;
+    const targetId = notebook?.id || 'diary';
+    if (notebook?.isLocked && !isSessionUnlocked(targetId)) {
+      const result = await authenticateWithBiometrics({
+        promptMessage: t('security.unlockToOpen', {
+          title: getTitle ? getTitle(notebook) : '',
+          defaultValue: 'Defteri açmak için kimliğinizi doğrulayın',
+        }),
+        fallbackLabel: t('security.fallbackPasscode', 'Cihaz Parolasını Kullan'),
+        cancelLabel: t('common.cancel', 'Vazgeç'),
+      });
+
+      if (!result.success) {
+        return;
+      }
+      unlockSession(targetId);
+    }
+
     if (onOpen) onOpen();
-  }, [onOpen]);
+  }, [notebook, onOpen, getTitle, t]);
 
   if (isLoading) {
     return (
@@ -217,6 +279,28 @@ export default function NotebookCoverView({ storage, getTitle, openButtonLabel, 
         </View>
 
         <View style={styles.headerRightGroup}>
+          {/* Biyometrik Kilit Butonu */}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={handleToggleLock}
+            style={[
+              styles.headerButton,
+              { backgroundColor: colors.card, borderColor: colors.border },
+              notebook?.isLocked && { backgroundColor: colors.accent + '20', borderColor: colors.accent },
+            ]}
+            accessibilityLabel={
+              notebook?.isLocked
+                ? t('security.unlockNotebook', 'Kilidi Kaldır')
+                : t('security.lockNotebook', 'Bu Defteri Kilitle')
+            }
+          >
+            <MaterialCommunityIcons
+              name={notebook?.isLocked ? 'lock' : 'lock-open-outline'}
+              size={20}
+              color={notebook?.isLocked ? colors.accent : colors.textSecondary}
+            />
+          </TouchableOpacity>
+
           {/* İç Sayfa Kağıt Şablonu Seçimi */}
           <TouchableOpacity
             activeOpacity={0.7}
@@ -285,6 +369,13 @@ export default function NotebookCoverView({ storage, getTitle, openButtonLabel, 
               ]}
             />
           </ImageWithSkeleton>
+
+          {/* Kilitli Defter Rozeti */}
+          {notebook?.isLocked ? (
+            <View style={styles.coverLockBadge} pointerEvents="none">
+              <MaterialCommunityIcons name="lock" size={18} color="#FFFFFF" />
+            </View>
+          ) : null}
         </InteractiveCover3D>
 
       </View>
@@ -408,6 +499,20 @@ const styles = StyleSheet.create({
   },
   fullBleedCanvas: {
     ...StyleSheet.absoluteFillObject,
+  },
+  coverLockBadge: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 60,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
 
   floatingToolbarContainer: {

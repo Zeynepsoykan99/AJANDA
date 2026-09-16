@@ -287,19 +287,23 @@ export const searchAllData = async (
       }
     }
     if (diaryCoverMatches.length > 0) {
+      const isLocked = !!diary.isLocked;
       results.push({
         id: 'diary_cover',
-        title: diary.title || 'Günlük Kapağı',
+        title: isLocked ? 'Günlüğüm (🔒) - Kapak' : (diary.title || 'Günlük Kapağı'),
         category: 'gunlugum',
         categoryName: 'Günlüğüm',
         categoryEmoji: '🌸',
         createdAt: diary.updatedAt || diary.createdAt || null,
         route: '/gunlugum',
-        matches: diaryCoverMatches,
-        primarySnippet: diaryCoverMatches[0].snippet,
+        matches: isLocked
+          ? [{ type: 'locked', snippet: '🔒 Kilitli Günlük Notu', field: 'Kapak Notu' }]
+          : diaryCoverMatches,
+        primarySnippet: isLocked ? '🔒 Kilitli Günlük Notu' : diaryCoverMatches[0].snippet,
         field: diaryCoverMatches[0].field,
         hasTitleMatch: diaryCoverMatches.some((m) => m.isTitleMatch),
         isHandwritingMatch: false,
+        isLocked,
       });
     }
 
@@ -332,20 +336,26 @@ export const searchAllData = async (
         }
 
         if (pageMatches.length > 0) {
+          const isLocked = !!diary.isLocked;
           const hasHandwriting = pageMatches.some((m) => m.isHandwriting);
           results.push({
             id: `diary_${page.pageId || pageIndex}`,
-            title: `Günlüğüm - Sayfa ${page.pageNumber || pageIndex + 1}`,
+            title: isLocked
+              ? `Günlüğüm (🔒) - Sayfa ${page.pageNumber || pageIndex + 1}`
+              : `Günlüğüm - Sayfa ${page.pageNumber || pageIndex + 1}`,
             category: 'gunlugum',
             categoryName: 'Günlüğüm',
             categoryEmoji: '🌸',
             createdAt: page.createdAt || diary.updatedAt || null,
             route: `/gunlugum/pages?pageIndex=${pageIndex}&pageId=${page.pageId || ''}`,
-            matches: pageMatches,
-            primarySnippet: pageMatches[0].snippet,
-            field: pageMatches[0].field,
+            matches: isLocked
+              ? [{ type: 'locked', snippet: '🔒 Kilitli Günlük İçeriği', field: 'Gizli Not' }]
+              : pageMatches,
+            primarySnippet: isLocked ? '🔒 Kilitli Günlük İçeriği' : pageMatches[0].snippet,
+            field: isLocked ? 'Gizli İçerik' : pageMatches[0].field,
             hasTitleMatch: false,
-            isHandwritingMatch: hasHandwriting,
+            isHandwritingMatch: isLocked ? false : hasHandwriting,
+            isLocked,
           });
         }
       });
@@ -383,19 +393,23 @@ export const searchAllData = async (
         }
       }
       if (nbCoverMatches.length > 0) {
+        const isLocked = !!nb.isLocked;
         results.push({
           id: `nb_cover_${nb.id}`,
-          title: nb.title || 'Defter Kapağı',
+          title: isLocked ? `${nb.title || 'Defter Kapağı'} (🔒)` : (nb.title || 'Defter Kapağı'),
           category: 'notlarim',
           categoryName: nb.title || 'Notlarım',
           categoryEmoji: '📓',
           createdAt: nb.updatedAt || nb.createdAt || null,
           route: `/defterlerim/${nb.id}`,
-          matches: nbCoverMatches,
-          primarySnippet: nbCoverMatches[0].snippet,
+          matches: isLocked && !titleMatches
+            ? [{ type: 'locked', snippet: '🔒 Kilitli Kapak Notu', field: 'Kapak Notu' }]
+            : nbCoverMatches,
+          primarySnippet: isLocked && !titleMatches ? '🔒 Kilitli Kapak Notu' : nbCoverMatches[0].snippet,
           field: nbCoverMatches[0].field,
           hasTitleMatch: titleMatches,
           isHandwritingMatch: false,
+          isLocked,
         });
       }
 
@@ -426,20 +440,26 @@ export const searchAllData = async (
           }
 
           if (pageMatches.length > 0) {
+            const isLocked = !!nb.isLocked;
             const hasHandwriting = pageMatches.some((m) => m.isHandwriting);
             results.push({
               id: `nb_${nb.id}_${page.pageId || pageIndex}`,
-              title: `${nb.title || 'Defter'} - Sayfa ${page.pageNumber || pageIndex + 1}`,
+              title: isLocked
+                ? `${nb.title || 'Defter'} (🔒) - Sayfa ${page.pageNumber || pageIndex + 1}`
+                : `${nb.title || 'Defter'} - Sayfa ${page.pageNumber || pageIndex + 1}`,
               category: 'notlarim',
               categoryName: nb.title || 'Notlarım',
               categoryEmoji: '📓',
               createdAt: page.createdAt || nb.updatedAt || null,
               route: `/defterlerim/${nb.id}/pages?pageIndex=${pageIndex}&pageId=${page.pageId || ''}`,
-              matches: pageMatches,
-              primarySnippet: pageMatches[0].snippet,
-              field: pageMatches[0].field,
+              matches: isLocked
+                ? [{ type: 'locked', snippet: '🔒 Kilitli Defter İçeriği', field: 'Gizli Not' }]
+                : pageMatches,
+              primarySnippet: isLocked ? '🔒 Kilitli Defter İçeriği' : pageMatches[0].snippet,
+              field: isLocked ? 'Gizli İçerik' : pageMatches[0].field,
               hasTitleMatch: false,
-              isHandwritingMatch: hasHandwriting,
+              isHandwritingMatch: isLocked ? false : hasHandwriting,
+              isLocked,
             });
           }
         });

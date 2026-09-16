@@ -254,5 +254,20 @@
     "noResults": "No se encontraron resultados",
     "resultCount": "Coincidencias en {{count}} páginas",
     "matchCount": "{{count}} coincidencias"
+  },
+  "security": {
+    "lockNotebook": "Bloquear este cuaderno",
+    "unlockNotebook": "Quitar bloqueo",
+    "lockedNotebook": "Cuaderno bloqueado",
+    "lockedDesc": "Las páginas y notas personales de este cuaderno están protegidas con la seguridad del dispositivo.",
+    "unlockPrompt": "Autentícate para acceder al contenido",
+    "unlockPromptWithTitle": "Autentícate para desbloquear \"{{title}}\"",
+    "unlockToOpen": "Autentícate para abrir el cuaderno",
+    "unlockToRemoveLock": "Autentícate para quitar el bloqueo",
+    "lockConfirm": "Autentícate para bloquear este cuaderno",
+    "fallbackPasscode": "Usar contraseña del dispositivo",
+    "unlockWithBiometric": "Desbloquear con {{type}}",
+    "authFailed": "Error de autenticación. Inténtalo de nuevo.",
+    "biometricNotAvailable": "No hay bloqueo biométrico ni contraseña configurada en tu dispositivo."
   }
 }

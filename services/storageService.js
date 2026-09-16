@@ -26,7 +26,7 @@ const withJournalLock = (task) => {
 };
 
 // Kapak ekranının yazabileceği üst düzey defter alanları (pages asla buradan yazılmaz)
-const NOTEBOOK_META_FIELDS = ['title', 'coverTemplateId', 'paperTemplateId', 'coverDrawings', 'coverTextBlocks', 'lastPageIndex'];
+const NOTEBOOK_META_FIELDS = ['title', 'coverTemplateId', 'paperTemplateId', 'coverDrawings', 'coverTextBlocks', 'lastPageIndex', 'isLocked'];
 
 const DEFAULT_PAPER_TEMPLATE_ID = 'blank_lined';
 const DEFAULT_COVER_TEMPLATE_ID = 'cover_1';
