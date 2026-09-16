@@ -309,5 +309,13 @@
     "deleteConfirmMessage": "Voulez-vous vraiment supprimer cette note vocale ? Cette action est irréversible.",
     "micPermissionTitle": "Autorisation du Microphone Requise",
     "micPermissionMessage": "Veuillez autoriser l'accès au microphone dans les Paramètres."
+  },
+  "export": {
+    "button": "Exporter en PDF",
+    "loadingTitle": "Génération du PDF...",
+    "loadingDesc": "Conversion de votre page en haute qualité...",
+    "errorTitle": "Erreur d'exportation",
+    "errorDesc": "Une erreur est survenue lors de l'exportation de la page en PDF. Veuillez réessayer."
   }
 }
+

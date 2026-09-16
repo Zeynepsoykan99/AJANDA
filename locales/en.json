@@ -309,5 +309,13 @@
     "deleteConfirmMessage": "Are you sure you want to delete this audio note? This action cannot be undone.",
     "micPermissionTitle": "Microphone Permission Required",
     "micPermissionMessage": "Please enable microphone permission in Settings to record audio notes."
+  },
+  "export": {
+    "button": "Export as PDF",
+    "loadingTitle": "Generating PDF...",
+    "loadingDesc": "Converting your page with high quality...",
+    "errorTitle": "Export Error",
+    "errorDesc": "An error occurred while exporting page to PDF. Please try again."
   }
 }
+

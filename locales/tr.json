@@ -309,5 +309,13 @@
     "deleteConfirmMessage": "Bu ses kaydını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
     "micPermissionTitle": "Mikrofon İzni Gerekli",
     "micPermissionMessage": "Ses kaydı alabilmek için lütfen ayarlardan mikrofon erişimine izin verin."
+  },
+  "export": {
+    "button": "PDF Olarak Dışa Aktar",
+    "loadingTitle": "PDF Hazırlanıyor...",
+    "loadingDesc": "Sayfanız yüksek kalitede dönüştürülüyor...",
+    "errorTitle": "Dışa Aktarma Hatası",
+    "errorDesc": "Sayfa PDF olarak dışa aktarılırken bir hata oluştu. Lütfen tekrar deneyin."
   }
 }
+

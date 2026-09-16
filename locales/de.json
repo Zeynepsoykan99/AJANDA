@@ -309,5 +309,13 @@
     "deleteConfirmMessage": "Möchten Sie diese Sprachnotiz wirklich löschen? Dieser Vorgang kann nicht rückgängig gemacht werden.",
     "micPermissionTitle": "Mikrofonberechtigung erforderlich",
     "micPermissionMessage": "Bitte aktivieren Sie die Mikrofonberechtigung in den Einstellungen."
+  },
+  "export": {
+    "button": "Als PDF exportieren",
+    "loadingTitle": "PDF wird vorbereitet...",
+    "loadingDesc": "Ihre Seite wird in hoher Qualität konvertiert...",
+    "errorTitle": "Exportfehler",
+    "errorDesc": "Beim Exportieren der Seite als PDF ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut."
   }
 }
+

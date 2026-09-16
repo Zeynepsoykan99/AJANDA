@@ -22,6 +22,7 @@ export default function StickerCanvas({
   onStickerResize,
   onStickerDelete,
   isDrawingMode = false,
+  isExporting = false,
   pointerEvents = 'box-none',
   style,
 }) {
@@ -40,12 +41,12 @@ export default function StickerCanvas({
     }
   );
 
-  // Mod değiştiğinde (örn. çizim moduna geçildiğinde) seçimi kaldır
+  // Mod değiştiğinde veya dışa aktarım başladığında seçimi kaldır
   useEffect(() => {
-    if (isDrawingMode && selectedStickerId) {
+    if ((isDrawingMode || isExporting) && selectedStickerId) {
       setSelectedStickerId(null);
     }
-  }, [isDrawingMode]);
+  }, [isDrawingMode, isExporting]);
 
   // Tuval boşluğuna dokunulduğunda seçimi kaldırma jesti (Deselect on Outside Tap)
   const backdropTapGesture = Gesture.Tap()
@@ -70,13 +71,13 @@ export default function StickerCanvas({
       }}
     >
       {/* Akıllı Hizalama Kılavuz Çizgileri */}
-      {guideLines.v && canvasLayout.width > 0 && (
+      {!isExporting && guideLines.v && canvasLayout.width > 0 && (
         <View
           style={[styles.guideLineVertical, { left: canvasLayout.width / 2 }]}
           pointerEvents="none"
         />
       )}
-      {guideLines.h && canvasLayout.height > 0 && (
+      {!isExporting && guideLines.h && canvasLayout.height > 0 && (
         <View
           style={[styles.guideLineHorizontal, { top: canvasLayout.height / 2 }]}
           pointerEvents="none"

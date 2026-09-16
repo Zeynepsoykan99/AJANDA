@@ -37,6 +37,7 @@ export default function NotebookInlineText({
   isActive = true,
   isTextMode = false,
   isDrawingMode = false,
+  isExporting = false,
   onActivateTextMode,
   textColor = '#4E342E',
   textFontSize = null,
@@ -66,12 +67,12 @@ export default function NotebookInlineText({
     }
   }, [isActive, isTextMode, isDrawingMode]);
 
-  // Çizim moduna geçildiğinde klavyeyi kapat ve odağı bırak
+  // Çizim veya dışa aktarma moduna geçildiğinde klavyeyi kapat ve odağı bırak
   useEffect(() => {
-    if (isDrawingMode && inputRef.current) {
+    if ((isDrawingMode || isExporting) && inputRef.current) {
       inputRef.current.blur();
     }
-  }, [isDrawingMode]);
+  }, [isDrawingMode, isExporting]);
 
   // Kağıt şablonuna ve yazı boyutuna göre dinamik satır ve marj metrikleri
   const metrics = useMemo(() => {
@@ -112,13 +113,13 @@ export default function NotebookInlineText({
     }
   }, [onActivateTextMode]);
 
-  const isEditable = isActive && !isDrawingMode;
+  const isEditable = isActive && !isDrawingMode && !isExporting;
 
   return (
     <Pressable
       style={styles.container}
       onPress={isEditable && !isTextMode ? handleDoubleTap : undefined}
-      pointerEvents={isDrawingMode ? 'none' : 'auto'}
+      pointerEvents={isDrawingMode || isExporting ? 'none' : 'auto'}
     >
       <TextInput
         ref={inputRef}
@@ -129,7 +130,9 @@ export default function NotebookInlineText({
         scrollEnabled={false}
         textAlignVertical="top"
         placeholder={
-          placeholder !== undefined
+          isExporting
+            ? ''
+            : placeholder !== undefined
             ? placeholder
             : t('notebooks.inlinePlaceholder', 'Buraya yazmaya başlayın...')
         }

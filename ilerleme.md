@@ -4,7 +4,43 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-16] - Profesyonel PDF Olarak Dışa Aktarma (Export to PDF) Modülü
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** "Günlüğüm" ve "Notlarım" modüllerindeki sayfaların; üzerindeki el yazısı/fırça çizimleri, fosforlu kalem darbeleri, kağıt şablonu (arka plan rengi, satır ve sütun çizgileri), satır hizalı doğrudan klavye metinleri, serbest metin blokları ve sticker'lar ile birlikte birebir yüksek çözünürlüklü A4 PDF formatında dışa aktarılabilmesi ve paylaşılabilmesi.
+- **Hedefler:**
+  1. **Yüksek Çözünürlüklü Görsel Yakalama (Snapshot):** `react-native-view-shot` kütüphanesi kullanılarak aktif sayfanın tüm katmanlarının (kağıt şablonu, dikişli kenarlıklar, metinler, çizimler, sticker'lar) kayıpsız PNG olarak yakalanması.
+  2. **Zoom & Pan Bağımsızlığı (Full Page Invariance):** Kullanıcı sayfayı büyütmüş (pinch-to-zoom) veya kaydırmış (pan) olsa bile yakalama öncesinde anında `resetZoomImmediate()` çağrısıyla ölçeğin 1.0x ve ofsetlerin 0px'e sıfırlanması; sayfanın tamamının eksiksiz ve orantılı yakalanması.
+  3. **Temiz UI Yakalama (Clean Capture Guarantee):** Snapshot esnasında `isExporting` bayrağı devreye sokularak metin imlecinin (cursor), placeholder metninin ("Buraya yazmaya başlayın..."), aktif sticker seçim çerçevesi ve tutamaçlarının (rotate/resize/delete handles) ve kement (lasso) seçim menüsünün gizlenmesi.
+  4. **Kenarlıksız A4 PDF Dönüşümü (`services/pdfExportService.js`):** Yakalanan görselin Base64 verisine dönüştürülüp `@page { margin: 0; size: A4 portrait; }` CSS şablonuyla `expo-print` (`Print.printToFileAsync`) motoruna verilmesi; sıfır kenar boşluğu ve %100 oran korumalı A4 PDF oluşturulması.
+  5. **Çoklu Platform Paylaşım ve Kaydetme:** Mobil cihazlarda `expo-sharing` (`Sharing.shareAsync`) ile yerel paylaşım/kayıt menüsünün açılması; Web ortamında ise otomatik dosya indirme köprüsünün işletilmesi.
+  6. **Kullanıcı Geri Bildirimi ve Estetik:** Sağ üst başlık çubuğuna şık bir dışa aktarma butonu (`share-variant-outline`) eklenmesi ve işlem süresince pembe temalı zarif bir `ExportLoadingModal` gösterilmesi.
+  7. **Çoklu Dil Desteği:** 5 dilde (TR, EN, DE, ES, FR) eksiksiz `export` çeviri anahtarları.
+
+### 🔧 Yapılan Geliştirmeler ve Düzenlemeler
+1. **Paket Kurulumları:** `expo-print` (~15.0.8), `expo-sharing` (~14.0.8) ve `react-native-view-shot` (4.0.3) resmi Expo 54 sürümleri kuruldu.
+2. **`services/pdfExportService.js` [NEW]:**
+   - `convertImageToPdf`: Görsel dosyasını Base64 formatına çevirip sıfır kenar boşluklu A4 HTML şablonuyla `Print.printToFileAsync` üzerinden PDF'e dönüştürür.
+   - `sharePdfFile`: Cihazın yerel paylaşım sayfasını (`Sharing.shareAsync`) tetikler veya web üzerinde indirme başlatır.
+3. **`components/ui/ExportLoadingModal.js` [NEW]:** Dışa aktarma işlemi sırasında kullanıcıya şık ve açıklayıcı yükleniyor ekranı sunan modal bileşeni.
+4. **`components/drawing/ZoomableCanvas.js`:** `resetZoomImmediate` metodu eklenerek dışa aktarma öncesi yaylanma gecikmesi olmadan zumun anında 1.0x seviyesine çekilmesi sağlandı.
+5. **`components/stationery/NotebookInlineText.js`:** `isExporting` desteği eklendi; dışa aktarımda placeholder ve imleç gizlenir.
+6. **`components/stickers/StickerCanvas.js`:** `isExporting` desteği eklendi; dışa aktarımda seçili sticker çerçevesi ve tutamaçları kaldırılır.
+7. **`components/notebook/NotebookPagesView.js`:**
+   - Sayfa içeriği `collapsable={false}` olan bir yakalama konteyneri (`pageCaptureContainer`) ile sarıldı.
+   - `handleExportPageToPdf` fonksiyonu oluşturuldu.
+   - Başlık çubuğuna PDF export butonu yerleştirildi ve kompakt başlık düzeni dar ekranlar için optimize edildi.
+   - `ExportLoadingModal` entegre edildi.
+8. **Çoklu Dil Desteği (`locales/*.json`):** TR, EN, DE, ES ve FR dosyalarına `export` anahtarları eklendi.
+
+### ✅ Doğrulama & Testler
+- `validate_pdf_export.js`: Değiştirilen ve yeni eklenen tüm 6 JavaScript dosyası Babel AST parser ile %100 sözdizimsel olarak doğrulandı. 5 dil dosyasının JSON bütünlüğü test edildi.
+- `tests/zoomableCanvas.test.js`: Tüm matematiksel zum ve koordinat testleri başarıyla geçti.
+
+---
+
 ## 📅 [2026-09-16] - Günlüğüm & Notlarım: Tuval Üzerine Satır Uyumlu Inline TextInput
+
 
 ### 🔍 Kapsam ve İhtiyaç
 - **İhtiyaç:** "Günlüğüm" ve "Notlarım" bölümlerinde klavye ile metin girerken odak bozucu kutucuklar veya harici pencereler yerine doğrudan seçilen kağıt şablonunun (çizgili, kareli, noktalı, düz) üzerine ve tam satır aralıklarına oturacak şekilde gerçek bir defter yazım deneyimi inşa edilmesi.

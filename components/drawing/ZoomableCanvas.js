@@ -151,6 +151,16 @@ const ZoomableCanvas = forwardRef(function ZoomableCanvas(
     triggerHaptic();
   }, [scale, translateX, translateY]);
 
+  // Yaylanma gecikmesi olmadan %100 boyuta anında sıfırla (Snapshot / PDF için)
+  const resetZoomImmediate = useCallback(() => {
+    scale.value = 1.0;
+    translateX.value = 0;
+    translateY.value = 0;
+    transformRef.current.scale = 1.0;
+    transformRef.current.translateX = 0;
+    transformRef.current.translateY = 0;
+  }, [scale, translateX, translateY]);
+
   // Görünüm alanının pencere içindeki konumunu ölç (pageToCanvas bu ofseti kullanır).
   // Yatay kaydırılan kapsayıcılarda (ör. Günlüğüm sayfaları) kaydırma sonrası yeniden çağrılmalıdır.
   const measureViewport = useCallback(() => {
@@ -164,6 +174,7 @@ const ZoomableCanvas = forwardRef(function ZoomableCanvas(
 
   useImperativeHandle(ref, () => ({
     resetZoom,
+    resetZoomImmediate,
     remeasure: measureViewport,
     getTransform: () => ({
       scale: scale.value,

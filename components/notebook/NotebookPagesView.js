@@ -46,6 +46,10 @@ import AudioNotesDeck from '../audio/AudioNotesDeck';
 import { AudioService } from '../../services/audioService';
 import { isSameDay, formatFilterDate } from '../../components/ui/GlobalFilterHeader';
 import { isSessionUnlocked } from '../../services/biometricService';
+import { captureRef } from 'react-native-view-shot';
+import * as Haptics from 'expo-haptics';
+import ExportLoadingModal from '../ui/ExportLoadingModal';
+import { PdfExportService } from '../../services/pdfExportService';
 
 import { recognizeSelectedStrokes } from '../../services/handwritingService';
 import { fitTextToBounds, clusterStrokesByColorAndProximity } from '../../utils/lassoGeometry';
@@ -86,7 +90,7 @@ export default function NotebookPagesView({
   const { colors } = useTheme();
   const { width: windowWidth } = useWindowDimensions();
   const { isTablet, isTwoPage, maxContentWidth } = useResponsiveLayout();
-  const compactHeader = (enableSearch || enableDatePicker) && windowWidth < 480;
+  const compactHeader = windowWidth < 500;
 
   const [notebook, setNotebook] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -112,6 +116,8 @@ export default function NotebookPagesView({
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
   const [isAudioModalVisible, setIsAudioModalVisible] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isExportLoading, setIsExportLoading] = useState(false);
   const [undoToast, setUndoToast] = useState({ visible: false, message: '' });
 
 
@@ -139,6 +145,8 @@ export default function NotebookPagesView({
 
   // Sayfa başına ZoomableCanvas referansları (pageId -> ref)
   const canvasRefs = useRef({});
+  // Sayfa başına Snapshot View referansları (pageId -> ref)
+  const pageShotRefs = useRef({});
 
   // Yatay sayfa kaydırma kilitleri: aktif sayfa büyütülmüşse veya ekranda 2+ parmak varsa
   // yatay swipe kapanır; böylece iki parmakla pinch/pan sayfa değiştirmeyle çakışmaz
@@ -910,6 +918,66 @@ export default function NotebookPagesView({
     ]
   );
 
+  // Sayfayı PDF Olarak Dışa Aktarma
+  const handleExportPageToPdf = useCallback(async () => {
+    if (!activePage) return;
+
+    try {
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      } catch (e) {}
+
+      // 1. Zoom ve pan durumunu anında sıfırla (sayfanın tamamının tam ölçekte yakalanması için)
+      if (canvasRefs.current[activePage.pageId]?.resetZoomImmediate) {
+        canvasRefs.current[activePage.pageId].resetZoomImmediate();
+      }
+
+      // 2. Export moduna geç (placeholder, imleç, sticker seçim çerçeveleri, kement menüsü gizlensin)
+      setIsExporting(true);
+      setIsExportLoading(true);
+
+      // UI bileşenlerinin temizlenip render alması için kısa bir bekleme
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      const targetRef = pageShotRefs.current[activePage.pageId];
+      if (!targetRef) {
+        throw new Error('Capture target ref not found');
+      }
+
+      // 3. Görseli tam çözünürlükte yakala
+      const imageUri = await captureRef(targetRef, {
+        format: 'png',
+        quality: 1,
+        result: 'tmpfile',
+      });
+
+      // 4. PDF'e dönüştür (A4 kenarlıksız tam sayfa)
+      const pageTitle =
+        typeof title === 'function' ? title(notebook) : title || 'Sayfa';
+      const formattedDate = activePage.date || new Date().toISOString().slice(0, 10);
+      const safeTitle = String(pageTitle).replace(/[^a-zA-Z0-9_\u00C0-\u017F\-\.]/g, '_');
+      const fileName = `${safeTitle}_Sayfa_${currentPageIndex + 1}_${formattedDate}.pdf`;
+
+      const pdfUri = await PdfExportService.convertImageToPdf(imageUri, {
+        fileName,
+        pageSize: 'a4',
+        orientation: 'portrait',
+      });
+
+      // 5. Paylaşım / Kaydetme menüsünü aç
+      await PdfExportService.sharePdfFile(pdfUri, fileName);
+    } catch (error) {
+      console.error('PDF Export Error:', error);
+      Alert.alert(
+        t('export.errorTitle', 'Dışa Aktarma Hatası'),
+        t('export.errorDesc', 'Sayfa PDF olarak dışa aktarılırken bir hata oluştu. Lütfen tekrar deneyin.')
+      );
+    } finally {
+      setIsExporting(false);
+      setIsExportLoading(false);
+    }
+  }, [activePage, currentPageIndex, title, notebook, t]);
+
   if (isLoading) {
     return (
       <AnimatedSafeAreaView
@@ -977,7 +1045,7 @@ export default function NotebookPagesView({
 
         {/* Merkez: Defter Başlığı ve Sayfa İndikatörü */}
         <View style={styles.headerCenter}>
-          <Text style={[styles.pageTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+          <Text style={[styles.pageTitle, compactHeader && styles.pageTitleCompact, { color: colors.textPrimary }]} numberOfLines={1}>
             {headerTitle}
           </Text>
           <View style={styles.pageIndicatorContainer}>
@@ -997,7 +1065,7 @@ export default function NotebookPagesView({
               />
             </TouchableOpacity>
 
-            <Text style={[styles.pageIndicatorText, { color: colors.textSecondary }]}>
+            <Text style={[styles.pageIndicatorText, compactHeader && styles.pageIndicatorTextCompact, { color: colors.textSecondary }]}>
               {t('diary.page', 'Sayfa')} {currentPageIndex + 1} / {pages.length}
             </Text>
 
@@ -1073,6 +1141,16 @@ export default function NotebookPagesView({
             style={[styles.headerButton, compactHeader && styles.headerButtonCompact, styles.deleteBtn]}
           >
             <MaterialCommunityIcons name="trash-can-outline" size={19} color="#E53935" />
+          </TouchableOpacity>
+
+          {/* PDF Dışa Aktar Butonu */}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={handleExportPageToPdf}
+            style={[styles.headerButton, compactHeader && styles.headerButtonCompact, { backgroundColor: colors.card, borderColor: colors.border }]}
+            accessibilityLabel={t('export.button', 'PDF Olarak Dışa Aktar')}
+          >
+            <MaterialCommunityIcons name="share-variant-outline" size={19} color={colors.textSecondary} />
           </TouchableOpacity>
 
           {enableSearch && (
@@ -1151,97 +1229,108 @@ export default function NotebookPagesView({
                   },
                 ]}
               >
-                <NotebookContainer
-                  coverColor="#FCE4EC"
-                  showSpiral={!isTwoPage}
+                <View
+                  ref={(r) => {
+                    if (r) pageShotRefs.current[p.pageId] = r;
+                    else delete pageShotRefs.current[p.pageId];
+                  }}
+                  collapsable={false}
+                  style={styles.pageCaptureContainer}
                 >
-                  <PaperSheet
-                    ruling={paper.ruling}
-                    paperColor={paper.paperColor}
-                    lineColor={paper.lineColor}
-                    showMargin={paper.ruling === 'lined'}
-                    style={styles.paperSheet}
+                  <NotebookContainer
+                    coverColor="#FCE4EC"
+                    showSpiral={!isTwoPage}
                   >
-                    {/* Doğrudan Kağıt Üzerine Satır Hizalı Metin Girişi */}
-                    <NotebookInlineText
-                      content={p.data?.content || p.content || ''}
-                      onChangeContent={(text) => handlePageContentChange(index, text)}
+                    <PaperSheet
                       ruling={paper.ruling}
+                      paperColor={paper.paperColor}
+                      lineColor={paper.lineColor}
                       showMargin={paper.ruling === 'lined'}
-                      isActive={isActive}
-                      isTextMode={isActive && activeMode === 'text'}
-                      isDrawingMode={isActive && activeMode === 'drawing'}
-                      onActivateTextMode={() => setActiveMode('text')}
-                      textColor={textColor}
-                      textFontSize={textFontSize}
-                    />
-                  </PaperSheet>
-                </NotebookContainer>
+                      style={styles.paperSheet}
+                    >
+                      {/* Doğrudan Kağıt Üzerine Satır Hizalı Metin Girişi */}
+                      <NotebookInlineText
+                        content={p.data?.content || p.content || ''}
+                        onChangeContent={(text) => handlePageContentChange(index, text)}
+                        ruling={paper.ruling}
+                        showMargin={paper.ruling === 'lined'}
+                        isActive={isActive}
+                        isTextMode={isActive && activeMode === 'text'}
+                        isDrawingMode={isActive && activeMode === 'drawing'}
+                        isExporting={isActive && isExporting}
+                        onActivateTextMode={() => setActiveMode('text')}
+                        textColor={textColor}
+                        textFontSize={textFontSize}
+                      />
+                    </PaperSheet>
+                  </NotebookContainer>
 
-                {/* Serbest Metin Katmanı (Lasso ile el yazısından dönüştürülen bloklar) */}
-                <TextCanvas
-                  isTextMode={false}
-                  isDrawingMode={isActive && activeMode === 'drawing'}
-                  textBlocks={p.textBlocks || []}
-                  onTextBlocksChange={(blocks) => handleTextBlocksChange(index, blocks)}
-                  activeColor={textColor}
-                  activeFontSize={textFontSize}
-                  isEraserActive={activeMode === 'drawing' && drawingTool === 'eraser'}
-                  pointerEvents={
-                    !isActive
-                      ? 'none'
-                      : activeMode === 'drawing'
-                      ? 'none'
-                      : 'box-none'
-                  }
-                />
-
-                {/* Çizim Katmanı */}
-                <DrawingCanvas
-                  isDrawingMode={isActive && activeMode === 'drawing'}
-                  tool={drawingTool}
-                  color={drawingColor}
-                  strokeWidth={drawingWidth}
-                  drawings={p.drawings || []}
-                  onDrawingsChange={(drawings) => handleDrawingsChange(index, drawings)}
-                  textBlocks={p.textBlocks || []}
-                  onTextBlocksChange={(blocks) => handleTextBlocksChange(index, blocks)}
-                  selectedStrokeIds={isActive ? selectedStrokeIds : []}
-                  selectionBounds={isActive ? selectionBounds : null}
-                  onSelectionChange={isActive ? handleSelectionChange : undefined}
-                  pointerEvents={!isActive ? 'none' : undefined}
-                  style={[
-                    styles.fullBleedCanvas,
-                    { zIndex: isActive && activeMode === 'drawing' ? 50 : 20 },
-                  ]}
-                />
-
-                {/* Kement Menüsü (Sadece aktif sayfada) */}
-                {isActive && (
-                  <LassoActionMenu
-                    visible={
-                      activeMode === 'drawing' &&
-                      drawingTool === 'lasso' &&
-                      selectedStrokeIds.length > 0 &&
-                      !!selectionBounds
+                  {/* Serbest Metin Katmanı (Lasso ile el yazısından dönüştürülen bloklar) */}
+                  <TextCanvas
+                    isTextMode={false}
+                    isDrawingMode={isActive && activeMode === 'drawing'}
+                    textBlocks={p.textBlocks || []}
+                    onTextBlocksChange={(blocks) => handleTextBlocksChange(index, blocks)}
+                    activeColor={textColor}
+                    activeFontSize={textFontSize}
+                    isEraserActive={activeMode === 'drawing' && drawingTool === 'eraser'}
+                    pointerEvents={
+                      !isActive
+                        ? 'none'
+                        : activeMode === 'drawing'
+                        ? 'none'
+                        : 'box-none'
                     }
-                    bounds={selectionBounds}
-                    onConvertToText={handleLassoConvertToText}
-                    onDelete={handleLassoDelete}
-                    onClose={handleCloseLassoSelection}
-                    isLoading={isRecognizingSelected}
                   />
-                )}
 
-                {/* Sticker Katmanı */}
-                <StickerCanvas
-                  stickers={p.stickers || []}
-                  onStickerMove={isActive ? handleStickerMove : () => {}}
-                  onStickerResize={isActive ? handleStickerResize : () => {}}
-                  onStickerDelete={isActive ? handleStickerDelete : () => {}}
-                  isDrawingMode={isActive && activeMode === 'drawing'}
-                  pointerEvents={!isActive ? 'none' : 'box-none'}
-                />
+                  {/* Çizim Katmanı */}
+                  <DrawingCanvas
+                    isDrawingMode={isActive && activeMode === 'drawing'}
+                    tool={drawingTool}
+                    color={drawingColor}
+                    strokeWidth={drawingWidth}
+                    drawings={p.drawings || []}
+                    onDrawingsChange={(drawings) => handleDrawingsChange(index, drawings)}
+                    textBlocks={p.textBlocks || []}
+                    onTextBlocksChange={(blocks) => handleTextBlocksChange(index, blocks)}
+                    selectedStrokeIds={isActive ? selectedStrokeIds : []}
+                    selectionBounds={isActive ? selectionBounds : null}
+                    onSelectionChange={isActive ? handleSelectionChange : undefined}
+                    pointerEvents={!isActive ? 'none' : undefined}
+                    style={[
+                      styles.fullBleedCanvas,
+                      { zIndex: isActive && activeMode === 'drawing' ? 50 : 20 },
+                    ]}
+                  />
+
+                  {/* Kement Menüsü (Sadece aktif sayfada ve dışa aktarım yapılmıyorken) */}
+                  {isActive && !isExporting && (
+                    <LassoActionMenu
+                      visible={
+                        activeMode === 'drawing' &&
+                        drawingTool === 'lasso' &&
+                        selectedStrokeIds.length > 0 &&
+                        !!selectionBounds
+                      }
+                      bounds={selectionBounds}
+                      onConvertToText={handleLassoConvertToText}
+                      onDelete={handleLassoDelete}
+                      onClose={handleCloseLassoSelection}
+                      isLoading={isRecognizingSelected}
+                    />
+                  )}
+
+                  {/* Sticker Katmanı */}
+                  <StickerCanvas
+                    stickers={p.stickers || []}
+                    onStickerMove={isActive ? handleStickerMove : () => {}}
+                    onStickerResize={isActive ? handleStickerResize : () => {}}
+                    onStickerDelete={isActive ? handleStickerDelete : () => {}}
+                    isDrawingMode={isActive && activeMode === 'drawing'}
+                    isExporting={isActive && isExporting}
+                    pointerEvents={!isActive ? 'none' : 'box-none'}
+                  />
+                </View>
               </ZoomableCanvas>
             </View>
           );
@@ -1339,6 +1428,9 @@ export default function NotebookPagesView({
         onDismiss={handleDismissUndoToast}
       />
 
+      {/* PDF Dışa Aktarım Yükleme Modalı */}
+      <ExportLoadingModal visible={isExportLoading} />
+
       {/* Yüzen Çizim ve Metin Araç Çubuğu */}
       <View style={styles.floatingToolbarContainer} pointerEvents="box-none">
         <DrawingToolbar
@@ -1430,6 +1522,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
   },
+  pageTitleCompact: {
+    fontSize: 13,
+  },
   pageIndicatorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1446,21 +1541,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
+  pageIndicatorTextCompact: {
+    fontSize: 11,
+  },
   headerRightGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
   headerBarCompact: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
   },
   headerButtonCompact: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
   headerRightGroupCompact: {
-    gap: 5,
+    gap: 4,
   },
   horizontalScrollView: {
     flex: 1,
@@ -1468,6 +1566,12 @@ const styles = StyleSheet.create({
   pageSlide: {
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  pageCaptureContainer: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    position: 'relative',
   },
   canvasContainer: {
     flex: 1,

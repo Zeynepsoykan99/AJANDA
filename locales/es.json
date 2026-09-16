@@ -309,5 +309,13 @@
     "deleteConfirmMessage": "¿Estás seguro de que deseas eliminar esta nota de voz? Esta acción no se puede deshacer.",
     "micPermissionTitle": "Permiso de Micrófono Requerido",
     "micPermissionMessage": "Por favor, active los permisos de micrófono en los Ajustes."
+  },
+  "export": {
+    "button": "Exportar como PDF",
+    "loadingTitle": "Generando PDF...",
+    "loadingDesc": "Convirtiendo tu página en alta calidad...",
+    "errorTitle": "Error de exportación",
+    "errorDesc": "Ocurrió un error al exportar la página a PDF. Por favor, intenta de nuevo."
   }
 }
+
