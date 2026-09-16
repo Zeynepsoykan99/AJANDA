@@ -147,7 +147,28 @@ export default function DrawingToolbar({
     .onEnd(() => {
       'worklet';
       isDragging.value = false;
+    })
+    .onFinalize(() => {
+      'worklet';
+      isDragging.value = false;
     });
+
+  // FAB Dokunma (Tap) Jest'i - Sadece parmak 6px'den az hareket ettiğinde ve kısa dokunuşta çalışır
+  const fabTapGesture = Gesture.Tap()
+    .maxDuration(250)
+    .maxDistance(6)
+    .onEnd((_event, success) => {
+      'worklet';
+      if (success && !isDragging.value) {
+        runOnJS(toggleExpanded)();
+      }
+    });
+
+  // Jest Önceliği: Kapalıyken (FAB) Pan jesti Tap jestine kesin üstünlük sağlar (Exclusive).
+  // Kullanıcı parmağını kaydırdığı anda pan başlar ve tap iptal olur; çubuk yanlışlıkla açılmaz.
+  const toolbarGesture = isExpanded
+    ? panGesture
+    : Gesture.Exclusive(panGesture, fabTapGesture);
 
   // Reanimated Animasyonlu Stil
   const animatedStyle = useAnimatedStyle(() => ({
@@ -198,7 +219,7 @@ export default function DrawingToolbar({
 
   return (
     <>
-      <GestureDetector gesture={panGesture}>
+      <GestureDetector gesture={toolbarGesture}>
         <Animated.View
           style={[
             styles.floatingWrapper,
@@ -209,9 +230,7 @@ export default function DrawingToolbar({
         >
           {/* ─── DURUM 1: KAPALI HAL (FLOATING ACTION BUTTON - FAB) ─── */}
           {!isExpanded ? (
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={toggleExpanded}
+            <View
               style={[
                 styles.fabCircle,
                 {
@@ -219,6 +238,7 @@ export default function DrawingToolbar({
                   borderColor: (isDrawingMode || isTextMode) ? colors.accent : colors.border,
                 },
               ]}
+              accessibilityRole="button"
             >
               <MaterialCommunityIcons
                 name={getFabIcon()}
@@ -235,7 +255,7 @@ export default function DrawingToolbar({
                   },
                 ]}
               />
-            </TouchableOpacity>
+            </View>
           ) : (
             /* ─── DURUM 2: AÇIK HAL (GENİŞLETİLMİŞ ARAÇ ÇUBUĞU) ─── */
             <View

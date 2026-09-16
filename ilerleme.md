@@ -4,6 +4,41 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-16] - UX İyileştirmeleri: Kalem Modunda Sticker Taşıma, Floating Toolbar Gesture Çakışması & Dinamik Sayfa Şablonu Kalıtımı
+
+### 🔍 Kapsam ve İhtiyaç
+1. **Kalem Açıkken Sticker Taşıma (Gesture Önceliği):** Çizim modu açıkken sticker'ların taşınamaması; çizim tuvalinin tüm dokunmaları yutması sorunu.
+2. **Yüzen Araç Çubuğu (Floating Toolbar) Gesture Çakışması:** Araç çubuğu FAB haline getirildiğinde sürükleme sırasında `TouchableOpacity` ile `PanGesture` çakışması sonucu çubuğun istenmeden açılması sorunu.
+3. **Dinamik Yeni Sayfa Şablonu (Page Template Inheritance):** Defterlerde (Notlarım ve Günlüğüm) "+" butonuna basıldığında kapak varsayılanına dönmek yerine, o an bulunulan aktif sayfanın şablonunun anında ve otomatik miras alınması ihtiyacı.
+
+### 🔧 Yapılan Düzeltmeler ve İyileştirmeler
+
+#### 1. Kalem Açıkken Sticker Taşıma Önceliği (`components/stickers/StickerCanvas.js`)
+- `pointerEvents={isDrawingMode ? 'none' : 'box-none'}` kilidi kaldırılarak tuval daima `pointerEvents="box-none"` yapıldı; böylece boş alanlardaki dokunuşlar alttaki çizim tuvaline akarken, sticker üzerine basıldığında sticker dokunmayı doğrudan yakalayabilir hale geldi.
+- `StickerCanvas` konteynerine `zIndex: 60` verildi; böylece çizim tuvalinin (`zIndex: 50`) üzerine çıkarak sticker'lara dokunulduğunda çizgi çekmeden doğrudan `DraggableSticker` `PanGesture`'ının çalışması sağlandı.
+- Çizim modundayken `selectedStickerId` deselect katmanı devre dışı bırakıldı (`{selectedStickerId && !isDrawingMode && ...}`); böylece kalemle boş alana dokunulduğunda ilk vuruş bloke edilmeden çizim yapılabilmesi sağlandı.
+- `NotebookPagesView.js` içerisinde inaktif sayfalar için `pointerEvents="none"`, aktif sayfa için `box-none` verilerek sayfa geçişleri optimize edildi.
+
+#### 2. Yüzen Araç Çubuğu Gesture Çakışması (`components/drawing/DrawingToolbar.js`)
+- `react-native-gesture-handler`'ın `Gesture.Exclusive(panGesture, fabTapGesture)` yapısı kuruldu.
+- `panGesture` için `activeOffsetX/Y([-6, 6])` ve `fabTapGesture` için `maxDistance(6)` / `maxDuration(250)` tanımlandı.
+- Kullanıcı simgeyi 6 pikselden fazla sürüklediği anda `panGesture` derhal devreye girer ve `fabTapGesture` anında iptal edilir; çubuk ekranın istenen yerine açılmadan rahatça taşınabilir.
+- FAB butonu içindeki React Native `TouchableOpacity` bileşeni yerel `<View>` ile değiştirildi; dokunma ve açılma yönetimi tamamen jest sistemine devredilerek responder çakışması giderildi.
+
+#### 3. Dinamik Sayfa Şablonu Kalıtımı (`components/notebook/NotebookPagesView.js` & `storageService.js`)
+- `NotebookPagesView.js` içinde "+" butonu doğrudan `handleQuickAddPage` fonksiyonuna bağlandı.
+- "+" butonuna basıldığında araya şablon seçici modalı girmeden o anki aktif sayfanın şablonu (`activePaperTemplateId`) otomatik olarak devralınarak yeni sayfa anında oluşturulur ve pürüzsüzce yeni sayfaya kaydırılır.
+- Kullanıcı dilediğinde "+" butonunun hemen yanındaki "Şablon Değiştir" butonuyla yeni sayfanın şablonunu sonradan değiştirebilir.
+- `app/defterlerim/[notebookId]/pages.js` içerisinden `newPageTemplateSource="notebookDefault"` kaldırıldı; Notlarım ve Günlüğüm standartlaştırıldı.
+- `storageService.js` içerisindeki `notebookWithAddedPage` fonksiyonunda şablon belirtilmediğinde önceki sayfanın şablonunu miras alan fallback koruması eklendi.
+
+### ✅ Doğrulama & Testler
+- `node tests/zoomableCanvas.test.js`: 6/6 matematiksel birim testi başarılı.
+- Babel AST parse kontrolü: Değiştirilen 5 dosyanın tamamı 0 sözdizimi hatası ile doğrulandı (`components/stickers/StickerCanvas.js`, `components/drawing/DrawingToolbar.js`, `components/notebook/NotebookPagesView.js`, `app/defterlerim/[notebookId]/pages.js`, `services/storageService.js`).
+- Sayfa şablonu kalıtım mantığı simülasyonu çalıştırılarak, 1. sayfa `grid` iken eklenen sayfanın `grid`, 2. sayfa `dotted` iken eklenen sayfanın `dotted` şablonunu otomatik aldığı doğrulandı.
+
+---
+
 ## 📅 [2026-09-16] - Kapak Ekranı Başlık Metinlerinin Temizlenmesi & Minimalist UI Düzenlemesi
 
 ### 🔍 Kapsam ve İhtiyaç

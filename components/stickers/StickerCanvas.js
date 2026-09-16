@@ -19,6 +19,8 @@ export default function StickerCanvas({
   onStickerResize,
   onStickerDelete,
   isDrawingMode = false,
+  pointerEvents = 'box-none',
+  style,
 }) {
   const [selectedStickerId, setSelectedStickerId] = useState(null);
   const [canvasLayout, setCanvasLayout] = useState({ width: 0, height: 0 });
@@ -30,8 +32,8 @@ export default function StickerCanvas({
 
   return (
     <View
-      style={styles.canvas}
-      pointerEvents={isDrawingMode ? 'none' : 'box-none'}
+      style={[styles.canvas, style]}
+      pointerEvents={pointerEvents}
       onLayout={(e) => {
         const { width, height } = e.nativeEvent.layout;
         setCanvasLayout({ width, height });
@@ -51,7 +53,7 @@ export default function StickerCanvas({
         />
       )}
 
-      {selectedStickerId && (
+      {selectedStickerId && !isDrawingMode && (
         <View
           style={StyleSheet.absoluteFill}
           onStartShouldSetResponder={() => {
@@ -85,7 +87,7 @@ export default function StickerCanvas({
 const styles = StyleSheet.create({
   canvas: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 10,
+    zIndex: 60,
   },
   guideLineVertical: {
     position: 'absolute',

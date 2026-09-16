@@ -106,7 +106,11 @@ const notebookWithAddedPage = (notebook, pageData = {}) => {
   const newPage = {
     pageId: pageData.pageId || `page_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     pageNumber: (notebook.pages?.length || 0) + 1,
-    paperTemplateId: pageData.paperTemplateId || notebook.paperTemplateId || DEFAULT_PAPER_TEMPLATE_ID,
+    paperTemplateId:
+      pageData.paperTemplateId ||
+      (notebook.pages?.length ? notebook.pages[notebook.pages.length - 1]?.paperTemplateId : null) ||
+      notebook.paperTemplateId ||
+      DEFAULT_PAPER_TEMPLATE_ID,
     createdAt: new Date().toISOString(),
     drawings: pageData.drawings || [],
     textBlocks: pageData.textBlocks || [],

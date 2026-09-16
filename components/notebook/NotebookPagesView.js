@@ -334,8 +334,9 @@ export default function NotebookPagesView({
 
   // Yeni Sayfa Ekleme (+)
   const handleAddPage = useCallback(async (paperTemplateId) => {
-    // Yeni sayfa, seçici sheet'te seçilen kağıt şablonuyla StorageService üzerinden eklenir
-    const result = await storageRef.current.addPage(paperTemplateId ? { paperTemplateId } : {});
+    // Yeni sayfa, o anki aktif sayfanın şablonunu (veya seçilen şablonu) miras alarak StorageService üzerinden eklenir
+    const targetTemplateId = paperTemplateId || activePaperTemplateId || notebook?.paperTemplateId || DEFAULT_PAPER_TEMPLATE_ID;
+    const result = await storageRef.current.addPage({ paperTemplateId: targetTemplateId });
     if (!result) return;
 
     // Henüz kaydedilmemiş (debounce bekleyen) çizimler kaybolmasın diye yalnızca yeni sayfayı state'e ekle
@@ -348,7 +349,12 @@ export default function NotebookPagesView({
       type: 'page_added',
       pageId: newPage.pageId,
     });
-  }, [scrollToPageIndex, showUndoToast, t]);
+  }, [activePaperTemplateId, notebook?.paperTemplateId, scrollToPageIndex, showUndoToast, t]);
+
+  // "+" butonuna basıldığında aktif sayfanın şablonunu dinamik miras alarak anında yeni sayfa ekler
+  const handleQuickAddPage = useCallback(() => {
+    handleAddPage(activePaperTemplateId);
+  }, [handleAddPage, activePaperTemplateId]);
 
   // Sayfa Silme (Çöp Kutusu)
   const handleDeletePage = useCallback(() => {
@@ -944,7 +950,7 @@ export default function NotebookPagesView({
         <View style={[styles.headerRightGroup, compactHeader && styles.headerRightGroupCompact]}>
           <TouchableOpacity
             activeOpacity={0.7}
-            onPress={() => setTemplateSheetMode('newPage')}
+            onPress={handleQuickAddPage}
             style={[styles.headerButton, compactHeader && styles.headerButtonCompact, styles.addPageBtn, { backgroundColor: colors.accent }]}
             accessibilityLabel={t('diary.addPage', 'Yeni Sayfa Ekle')}
           >
@@ -1118,7 +1124,8 @@ export default function NotebookPagesView({
                   onStickerMove={isActive ? handleStickerMove : () => {}}
                   onStickerResize={isActive ? handleStickerResize : () => {}}
                   onStickerDelete={isActive ? handleStickerDelete : () => {}}
-                  isDrawingMode={!isActive || activeMode === 'drawing'}
+                  isDrawingMode={isActive && activeMode === 'drawing'}
+                  pointerEvents={!isActive ? 'none' : 'box-none'}
                 />
               </ZoomableCanvas>
             </View>
@@ -1126,15 +1133,11 @@ export default function NotebookPagesView({
         })}
       </ScrollView>
 
-      {/* Kağıt Şablonu Seçici (Yeni sayfa / Aktif sayfa) - yeni sayfada newPageTemplateSource'a göre seçili gelir */}
+      {/* Kağıt Şablonu Seçici (Aktif sayfa şablonu ile açılır) */}
       <PaperTemplateModal
         visible={templateSheetMode !== null}
         onClose={() => setTemplateSheetMode(null)}
-        currentTemplateId={
-          templateSheetMode === 'newPage' && newPageTemplateSource === 'notebookDefault'
-            ? notebook?.paperTemplateId || DEFAULT_PAPER_TEMPLATE_ID
-            : activePaperTemplateId
-        }
+        currentTemplateId={activePaperTemplateId}
         onSelectTemplate={templateSheetMode === 'newPage' ? handleAddPage : handleChangePageTemplate}
         mode={templateSheetMode || 'editPage'}
       />
