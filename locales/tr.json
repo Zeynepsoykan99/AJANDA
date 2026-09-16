@@ -47,7 +47,6 @@
     "categoryLabel": "Yapılacaklar"
   },
   "agenda": {
-    "coverTitle": "Ajanda Kapağı",
     "pagesTitle": "Sayfalarım",
     "emptyFilterTitle": "Sayfa bulunamadı",
     "emptyTitle": "Henüz sayfa eklenmedi",
@@ -204,7 +203,6 @@
   },
   "diary": {
     "title": "Günlüğüm",
-    "coverTitle": "Günlük Kapağı",
     "openDiary": "Günlüğü Aç",
     "openDiaryButton": "🌸 Günlüğümü Aç",
     "selectCover": "Kapak Değiştir",

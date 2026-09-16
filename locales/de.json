@@ -47,7 +47,6 @@
     "categoryLabel": "To-Do Liste"
   },
   "agenda": {
-    "coverTitle": "Planer-Cover",
     "pagesTitle": "Meine Seiten",
     "emptyFilterTitle": "Keine Seiten gefunden",
     "emptyTitle": "Noch keine Seiten hinzugefügt",
@@ -204,7 +203,6 @@
   },
   "diary": {
     "title": "Mein Tagebuch",
-    "coverTitle": "Tagebuch-Cover",
     "openDiary": "Tagebuch Öffnen",
     "openDiaryButton": "🌸 Mein Tagebuch Öffnen",
     "selectCover": "Cover Ändern",

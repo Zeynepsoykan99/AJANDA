@@ -47,7 +47,6 @@
     "categoryLabel": "Lista de Tareas"
   },
   "agenda": {
-    "coverTitle": "Portada de la Agenda",
     "pagesTitle": "Mis Páginas",
     "emptyFilterTitle": "Página no encontrada",
     "emptyTitle": "Aún no se han añadido páginas",
@@ -204,7 +203,6 @@
   },
   "diary": {
     "title": "Mi Diario",
-    "coverTitle": "Portada del Diario",
     "openDiary": "Abrir Diario",
     "openDiaryButton": "🌸 Abrir Mi Diario",
     "selectCover": "Cambiar Portada",

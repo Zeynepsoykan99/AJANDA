@@ -4,6 +4,40 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-16] - Kapak Ekranı Başlık Metinlerinin Temizlenmesi & Minimalist UI Düzenlemesi
+
+### 🔍 Kapsam ve İhtiyaç
+- **Tespit:** Kullanıcı Ajanda, Günlüğüm veya Notlarım defter kapaklarına girdiğinde, görsel kapak zaten tüm bilgiyi sunmasına rağmen üst barda "Ajanda Kapağı", "Günlük Kapağı" veya defter adı gibi açıklayıcı metinler gereksiz bir kalabalık yaratıyordu.
+- **Hedef:** Kapak ekranlarının üst barlarındaki metinlerin ve skeleton alanlarının tamamen kaldırılarak arayüzün daha minimalist ve profesyonel hale getirilmesi; kullanılmayan i18n anahtarlarının 5 dilden temizlenmesi.
+
+### 🔧 Yapılan Düzeltmeler ve Eklemeler
+
+#### 1. Arayüz Temizliği (Kapak Ekranları)
+- **`app/ajandam/index.js`:**
+  - Üst bardaki `<Text>{t('agenda.coverTitle')}</Text>` ve `<Skeleton>` metin alanı kaldırıldı.
+  - `<View style={styles.headerCenter} />` spacer olarak korunarak sol geri butonu ile sağ görsel düzenleme butonunun simetrisi ve kapak görselinin dikey/yatay merkezlemesi korundu.
+- **`components/notebook/NotebookCoverView.js`:**
+  - Üst bardaki `<Text>{getTitle(notebook)}</Text>` ve metin skeleton'ı kaldırıldı.
+  - `<View style={styles.headerCenter} />` spacer olarak bırakıldı.
+- **`app/gunlugum/index.js` & `app/defterlerim/[notebookId]/index.js`:**
+  - Kapak görünümünde artık başlık metni render edilmediği için `getTitle` prop'ları temizlendi.
+
+#### 2. Çoklu Dil (i18n) Temizliği
+- `locales/tr.json`, `locales/en.json`, `locales/de.json`, `locales/es.json`, `locales/fr.json`:
+  - `agenda.coverTitle` ("Ajanda Kapağı", "Planner Cover" vb.) silindi.
+  - `diary.coverTitle` ("Günlük Kapağı", "Diary Cover" vb.) silindi.
+
+#### 3. Bağlantılı Dosyalar & Arama Senkronizasyonu
+- **`utils/pageTitleHelper.js`:** Kapak için `agenda.coverTitle` bağımlılığı `subpages.agenda` ('Ajandam') olarak güncellendi.
+- **`services/searchService.js`:** Arama sonuçlarındaki kapak etiketleri sadeleştirildi (`Ajandam`, `Günlüğüm`, `[Defter Adı]`).
+
+### ✅ Doğrulama
+- `node tests/zoomableCanvas.test.js`: 6/6 birim testi başarılı
+- Babel AST parse: 6/6 dosya hatasız derlendi
+- i18n JSON geçerlilik kontrolü: 5 dil dosyasında `coverTitle` anahtarlarının tamamen temizlendiği ve JSON formatının geçerli olduğu doğrulandı
+
+---
+
 ## 📅 [2026-09-16] - Günlük ve Defterler İçin Biyometrik Kilit (Face ID / Touch ID / PIN) Entegrasyonu
 
 ### 🔍 Kapsam ve İhtiyaç

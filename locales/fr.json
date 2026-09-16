@@ -47,7 +47,6 @@
     "categoryLabel": "Liste de Tâches"
   },
   "agenda": {
-    "coverTitle": "Couverture de l'Agenda",
     "pagesTitle": "Mes Pages",
     "emptyFilterTitle": "Aucune page trouvée",
     "emptyTitle": "Aucune page ajoutée pour l'instant",
@@ -204,7 +203,6 @@
   },
   "diary": {
     "title": "Mon Journal",
-    "coverTitle": "Couverture du Journal",
     "openDiary": "Ouvrir le Journal",
     "openDiaryButton": "🌸 Ouvrir Mon Journal",
     "selectCover": "Changer la Couverture",

@@ -105,7 +105,7 @@ export const searchAllData = async (
       const hasHandwriting = coverMatches.some((m) => m.isHandwriting);
       results.push({
         id: 'cover',
-        title: 'Ajanda Kapağı',
+        title: 'Ajandam',
         category: 'cover',
         categoryName: 'Kapak',
         categoryEmoji: '📖',
@@ -290,7 +290,7 @@ export const searchAllData = async (
       const isLocked = !!diary.isLocked;
       results.push({
         id: 'diary_cover',
-        title: isLocked ? 'Günlüğüm (🔒) - Kapak' : (diary.title || 'Günlük Kapağı'),
+        title: isLocked ? 'Günlüğüm (🔒)' : (diary.title || 'Günlüğüm'),
         category: 'gunlugum',
         categoryName: 'Günlüğüm',
         categoryEmoji: '🌸',
@@ -396,7 +396,7 @@ export const searchAllData = async (
         const isLocked = !!nb.isLocked;
         results.push({
           id: `nb_cover_${nb.id}`,
-          title: isLocked ? `${nb.title || 'Defter Kapağı'} (🔒)` : (nb.title || 'Defter Kapağı'),
+          title: isLocked ? `${nb.title || 'Defter'} (🔒)` : (nb.title || 'Defter'),
           category: 'notlarim',
           categoryName: nb.title || 'Notlarım',
           categoryEmoji: '📓',

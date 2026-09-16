@@ -191,7 +191,7 @@ export default function NotebookCoverView({ storage, getTitle, openButtonLabel, 
     if (notebook?.isLocked && !isSessionUnlocked(targetId)) {
       const result = await authenticateWithBiometrics({
         promptMessage: t('security.unlockToOpen', {
-          title: getTitle ? getTitle(notebook) : '',
+          title: notebook?.title || '',
           defaultValue: 'Defteri açmak için kimliğinizi doğrulayın',
         }),
         fallbackLabel: t('security.fallbackPasscode', 'Cihaz Parolasını Kullan'),
@@ -205,7 +205,7 @@ export default function NotebookCoverView({ storage, getTitle, openButtonLabel, 
     }
 
     if (onOpen) onOpen();
-  }, [notebook, onOpen, getTitle, t]);
+  }, [notebook, onOpen, t]);
 
   if (isLoading) {
     return (
@@ -221,9 +221,7 @@ export default function NotebookCoverView({ storage, getTitle, openButtonLabel, 
           >
             <MaterialCommunityIcons name="arrow-left" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Skeleton width={140} height={18} borderRadius={4} />
-          </View>
+          <View style={styles.headerCenter} />
           <View style={styles.headerRightGroup}>
             <Skeleton width={38} height={38} borderRadius={19} />
           </View>
@@ -272,11 +270,7 @@ export default function NotebookCoverView({ storage, getTitle, openButtonLabel, 
           <MaterialCommunityIcons name="arrow-left" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
 
-        <View style={styles.headerCenter}>
-          <Text style={[styles.pageTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-            {getTitle ? getTitle(notebook) : ''}
-          </Text>
-        </View>
+        <View style={styles.headerCenter} />
 
         <View style={styles.headerRightGroup}>
           {/* Biyometrik Kilit Butonu */}

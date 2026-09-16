@@ -92,7 +92,7 @@ export const getPageDisplayTitle = (page, t) => {
 
   // Kapak kontrolü
   if (page.id === 'cover' || page.category === 'cover') {
-    return t ? t('agenda.coverTitle', 'Ajanda Kapağı') : 'Ajanda Kapağı';
+    return t ? t('subpages.agenda', 'Ajandam') : 'Ajandam';
   }
 
   const rawTitle = typeof page.title === 'string' ? page.title.trim() : '';

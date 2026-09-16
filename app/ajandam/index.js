@@ -204,9 +204,7 @@ export default function AjandamScreen() {
           >
             <MaterialCommunityIcons name="arrow-left" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Skeleton width={130} height={18} borderRadius={4} />
-          </View>
+          <View style={styles.headerCenter} />
           <View style={styles.headerRightGroup}>
             <Skeleton width={38} height={38} borderRadius={19} />
           </View>
@@ -239,9 +237,7 @@ export default function AjandamScreen() {
           <MaterialCommunityIcons name="arrow-left" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
 
-        <View style={styles.headerCenter}>
-          <Text style={[styles.pageTitle, { color: colors.textPrimary }]}>{t('agenda.coverTitle', 'Ajanda Kapağı')}</Text>
-        </View>
+        <View style={styles.headerCenter} />
 
         <View style={styles.headerRightGroup}>
           <TouchableOpacity

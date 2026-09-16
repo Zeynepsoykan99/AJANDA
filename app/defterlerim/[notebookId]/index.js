@@ -21,7 +21,6 @@ export default function NotebookCoverScreen() {
     [notebookId]
   );
 
-  const getTitle = useCallback((notebook) => notebook?.title || '', []);
   const handleOpen = useCallback(
     () => router.push(`/defterlerim/${notebookId}/pages`),
     [router, notebookId]
@@ -30,7 +29,6 @@ export default function NotebookCoverScreen() {
   return (
     <NotebookCoverView
       storage={storage}
-      getTitle={getTitle}
       openButtonLabel={t('notebooks.openButton', '📓 Defteri Aç')}
       onOpen={handleOpen}
     />

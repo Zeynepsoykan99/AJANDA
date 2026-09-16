@@ -20,13 +20,11 @@ export default function GunlugumCoverScreen() {
     []
   );
 
-  const getTitle = useCallback(() => t('diary.coverTitle', 'Günlük Kapağı'), [t]);
   const handleOpen = useCallback(() => router.push('/gunlugum/pages'), [router]);
 
   return (
     <NotebookCoverView
       storage={storage}
-      getTitle={getTitle}
       openButtonLabel={t('diary.openDiaryButton', '🌸 Günlüğümü Aç')}
       onOpen={handleOpen}
     />

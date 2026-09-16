@@ -47,7 +47,6 @@
     "categoryLabel": "To-Do List"
   },
   "agenda": {
-    "coverTitle": "Planner Cover",
     "pagesTitle": "My Pages",
     "emptyFilterTitle": "No pages found",
     "emptyTitle": "No pages added yet",
@@ -204,7 +203,6 @@
   },
   "diary": {
     "title": "My Diary",
-    "coverTitle": "Diary Cover",
     "openDiary": "Open Diary",
     "openDiaryButton": "🌸 Open My Diary",
     "selectCover": "Change Cover",
