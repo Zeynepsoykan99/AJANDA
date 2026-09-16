@@ -16,9 +16,8 @@ import { StorageService } from '../../services/storageService';
 import PageThumbnail from '../../components/PageThumbnail';
 import AddPageModal from '../../components/AddPageModal';
 import ListSkeleton from '../../components/ui/ListSkeleton';
-import DatePickerModal from '../../components/ui/DatePickerModal';
 import UndoToast from '../../components/ui/UndoToast';
-import GlobalSearchModal from '../../components/ui/GlobalSearchModal';
+import GlobalFilterHeader, { isSameDay, formatFilterDate } from '../../components/ui/GlobalFilterHeader';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 import { getPageDisplayTitle } from '../../utils/pageTitleHelper';
 
@@ -36,23 +35,10 @@ export default function PagesScreen() {
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [filterDate, setFilterDate] = useState(null);
-  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
-  const [isSearchModalVisible, setIsSearchModalVisible] = useState(false);
   const [undoToast, setUndoToast] = useState({ visible: false, message: '' });
 
   // Geri al (Undo) için bekleyen silme referansı
   const pendingDeleteRef = useRef(null);
-
-  // Gün bazlı tarih karşılaştırma
-  const isSameDay = (dateStr, targetDate) => {
-    if (!dateStr || !targetDate) return false;
-    const d = new Date(dateStr);
-    return (
-      d.getFullYear() === targetDate.getFullYear() &&
-      d.getMonth() === targetDate.getMonth() &&
-      d.getDate() === targetDate.getDate()
-    );
-  };
 
   // Filtrelenmiş veri
   const displayPages = useMemo(() => {
@@ -61,11 +47,11 @@ export default function PagesScreen() {
   }, [pages, filterDate]);
 
   // Filtre aktifken yerelleştirilmiş tarih metni
-  const dateLocaleMap = { tr: 'tr-TR', en: 'en-US', de: 'de-DE', es: 'es-ES', fr: 'fr-FR' };
-  const currentLocale = dateLocaleMap[i18n.language?.slice(0, 2)] || 'en-US';
-  const filterLabel = filterDate
-    ? filterDate.toLocaleDateString(currentLocale, { day: 'numeric', month: 'long', year: 'numeric' })
-    : null;
+  const filterLabel = useMemo(
+    () => formatFilterDate(filterDate, i18n.language),
+    [filterDate, i18n.language]
+  );
+
 
   // Sayfaları yükle (Ekran her odaklandığında çalışır)
   useFocusEffect(
@@ -204,86 +190,13 @@ export default function PagesScreen() {
       style={[styles.safeArea, { backgroundColor: colors.background }]}
       edges={['top', 'bottom']}
     >
-      {/* Üst Bar */}
-      <View style={[styles.headerBar, isTablet && styles.tabletContainer]}>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => router.back()}
-          style={[
-            styles.backButton,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-            },
-          ]}
-        >
-          <MaterialCommunityIcons
-            name="arrow-left"
-            size={20}
-            color={colors.textSecondary}
-          />
-        </TouchableOpacity>
-
-        <Text style={[styles.pageTitle, { color: colors.textPrimary }]}>
-          {t('agenda.pagesTitle', 'Sayfalarım')}
-        </Text>
-
-        <View style={styles.headerRightGroup}>
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => setIsSearchModalVisible(true)}
-            style={[
-              styles.backButton,
-              {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-              },
-            ]}
-          >
-            <MaterialCommunityIcons
-              name="magnify"
-              size={20}
-              color={colors.textSecondary}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => setIsDatePickerVisible(true)}
-            style={[
-              styles.backButton,
-              {
-                backgroundColor: filterDate ? colors.accent + '20' : colors.card,
-                borderColor: filterDate ? colors.accent : colors.border,
-              },
-            ]}
-          >
-            <MaterialCommunityIcons
-              name="calendar-search"
-              size={20}
-              color={filterDate ? colors.accent : colors.textSecondary}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Filtre Aktif Çipi */}
-      {filterDate && (
-        <View style={[styles.filterChipContainer, isTablet && styles.tabletContainer]}>
-          <View style={[styles.filterChip, { backgroundColor: colors.accent + '12' }]}>
-            <MaterialCommunityIcons name="calendar-check" size={16} color={colors.accent} />
-            <Text style={[styles.filterChipText, { color: colors.accent }]}>
-              {filterLabel}
-            </Text>
-            <TouchableOpacity
-              onPress={() => setFilterDate(null)}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <MaterialCommunityIcons name="close-circle" size={18} color={colors.accent + '80'} />
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
+      {/* Üst Bar & Arama/Filtreleme Başlığı */}
+      <GlobalFilterHeader
+        title={t('agenda.pagesTitle', 'Sayfalarım')}
+        searchCategory="ajandam"
+        filterDate={filterDate}
+        onSelectDate={setFilterDate}
+      />
 
       {/* Sayfa Listesi */}
       <View style={[{ flex: 1 }, isTablet && styles.tabletContainer]}>
@@ -327,15 +240,6 @@ export default function PagesScreen() {
         onAdd={handleAddPage}
       />
 
-      {/* Tarih Filtresi Modal */}
-      <DatePickerModal
-        visible={isDatePickerVisible}
-        onClose={() => setIsDatePickerVisible(false)}
-        onSelectDate={setFilterDate}
-        selectedDate={filterDate}
-        onClearFilter={() => setFilterDate(null)}
-      />
-
       {/* Geri Al (Undo) Bildirimi */}
       <UndoToast
         visible={undoToast.visible}
@@ -344,13 +248,6 @@ export default function PagesScreen() {
         onDismiss={handleDismissUndo}
         duration={4500}
       />
-
-      {/* Global Arama Modalı */}
-      <GlobalSearchModal
-        visible={isSearchModalVisible}
-        onClose={() => setIsSearchModalVisible(false)}
-        initialCategory="ajandam"
-      />
     </SafeAreaView>
   );
 }
@@ -358,43 +255,6 @@ export default function PagesScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-  },
-  headerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  headerRightGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  backButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  filterChipContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-  },
-  filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  filterChipText: {
-    fontSize: 13,
-    fontWeight: '600',
   },
   clearFilterInlineBtn: {
     marginTop: 12,
@@ -407,12 +267,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
-  pageTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
   listContent: {
+
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 100,

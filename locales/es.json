@@ -230,7 +230,9 @@
       "plainDesc": "Un lienzo totalmente en blanco para dibujar libremente",
       "vintage": "Papel Antiguo",
       "vintageDesc": "Textura nostálgica de papel amarillento"
-    }
+    },
+    "noEntryTitle": "Entrada no encontrada",
+    "noEntryForDate": "No se encontró ninguna página para el {{date}}."
   },
   "notebooks": {
     "addNotebook": "Añadir Cuaderno",
@@ -243,7 +245,10 @@
     "deleted": "\"{{title}}\" eliminado",
     "emptyTitle": "Aún no hay cuadernos",
     "emptyDesc": "Crea tu primer cuaderno con el botón + de arriba a la derecha.",
+    "emptyFilterTitle": "No se encontraron cuadernos",
+    "emptyFilterDesc": "No hay cuadernos modificados el {{date}}.",
     "openButton": "📓 Abrir Cuaderno",
+
     "singlePageWarning": "El cuaderno debe contener al menos una página.",
     "notFound": "Cuaderno no encontrado",
     "search": "Buscar en el Cuaderno",

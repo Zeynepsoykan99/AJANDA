@@ -230,7 +230,9 @@
       "plainDesc": "Une toile entièrement vierge pour dessiner librement",
       "vintage": "Papier Vieilli",
       "vintageDesc": "Texture nostalgique de papier jauni"
-    }
+    },
+    "noEntryTitle": "Aucune entrée trouvée",
+    "noEntryForDate": "Aucune page trouvée pour le {{date}}."
   },
   "notebooks": {
     "addNotebook": "Ajouter un Carnet",
@@ -243,7 +245,10 @@
     "deleted": "\"{{title}}\" supprimé",
     "emptyTitle": "Aucun carnet pour le moment",
     "emptyDesc": "Créez votre premier carnet avec le bouton + en haut à droite.",
+    "emptyFilterTitle": "Aucun carnet trouvé",
+    "emptyFilterDesc": "Aucun carnet modifié le {{date}}.",
     "openButton": "📓 Ouvrir le Carnet",
+
     "singlePageWarning": "Le carnet doit contenir au moins une page.",
     "notFound": "Carnet introuvable",
     "search": "Rechercher dans le Carnet",

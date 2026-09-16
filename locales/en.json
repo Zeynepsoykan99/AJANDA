@@ -230,7 +230,9 @@
       "plainDesc": "A completely blank canvas for free drawing",
       "vintage": "Vintage Paper",
       "vintageDesc": "Nostalgic yellow aged paper texture"
-    }
+    },
+    "noEntryTitle": "No Entry Found",
+    "noEntryForDate": "No page found for {{date}}."
   },
   "notebooks": {
     "addNotebook": "Add Notebook",
@@ -243,7 +245,10 @@
     "deleted": "\"{{title}}\" deleted",
     "emptyTitle": "No notebooks yet",
     "emptyDesc": "Create your first notebook with the + button at the top right.",
+    "emptyFilterTitle": "No notebooks found",
+    "emptyFilterDesc": "No notebooks modified on {{date}}.",
     "openButton": "📓 Open Notebook",
+
     "singlePageWarning": "The notebook must contain at least one page.",
     "notFound": "Notebook not found",
     "search": "Search Notebook",

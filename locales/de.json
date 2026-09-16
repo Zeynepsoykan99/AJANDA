@@ -230,7 +230,9 @@
       "plainDesc": "Eine völlig leere Leinwand zum freien Zeichnen",
       "vintage": "Vintage-Papier",
       "vintageDesc": "Nostalgische gelbliche Papierstruktur"
-    }
+    },
+    "noEntryTitle": "Kein Eintrag gefunden",
+    "noEntryForDate": "Keine Seite für den {{date}} gefunden."
   },
   "notebooks": {
     "addNotebook": "Notizbuch Hinzufügen",
@@ -243,7 +245,10 @@
     "deleted": "\"{{title}}\" gelöscht",
     "emptyTitle": "Noch keine Notizbücher",
     "emptyDesc": "Erstelle dein erstes Notizbuch mit der + Taste oben rechts.",
+    "emptyFilterTitle": "Keine Notizbücher gefunden",
+    "emptyFilterDesc": "Am {{date}} wurden keine Notizbücher geändert.",
     "openButton": "📓 Notizbuch Öffnen",
+
     "singlePageWarning": "Das Notizbuch muss mindestens eine Seite enthalten.",
     "notFound": "Notizbuch nicht gefunden",
     "search": "Im Notizbuch Suchen",

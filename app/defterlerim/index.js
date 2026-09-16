@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import ImageWithSkeleton from '../../components/ui/ImageWithSkeleton';
 import UndoToast from '../../components/ui/UndoToast';
 import NotebookFormSheet from '../../components/notebook/NotebookFormSheet';
 import NotebookActionSheet from '../../components/notebook/NotebookActionSheet';
+import GlobalFilterHeader, { isSameDay, formatFilterDate } from '../../components/ui/GlobalFilterHeader';
 import {
   authenticateWithBiometrics,
   unlockSession,
@@ -36,13 +37,14 @@ const SHEET_SWITCH_DELAY = 300;
  * Sağ üstten defter eklenir; uzun basınca yeniden adlandırma / silme menüsü açılır.
  */
 export default function NotebooksScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const { colors } = useTheme();
   const { isTablet } = useResponsiveLayout();
 
   const [notebooks, setNotebooks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [filterDate, setFilterDate] = useState(null);
   const [isCreateVisible, setIsCreateVisible] = useState(false);
   const [actionTarget, setActionTarget] = useState(null);
   const [renameTarget, setRenameTarget] = useState(null);
@@ -50,6 +52,18 @@ export default function NotebooksScreen() {
   const undoActionRef = useRef(null);
 
   const numColumns = isTablet ? 4 : 2;
+
+  // Filtre aktifken yerelleştirilmiş tarih etiketi
+  const filterLabel = useMemo(
+    () => formatFilterDate(filterDate, i18n.language),
+    [filterDate, i18n.language]
+  );
+
+  // Tarihe göre filtrelenmiş defter listesi (son düzenleme veya oluşturma tarihine göre)
+  const displayNotebooks = useMemo(() => {
+    if (!filterDate) return notebooks;
+    return notebooks.filter((nb) => isSameDay(nb.updatedAt || nb.createdAt, filterDate));
+  }, [notebooks, filterDate]);
 
   const loadNotebooks = useCallback(async () => {
     const list = await StorageService.getNotebooks();
@@ -193,42 +207,56 @@ export default function NotebooksScreen() {
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
-      <MaterialCommunityIcons name="bookshelf" size={64} color={colors.accent + '40'} />
+      <MaterialCommunityIcons
+        name={filterDate ? 'calendar-remove' : 'bookshelf'}
+        size={64}
+        color={colors.accent + '40'}
+      />
       <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
-        {t('notebooks.emptyTitle', 'Henüz defter yok')}
+        {filterDate
+          ? t('notebooks.emptyFilterTitle', 'Defter bulunamadı')
+          : t('notebooks.emptyTitle', 'Henüz defter yok')}
       </Text>
       <Text style={[styles.emptyDesc, { color: colors.textSecondary + '99' }]}>
-        {t('notebooks.emptyDesc', 'Sağ üstteki + butonuyla ilk defterini oluştur.')}
+        {filterDate
+          ? t('notebooks.emptyFilterDesc', {
+              date: filterLabel,
+              defaultValue: `${filterLabel} tarihinde düzenlenmiş defter yok.`,
+            })
+          : t('notebooks.emptyDesc', 'Sağ üstteki + butonuyla ilk defterini oluştur.')}
       </Text>
+      {filterDate && (
+        <TouchableOpacity
+          onPress={() => setFilterDate(null)}
+          style={[styles.clearFilterInlineBtn, { borderColor: colors.accent }]}
+        >
+          <Text style={[styles.clearFilterInlineText, { color: colors.accent }]}>
+            {t('todo.clearFilter', 'Filtreyi Temizle')}
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-      {/* Üst Bar */}
-      <View style={[styles.headerBar, isTablet && styles.tabletContainer]}>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => router.back()}
-          style={[styles.headerButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-          accessibilityLabel={t('common.back', 'Geri')}
-        >
-          <MaterialCommunityIcons name="arrow-left" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        <Text style={[styles.pageTitle, { color: colors.textPrimary }]}>
-          {t('subpages.notebooks', 'defterlerim')}
-        </Text>
-
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => setIsCreateVisible(true)}
-          style={[styles.headerButton, styles.addButton, { backgroundColor: colors.accent, borderColor: colors.accent }]}
-          accessibilityLabel={t('notebooks.addNotebook', 'Defter Ekle')}
-        >
-          <MaterialCommunityIcons name="plus" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+      {/* Üst Bar & Arama/Filtreleme Başlığı */}
+      <GlobalFilterHeader
+        title={t('subpages.notebooks', 'defterlerim')}
+        searchCategory="notlarim"
+        filterDate={filterDate}
+        onSelectDate={setFilterDate}
+        rightActions={
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => setIsCreateVisible(true)}
+            style={[styles.headerButton, styles.addButton, { backgroundColor: colors.accent, borderColor: colors.accent }]}
+            accessibilityLabel={t('notebooks.addNotebook', 'Defter Ekle')}
+          >
+            <MaterialCommunityIcons name="plus" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
 
       {/* Defter Rafı */}
       <View style={[styles.listWrapper, isTablet && styles.tabletContainer]}>
@@ -237,16 +265,17 @@ export default function NotebooksScreen() {
         ) : (
           <FlatList
             key={`shelf_${numColumns}`}
-            data={notebooks}
+            data={displayNotebooks}
             numColumns={numColumns}
             keyExtractor={(item) => item.id}
             renderItem={renderNotebook}
-            contentContainerStyle={[styles.listContent, notebooks.length === 0 && styles.emptyListContent]}
+            contentContainerStyle={[styles.listContent, displayNotebooks.length === 0 && styles.emptyListContent]}
             ListEmptyComponent={renderEmptyState}
             showsVerticalScrollIndicator={false}
           />
         )}
       </View>
+
 
       <NotebookFormSheet
         visible={isCreateVisible}
@@ -288,13 +317,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  headerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
   headerButton: {
     width: 42,
     height: 42,
@@ -310,11 +332,18 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 4,
   },
-  pageTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+  clearFilterInlineBtn: {
+    marginTop: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1.5,
   },
+  clearFilterInlineText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+
   tabletContainer: {
     width: '100%',
     maxWidth: 860,

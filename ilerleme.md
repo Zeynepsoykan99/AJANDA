@@ -4,6 +4,53 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-16] - Global Arama ve Tarih Filtreleme Header'ı: Ajandam, Günlüğüm ve Defterlerim Entegrasyonu
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** "Yapılacaklar" (To-Do) ekranında bulunan büyüteç (arama) ve takvim (tarihe göre filtreleme) butonlarının sunduğu pratikliğin uygulamanın diğer ana modüllerine de taşınması ("Ajandam", "Günlüğüm" ve "Defterlerim / Notlarım").
+- **Hedefler:**
+  1. **Ortak Bileşen (`GlobalFilterHeader`):** Geri butonu, başlık, dinamik sağ aksiyonlar, arama butonu, tarih filtre butonu, aktif filtre çipi ve dahili modal kontrollerini tek bir yeniden kullanılabilir çatı bileşende toplamak.
+  2. **UI Entegrasyonu:** Ajandam sayfa listesi, Defterlerim rafı ve Günlüğüm kapak / sayfalarına bu işlevleri eklemek; tasarım, renk ve buton ölçülerini (42x42 dairesel butonlar, tema uyumu) birebir standartlaştırmak.
+  3. **Dinamik Filtreleme ve Yönlendirme:**
+     - Arama: İlgili modül sekmesi (`todo`, `ajandam`, `notlarim`, `gunlugum`) seçili olarak `GlobalSearchModal` veya defter içi arama sheet'i açılması.
+     - Tarih: `DatePickerModal` ile seçilen güne göre kayıtların filtrelenmesi (To-Do, Ajandam, Defterlerim) veya doğrudan o tarihteki sayfaya gidilmesi (Günlüğüm).
+     - Filtre Temizleme: Seçili tarih filtresini tek tıkla sıfırlayan (X) ve inline temizleme butonlarının eksiksiz çalışması.
+
+### 🔧 Yapılan Geliştirmeler ve Düzenlemeler
+
+#### 1. Yeniden Kullanılabilir `GlobalFilterHeader` Bileşeni (`components/ui/GlobalFilterHeader.js`)
+- `title`, `searchCategory`, `filterDate`, `onSelectDate`, `showBack`, `showSearch`, `showDatePicker`, `rightActions`, `containerStyle` proplarıyla tam esnek bir header oluşturuldu.
+- `DatePickerModal` ve `GlobalSearchModal` bileşenleri doğrudan header içine entegre edildi; sayfaların yerel modal state'i tutma gereksinimi ortadan kaldırıldı (DRY prensibi).
+- Filtre seçildiğinde beliren ve (X) ile kapatılabilen yerelleştirilmiş tarih çipi (`filterChip`) header bünyesinde standartlaştırıldı.
+- Çoklu dil tarih formatlaması için `formatFilterDate(date, language)` ve gün bazlı karşılaştırma için `isSameDay(dateStr, targetDate)` fonksiyonları dışa aktarıldı.
+
+#### 2. "Yapılacaklar" ve "Ajandam" Sayfalarının Refaktörü (`app/todolist/index.js` & `app/ajandam/pages.js`)
+- Her iki ekranda da yinelenen `DatePickerModal`, `GlobalSearchModal`, `isSameDay`, `dateLocaleMap` ve yerel modal state'leri kaldırılarak yerine `<GlobalFilterHeader>` konumlandırıldı.
+- Kod kalabalığı ve kullanılmayan stil tanımları temizlendi; boş durum ekranlarında (`renderEmptyState`) `formatFilterDate` desteği sağlandı.
+
+#### 3. "Defterlerim" Rafı Tarih ve Arama Entegrasyonu (`app/defterlerim/index.js`)
+- `GlobalFilterHeader` entegre edildi; "+" defter ekleme butonu `rightActions` prop'u üzerinden başlığa yerleştirildi.
+- Defter listesi `filterDate` seçildiğinde defterlerin `updatedAt` veya `createdAt` zaman damgasına göre filtrelenecek şekilde güncellendi.
+- Arama butonu tıklandığında `GlobalSearchModal` doğrudan "Notlarım" (`notlarim`) sekmesiyle açılır.
+- Seçili tarihte defter bulunamadığında bilgilendirici boş ekran ve "Filtreyi Temizle" butonu sunuldu.
+
+#### 4. "Günlüğüm" Kapak ve Sayfa Entegrasyonu (`components/notebook/NotebookCoverView.js`, `NotebookPagesView.js`, `app/gunlugum/`)
+- `NotebookCoverView`: `showSearch={true}` ve `showDatePicker={true}` desteği kazandı. Büyüteç ikonu tıklandığında `GlobalSearchModal` "Günlüğüm" kategorisiyle açılır. Takvim ikonu tıklandığında `DatePickerModal` açılır ve seçilen güne ait sayfa varsa doğrudan sayfaya (`/gunlugum/pages?pageId=...`) yönlendirilir; yoksa kullanıcıya nazik bir uyarı sunulur. Kilitli defter durumunda biyometrik doğrulama araya girer.
+- `NotebookPagesView`: `enableSearch={true}` ve `enableDatePicker={true}` propları eklendi. Günlük sayfaları içindeyken hem defter içi metin araması yapılabilir hem de takvim butonuyla istenen tarihteki sayfaya anında zıplanabilir.
+
+#### 5. Çoklu Dil Desteği (`locales/*.json` - TR, EN, DE, ES, FR)
+- 5 dilde eksiksiz yeni çeviriler eklendi:
+  - `notebooks.emptyFilterTitle`, `notebooks.emptyFilterDesc`
+  - `diary.noEntryTitle`, `diary.noEntryForDate`
+
+### ✅ Doğrulama & Testler
+- `node tests/zoomableCanvas.test.js`: 6/6 matematiksel birim testi başarılı.
+- `test_filter_helpers.js`: Tarih karşılaştırma (`isSameDay`), zaman dilimi ve 5 dilde tarih formatlama (`formatFilterDate`) testleri %100 başarıyla geçti.
+- 5 dil dosyası (`tr.json`, `en.json`, `de.json`, `es.json`, `fr.json`) JSON sözdizim doğrulamasından geçti.
+- Değiştirilen tüm bileşenler (`GlobalFilterHeader.js`, `app/todolist/index.js`, `app/ajandam/pages.js`, `app/defterlerim/index.js`, `NotebookCoverView.js`, `NotebookPagesView.js`, `app/gunlugum/index.js`, `app/gunlugum/pages.js`) Babel AST ile hatasız parse edildi.
+
+
+
 ## 📅 [2026-09-16] - Sticker Etkileşim İyileştirmesi: Sürükleme Bitişinde ve Tuval Dokunuşunda Seçimi Kaldırma (Deselect)
 
 ### 🔍 Kapsam ve İhtiyaç

@@ -36,6 +36,9 @@ import InteractiveCover3D from '../../components/stationery/InteractiveCover3D';
 import DrawingCanvas from '../../components/drawing/DrawingCanvas';
 import DrawingToolbar from '../../components/drawing/DrawingToolbar';
 import TextCanvas from '../../components/text/TextCanvas';
+import DatePickerModal from '../../components/ui/DatePickerModal';
+import GlobalSearchModal from '../../components/ui/GlobalSearchModal';
+import { isSameDay, formatFilterDate } from '../../components/ui/GlobalFilterHeader';
 
 const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
 
@@ -50,8 +53,21 @@ const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
  * @param {(notebook) => string} getTitle - Üst bardaki başlık
  * @param {string} openButtonLabel - Defteri açma butonunun metni
  * @param {function} onOpen - Sayfalara geçiş
+ * @param {boolean} [showSearch=false] - Sağ üstte arama butonu gösterilsin mi
+ * @param {boolean} [showDatePicker=false] - Sağ üstte tarih filtreleme butonu gösterilsin mi
+ * @param {string} [searchCategory='gunlugum'] - GlobalSearchModal varsayılan sekmesi
+ * @param {function} [onSelectDate] - Özel tarih seçimi callback'i
  */
-export default function NotebookCoverView({ storage, getTitle, openButtonLabel, onOpen }) {
+export default function NotebookCoverView({
+  storage,
+  getTitle,
+  openButtonLabel,
+  onOpen,
+  showSearch = false,
+  showDatePicker = false,
+  searchCategory = 'gunlugum',
+  onSelectDate,
+}) {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const { colors } = useTheme();
@@ -61,6 +77,10 @@ export default function NotebookCoverView({ storage, getTitle, openButtonLabel, 
   const [isLoading, setIsLoading] = useState(true);
   const [isCoverEditorVisible, setIsCoverEditorVisible] = useState(false);
   const [isTemplateModalVisible, setIsTemplateModalVisible] = useState(false);
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  const [isSearchModalVisible, setIsSearchModalVisible] = useState(false);
+  const [filterDate, setFilterDate] = useState(null);
+
 
   // Kapak Şablonu ve Dinamik Kenar Rengi
   const coverTemplate = getCoverTemplateById(notebook?.coverTemplateId || DEFAULT_COVER_TEMPLATE_ID);
@@ -207,6 +227,54 @@ export default function NotebookCoverView({ storage, getTitle, openButtonLabel, 
     if (onOpen) onOpen();
   }, [notebook, onOpen, t]);
 
+  // Tarih seçildiğinde ilgili sayfayı bul ve yönlendir
+  const handleDateSelect = useCallback(
+    async (selectedDate) => {
+      setIsDatePickerVisible(false);
+      setFilterDate(selectedDate);
+      if (onSelectDate) {
+        onSelectDate(selectedDate);
+        return;
+      }
+      if (!selectedDate) return;
+
+      // Kilit kontrolü
+      const targetId = notebook?.id || 'diary';
+      if (notebook?.isLocked && !isSessionUnlocked(targetId)) {
+        const result = await authenticateWithBiometrics({
+          promptMessage: t('security.unlockToOpen', {
+            title: notebook?.title || '',
+            defaultValue: 'Defteri açmak için kimliğinizi doğrulayın',
+          }),
+          fallbackLabel: t('security.fallbackPasscode', 'Cihaz Parolasını Kullan'),
+          cancelLabel: t('common.cancel', 'Vazgeç'),
+        });
+        if (!result.success) return;
+        unlockSession(targetId);
+      }
+
+      const matchPage = notebook?.pages?.find((p) => isSameDay(p.createdAt, selectedDate));
+      if (matchPage) {
+        if (onOpen) {
+          onOpen(matchPage);
+        } else {
+          router.push(`/gunlugum/pages?pageId=${matchPage.pageId}`);
+        }
+      } else {
+        const dateStr = formatFilterDate(selectedDate, i18n.language);
+        Alert.alert(
+          t('diary.noEntryTitle', 'Kayıt Bulunamadı'),
+          t('diary.noEntryForDate', {
+            date: dateStr,
+            defaultValue: `${dateStr} tarihine ait bir sayfa bulunamadı.`,
+          })
+        );
+      }
+    },
+    [notebook, onOpen, onSelectDate, router, i18n.language, t]
+  );
+
+
   if (isLoading) {
     return (
       <AnimatedSafeAreaView
@@ -312,8 +380,43 @@ export default function NotebookCoverView({ storage, getTitle, openButtonLabel, 
           >
             <MaterialCommunityIcons name="image-edit-outline" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
+
+          {/* Arama Butonu */}
+          {showSearch && (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setIsSearchModalVisible(true)}
+              style={[styles.headerButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+              accessibilityLabel={t('common.search', 'Ara...')}
+            >
+              <MaterialCommunityIcons name="magnify" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          )}
+
+          {/* Tarih Filtresi / Atlama Butonu */}
+          {showDatePicker && (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setIsDatePickerVisible(true)}
+              style={[
+                styles.headerButton,
+                {
+                  backgroundColor: filterDate ? colors.accent + '20' : colors.card,
+                  borderColor: filterDate ? colors.accent : colors.border,
+                },
+              ]}
+              accessibilityLabel={t('datePicker.title', 'Tarihe Göre Filtrele')}
+            >
+              <MaterialCommunityIcons
+                name="calendar-search"
+                size={20}
+                color={filterDate ? colors.accent : colors.textSecondary}
+              />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
+
 
       {/* Merkezlenmiş Kapak Görseli ve 3D İnteraktif Katmanlar */}
       <View style={[styles.contentArea, { backgroundColor: 'transparent' }]}>
@@ -411,9 +514,33 @@ export default function NotebookCoverView({ storage, getTitle, openButtonLabel, 
           canUndo={(notebook?.coverDrawings || []).length > 0}
         />
       </View>
+
+      {/* Tarih Seçici Modal */}
+      {showDatePicker && (
+        <DatePickerModal
+          visible={isDatePickerVisible}
+          onClose={() => setIsDatePickerVisible(false)}
+          onSelectDate={handleDateSelect}
+          selectedDate={filterDate}
+          onClearFilter={() => {
+            setFilterDate(null);
+            setIsDatePickerVisible(false);
+          }}
+        />
+      )}
+
+      {/* Global Arama Modalı */}
+      {showSearch && (
+        <GlobalSearchModal
+          visible={isSearchModalVisible}
+          onClose={() => setIsSearchModalVisible(false)}
+          initialCategory={searchCategory}
+        />
+      )}
     </AnimatedSafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   safeArea: {

@@ -39,7 +39,10 @@ import LassoActionMenu from '../../components/drawing/LassoActionMenu';
 import RecognitionConfirmationModal from '../../components/drawing/RecognitionConfirmationModal';
 import NotebookSearchSheet from './NotebookSearchSheet';
 import NotebookLockGate from './NotebookLockGate';
+import DatePickerModal from '../../components/ui/DatePickerModal';
+import { isSameDay, formatFilterDate } from '../../components/ui/GlobalFilterHeader';
 import { isSessionUnlocked } from '../../services/biometricService';
+
 import { recognizeSelectedStrokes } from '../../services/handwritingService';
 import { fitTextToBounds, clusterStrokesByColorAndProximity } from '../../utils/lassoGeometry';
 
@@ -69,6 +72,7 @@ export default function NotebookPagesView({
   title,
   singlePageWarning,
   enableSearch = false,
+  enableDatePicker = false,
   newPageTemplateSource = 'activePage',
   initialPageIndex,
   initialPageId,
@@ -78,7 +82,7 @@ export default function NotebookPagesView({
   const { colors } = useTheme();
   const { width: windowWidth } = useWindowDimensions();
   const { isTablet, isTwoPage, maxContentWidth } = useResponsiveLayout();
-  const compactHeader = enableSearch && windowWidth < 480;
+  const compactHeader = (enableSearch || enableDatePicker) && windowWidth < 480;
 
   const [notebook, setNotebook] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -102,7 +106,9 @@ export default function NotebookPagesView({
   // Kağıt şablonu seçici: null (kapalı) | 'newPage' (+ ile yeni sayfa) | 'editPage' (aktif sayfa)
   const [templateSheetMode, setTemplateSheetMode] = useState(null);
   const [isSearchVisible, setIsSearchVisible] = useState(false);
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
   const [undoToast, setUndoToast] = useState({ visible: false, message: '' });
+
 
   // Kement (Lasso) Seçim Durumu
   const [lassoSelection, setLassoSelection] = useState({ ids: [], bounds: null, strokes: [] });
@@ -992,8 +998,20 @@ export default function NotebookPagesView({
               <MaterialCommunityIcons name="magnify" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
+
+          {enableDatePicker && (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setIsDatePickerVisible(true)}
+              style={[styles.headerButton, compactHeader && styles.headerButtonCompact, { backgroundColor: colors.card, borderColor: colors.border }]}
+              accessibilityLabel={t('datePicker.title', 'Tarihe Göre Git')}
+            >
+              <MaterialCommunityIcons name="calendar-search" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
+
 
       {/* Yatay Çoklu Sayfa Kaydırma Alanı (Paging ScrollView) */}
       <ScrollView
@@ -1154,6 +1172,32 @@ export default function NotebookPagesView({
           }}
         />
       )}
+
+      {/* Tarih Seçici Modal */}
+      {enableDatePicker && (
+        <DatePickerModal
+          visible={isDatePickerVisible}
+          onClose={() => setIsDatePickerVisible(false)}
+          onSelectDate={(selectedDate) => {
+            setIsDatePickerVisible(false);
+            if (!selectedDate) return;
+            const targetIndex = pages.findIndex((p) => isSameDay(p.createdAt, selectedDate));
+            if (targetIndex !== -1) {
+              goToPage(targetIndex);
+            } else {
+              const dateStr = formatFilterDate(selectedDate, i18n.language);
+              Alert.alert(
+                t('diary.noEntryTitle', 'Kayıt Bulunamadı'),
+                t('diary.noEntryForDate', {
+                  date: dateStr,
+                  defaultValue: `${dateStr} tarihine ait bir sayfa bulunamadı.`,
+                })
+              );
+            }
+          }}
+        />
+      )}
+
 
       {/* Sticker Menüsü */}
       <StickerMenu

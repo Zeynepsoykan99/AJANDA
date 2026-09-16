@@ -34,6 +34,9 @@ export default function GunlugumPagesScreen() {
       singlePageWarning={t('diary.singlePageWarning', 'Günlükte en az bir sayfa bulunmalıdır.')}
       initialPageIndex={pageIndex != null ? Number(pageIndex) : undefined}
       initialPageId={typeof pageId === 'string' ? pageId : undefined}
+      enableSearch={true}
+      enableDatePicker={true}
     />
+
   );
 }

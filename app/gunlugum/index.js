@@ -20,13 +20,26 @@ export default function GunlugumCoverScreen() {
     []
   );
 
-  const handleOpen = useCallback(() => router.push('/gunlugum/pages'), [router]);
+  const handleOpen = useCallback(
+    (page) => {
+      if (page?.pageId) {
+        router.push(`/gunlugum/pages?pageId=${page.pageId}`);
+      } else {
+        router.push('/gunlugum/pages');
+      }
+    },
+    [router]
+  );
 
   return (
     <NotebookCoverView
       storage={storage}
       openButtonLabel={t('diary.openDiaryButton', '🌸 Günlüğümü Aç')}
       onOpen={handleOpen}
+      showSearch={true}
+      showDatePicker={true}
+      searchCategory="gunlugum"
     />
   );
 }
+
