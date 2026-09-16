@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { StorageService } from '../../services/storageService';
 import NotebookPagesView from '../../components/notebook/NotebookPagesView';
@@ -9,6 +10,7 @@ import NotebookPagesView from '../../components/notebook/NotebookPagesView';
  */
 export default function GunlugumPagesScreen() {
   const { t } = useTranslation();
+  const { pageIndex, pageId } = useLocalSearchParams();
 
   const storage = useMemo(
     () => ({
@@ -29,6 +31,8 @@ export default function GunlugumPagesScreen() {
       storage={storage}
       title={t('diary.title', 'Günlüğüm')}
       singlePageWarning={t('diary.singlePageWarning', 'Günlükte en az bir sayfa bulunmalıdır.')}
+      initialPageIndex={pageIndex != null ? Number(pageIndex) : undefined}
+      initialPageId={typeof pageId === 'string' ? pageId : undefined}
     />
   );
 }

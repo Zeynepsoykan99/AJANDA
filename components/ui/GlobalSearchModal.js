@@ -5,6 +5,7 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
+  ScrollView,
   Modal,
   StyleSheet,
   Platform,
@@ -32,7 +33,7 @@ const DATE_LOCALE_MAP = {
  *
  * @param {boolean} visible - Modal açık mı
  * @param {function} onClose - Modalı kapatma callback'i
- * @param {string} initialCategory - Başlangıç kategori filtresi ('all' | 'ajandam' | 'todo')
+ * @param {string} initialCategory - Başlangıç kategori filtresi ('all' | 'notlarim' | 'gunlugum' | 'ajandam' | 'todo')
  */
 export default function GlobalSearchModal({
   visible,
@@ -47,10 +48,11 @@ export default function GlobalSearchModal({
   const activeLocale = DATE_LOCALE_MAP[currentLang] || 'tr-TR';
 
   const categoryTabs = [
-    { id: 'all', label: t('search.tabAll'), icon: 'sparkles' },
-    { id: 'ajandam', label: t('search.tabAgenda'), icon: 'calendar-month' },
-    { id: 'todo', label: t('search.tabTodo'), icon: 'checkbox-marked-circle-outline' },
-    { id: 'cover', label: t('search.tabCover'), icon: 'book-open-page-variant' },
+    { id: 'all', label: t('search.tabAll', 'Tümü'), icon: 'sparkles' },
+    { id: 'notlarim', label: t('search.tabNotebooks', 'Notlarım'), icon: 'notebook-outline' },
+    { id: 'gunlugum', label: t('search.tabDiary', 'Günlüğüm'), icon: 'book-heart-outline' },
+    { id: 'ajandam', label: t('search.tabAgenda', 'Ajandam'), icon: 'calendar-month' },
+    { id: 'todo', label: t('search.tabTodo', 'Yapılacaklar'), icon: 'checkbox-marked-circle-outline' },
   ];
 
   const [query, setQuery] = useState('');
@@ -62,6 +64,8 @@ export default function GlobalSearchModal({
   // In-memory veri önbelleği (diskten tekrar tekrar okumayı engeller)
   const cachedPagesRef = useRef(null);
   const cachedCoverRef = useRef(null);
+  const cachedDiaryRef = useRef(null);
+  const cachedNotebooksRef = useRef(null);
   const searchTimeoutRef = useRef(null);
 
   // Modal her açıldığında verileri belleğe yükle
@@ -75,12 +79,16 @@ export default function GlobalSearchModal({
       // Verileri bir kez belleğe al
       (async () => {
         try {
-          const [pages, cover] = await Promise.all([
+          const [pages, cover, diary, notebooks] = await Promise.all([
             StorageService.getPages(),
             StorageService.getCover(),
+            StorageService.getDiary(),
+            StorageService.getNotebooks(),
           ]);
           cachedPagesRef.current = pages || [];
           cachedCoverRef.current = cover || null;
+          cachedDiaryRef.current = diary || null;
+          cachedNotebooksRef.current = notebooks || [];
         } catch (e) {
           console.warn('Arama verileri önbelleğe alınamadı:', e);
         }
@@ -103,20 +111,22 @@ export default function GlobalSearchModal({
         trimmed,
         { category: cat },
         cachedPagesRef.current,
-        cachedCoverRef.current
+        cachedCoverRef.current,
+        cachedDiaryRef.current,
+        cachedNotebooksRef.current
       );
       setResults(searchResults);
     },
     []
   );
 
-  // Arama girdisi değiştiğinde canlı filtrele
+  // Arama girdisi değiştiğinde canlı filtrele (300ms debounce)
   const handleQueryChange = (text) => {
     setQuery(text);
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => {
       executeSearch(text, selectedCategory);
-    }, 100);
+    }, 300);
   };
 
   // Kategori sekmesi değiştiğinde
@@ -137,11 +147,17 @@ export default function GlobalSearchModal({
   const getCategoryLabel = (cat, fallback) => {
     switch (cat) {
       case 'ajandam':
-        return t('search.tabAgenda');
+        return t('search.tabAgenda', 'Ajandam');
       case 'todo':
-        return t('search.tabTodo');
+        return t('search.tabTodo', 'Yapılacaklar');
       case 'cover':
-        return t('search.tabCover');
+        return t('search.tabCover', 'Kapak');
+      case 'gunlugum':
+      case 'diary':
+        return t('search.tabDiary', 'Günlüğüm');
+      case 'notlarim':
+      case 'notebooks':
+        return fallback || t('search.tabNotebooks', 'Notlarım');
       default:
         return fallback || cat;
     }
@@ -232,38 +248,44 @@ export default function GlobalSearchModal({
           </View>
 
           {/* ── Kategori Filtre Çipleri ── */}
-          <View style={styles.categoriesRow}>
-            {categoryTabs.map((tab) => {
-              const isSelected = selectedCategory === tab.id;
-              return (
-                <TouchableOpacity
-                  key={tab.id}
-                  onPress={() => handleCategorySelect(tab.id)}
-                  style={[
-                    styles.categoryTab,
-                    {
-                      backgroundColor: isSelected ? colors.accent : colors.card,
-                      borderColor: isSelected ? colors.accent : colors.border,
-                    },
-                  ]}
-                  activeOpacity={0.7}
-                >
-                  <MaterialCommunityIcons
-                    name={tab.icon}
-                    size={14}
-                    color={isSelected ? '#FFFFFF' : colors.textSecondary}
-                  />
-                  <Text
+          <View style={{ flexShrink: 0 }}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoriesRow}
+            >
+              {categoryTabs.map((tab) => {
+                const isSelected = selectedCategory === tab.id;
+                return (
+                  <TouchableOpacity
+                    key={tab.id}
+                    onPress={() => handleCategorySelect(tab.id)}
                     style={[
-                      styles.categoryTabText,
-                      { color: isSelected ? '#FFFFFF' : colors.textPrimary },
+                      styles.categoryTab,
+                      {
+                        backgroundColor: isSelected ? colors.accent : colors.card,
+                        borderColor: isSelected ? colors.accent : colors.border,
+                      },
                     ]}
+                    activeOpacity={0.7}
                   >
-                    {tab.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+                    <MaterialCommunityIcons
+                      name={tab.icon}
+                      size={14}
+                      color={isSelected ? '#FFFFFF' : colors.textSecondary}
+                    />
+                    <Text
+                      style={[
+                        styles.categoryTabText,
+                        { color: isSelected ? '#FFFFFF' : colors.textPrimary },
+                      ]}
+                    >
+                      {tab.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
 
           {/* ── İçerik Alanı (Sonuçlar veya Boş Durum) ── */}

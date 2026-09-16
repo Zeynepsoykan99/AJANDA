@@ -11,7 +11,7 @@ import NotebookPagesView from '../../../components/notebook/NotebookPagesView';
  */
 export default function NotebookPagesScreen() {
   const { t } = useTranslation();
-  const { notebookId } = useLocalSearchParams();
+  const { notebookId, pageIndex, pageId } = useLocalSearchParams();
 
   const storage = useMemo(
     () => ({
@@ -36,6 +36,8 @@ export default function NotebookPagesScreen() {
       singlePageWarning={t('notebooks.singlePageWarning', 'Defterde en az bir sayfa bulunmalıdır.')}
       enableSearch
       newPageTemplateSource="notebookDefault"
+      initialPageIndex={pageIndex != null ? Number(pageIndex) : undefined}
+      initialPageId={typeof pageId === 'string' ? pageId : undefined}
     />
   );
 }

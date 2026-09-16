@@ -137,6 +137,8 @@
     "tabAgenda": "Agenda",
     "tabTodo": "Tareas",
     "tabCover": "Portada",
+    "tabDiary": "Mi Diario",
+    "tabNotebooks": "Mis Notas",
     "initialTitle": "Buscar en Todas las Páginas",
     "initialSubtitle": "Busca en títulos de página, notas de agenda, tareas o portadas.",
     "noResultsTitle": "No se Encontraron Resultados",

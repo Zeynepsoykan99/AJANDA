@@ -4,6 +4,39 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-16] - Global Arama (Spotlight Search) Genişletmesi: Günlüğüm ve Notlarım Entegrasyonu, Doğrudan Sayfaya Atlama ve 300ms Debounce
+
+### 🔍 Kapsam ve İhtiyaç
+- **Bildirim:** Ana ekrandaki canlı arama modülü (`GlobalSearchModal`) sadece Ajandam ve To-Do sayfalarını tarıyordu; ortak defter altyapısına kavuşan Günlüğüm ve Notlarım verileri genel aramada çıkmıyordu.
+- **Hedef:** Tüm serbest metin kutuları (`textBlocks` - klavye ve dönüştürülmüş el yazısı) ile kapak metinlerinin taranması, modül bazlı rozetlerin gösterilmesi, 300ms debounce ve sonuca tıklandığında doğrudan o defterin/günlüğün ilgili sayfasına gidilmesi (`direct page routing`).
+
+### 🔧 Yapılan Düzeltmeler ve Eklemeler
+- **`services/searchService.js` (`searchAllData`):**
+  - Fonksiyon imzasına `cachedDiary` ve `cachedNotebooks` parametreleri eklendi.
+  - **Günlüğüm Taraması:** Günlük kapağı (`diary.coverTextBlocks`, `diary.title` -> `/gunlugum`) ve sayfaları (`diary.pages` içindeki `textBlocks`, `recognizedText` -> `/gunlugum/pages?pageIndex=X&pageId=Y`) taramaya dahil edildi. Sonuçlar `🌸 Günlüğüm` rozetiyle etiketlendi.
+  - **Notlarım (Defterler) Taraması:** Defter başlığı ve kapağı (`notebook.title`, `notebook.coverTextBlocks` -> `/defterlerim/:id`) ile tüm defter sayfaları (`notebook.pages` içindeki `textBlocks`, `recognizedText` -> `/defterlerim/:id/pages?pageIndex=X&pageId=Y`) taramaya dahil edildi. Sonuçlar `📓 [Defter Adı]` rozetiyle etiketlendi.
+  - Türkçe büyük/küçük harf (`IŞIK` / `ışık`, `İSTANBUL` / `istanbul`) duyarsızlığı ve bağlam kırpması (`extractSnippet`) tüm modüllere uygulandı.
+- **`components/ui/GlobalSearchModal.js`:**
+  - Modal açıldığında `StorageService.getPages()`, `getCover()`, `getDiary()`, `getNotebooks()` tek seferde RAM'e önbelleklendi (sıfır gecikmeli arama).
+  - Canlı filtreleme gecikmesi 300ms debounce ile optimize edildi.
+  - Kategori sekmeleri güncellendi (`all`, `notlarim`, `gunlugum`, `ajandam`, `todo`); sekmeler mobil ekranlarda kırpılmasın diye yatay kaydırılabilir `ScrollView` içine alındı.
+  - Kategori etiketleyici `getCategoryLabel` Günlüğüm ve Notlarım için yerelleştirildi.
+- **`components/notebook/NotebookPagesView.js`:**
+  - Bileşene `initialPageIndex` ve `initialPageId` prop desteği eklendi.
+  - Defter/günlük yüklendiğinde veya arama sonrasında parametre değiştiğinde otomatik olarak ilgili sayfaya konumlanma ve kaydırma (`scrollTo`) mekanizması kuruldu.
+- **`app/gunlugum/pages.js` ve `app/defterlerim/[notebookId]/pages.js`:**
+  - `useLocalSearchParams()` ile URL'den gelen `pageIndex` ve `pageId` parametreleri yakalanarak `NotebookPagesView` bileşenine iletildi.
+- **`locales/*.json` (TR, EN, DE, ES, FR):**
+  - 5 dil dosyasına `search.tabDiary` ve `search.tabNotebooks` çeviri anahtarları eklendi.
+
+### ✅ Doğrulama & Testler
+- `tests/zoomableCanvas.test.js`: 6/6 matematiksel birim testi başarıyla geçti.
+- Arama doğrulama testi (`test_search.js`): Türkçe karakter normalizasyonu (`IŞIK` -> `ışık`), Günlüğüm ve Notlarım sayfalarındaki metinlerin taranması, rota parametrelerinin doğruluğu (`pageIndex`, `pageId`), kategori filtreleme (`gunlugum`, `notlarim`) başarıyla test edildi.
+- Babel AST parse kontrolü: Değiştirilen tüm 5 JavaScript dosyasının derleme sözdizimi hatasız olarak onaylandı.
+- i18n JSON geçerlilik kontrolü: 5 dil dosyasının JSON yapısı doğrulandı.
+
+---
+
 ## 📅 [2026-09-16] - Notlarım: Kapaktaki Varsayılan Kağıt Seçiminin İlk Sayfaya ve "+" Seçicisine Uygulanması
 
 ### 🐞 Hata ve Kök Neden

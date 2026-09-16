@@ -137,6 +137,8 @@
     "tabAgenda": "Ajandam",
     "tabTodo": "Yapılacaklar",
     "tabCover": "Kapak",
+    "tabDiary": "Günlüğüm",
+    "tabNotebooks": "Notlarım",
     "initialTitle": "Tüm Sayfalarda Ara",
     "initialSubtitle": "Sayfa başlıklarında, ajanda notlarında, yapılacak maddelerinde veya kapakta arama yapabilirsiniz.",
     "noResultsTitle": "Sonuç Bulunamadı",

@@ -59,6 +59,8 @@ const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
  * @param {boolean} enableSearch - Sağ üstte defter içi arama butonu gösterilsin mi
  * @param {'activePage'|'notebookDefault'} newPageTemplateSource - "+" seçicisinde seçili gelecek şablon:
  *   aktif sayfanın şablonu (Günlüğüm) veya defterin varsayılan kağıt şablonu (Notlarım)
+ * @param {number} [initialPageIndex] - Doğrudan açılacak sayfa indeksi
+ * @param {string} [initialPageId] - Doğrudan açılacak sayfa kimliği
  */
 export default function NotebookPagesView({
   storage,
@@ -66,6 +68,8 @@ export default function NotebookPagesView({
   singlePageWarning,
   enableSearch = false,
   newPageTemplateSource = 'activePage',
+  initialPageIndex,
+  initialPageId,
 }) {
   const { t, i18n } = useTranslation();
   const router = useRouter();
@@ -141,13 +145,33 @@ export default function NotebookPagesView({
       try {
         const savedNotebook = await storageRef.current.load();
         setNotebook(savedNotebook);
+
+        // Doğrudan arama sonucundan gelen sayfaya konumlan
+        const pList = savedNotebook?.pages || [];
+        let targetIdx = 0;
+        if (initialPageId) {
+          const foundIdx = pList.findIndex((p) => p.pageId === initialPageId);
+          if (foundIdx >= 0) targetIdx = foundIdx;
+        } else if (typeof initialPageIndex === 'number' && initialPageIndex >= 0 && initialPageIndex < pList.length) {
+          targetIdx = initialPageIndex;
+        }
+
+        if (targetIdx > 0 && targetIdx < pList.length) {
+          setCurrentPageIndex(targetIdx);
+          setTimeout(() => {
+            scrollViewRef.current?.scrollTo({
+              x: targetIdx * windowWidth,
+              animated: false,
+            });
+          }, 100);
+        }
       } catch (error) {
         console.warn('Defter yüklenirken hata:', error);
       } finally {
         setIsLoading(false);
       }
     })();
-  }, []);
+  }, [windowWidth, initialPageIndex, initialPageId]);
 
   const pages = notebook?.pages || [];
   const headerTitle = typeof title === 'function' ? title(notebook) : title;
@@ -227,6 +251,20 @@ export default function NotebookPagesView({
     },
     [pages.length, windowWidth]
   );
+
+  // URL parametresiyle gelen sayfa sonradan değişirse o sayfaya kaydır
+  useEffect(() => {
+    if (!pages.length) return;
+    let targetIdx = -1;
+    if (initialPageId) {
+      targetIdx = pages.findIndex((p) => p.pageId === initialPageId);
+    } else if (typeof initialPageIndex === 'number' && initialPageIndex >= 0 && initialPageIndex < pages.length) {
+      targetIdx = initialPageIndex;
+    }
+    if (targetIdx >= 0 && targetIdx !== currentPageIndex) {
+      goToPage(targetIdx);
+    }
+  }, [initialPageId, initialPageIndex, pages, goToPage, currentPageIndex]);
 
   // Yatay Kaydırma Bittiğinde İndeks Güncelleme
   const handleMomentumScrollEnd = useCallback(

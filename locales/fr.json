@@ -137,6 +137,8 @@
     "tabAgenda": "Agenda",
     "tabTodo": "Tâches",
     "tabCover": "Couverture",
+    "tabDiary": "Mon Journal",
+    "tabNotebooks": "Mes Notes",
     "initialTitle": "Rechercher dans Toutes les Pages",
     "initialSubtitle": "Recherchez dans les titres, notes d'agenda, tâches ou couvertures.",
     "noResultsTitle": "Aucun Résultat Trouvé",

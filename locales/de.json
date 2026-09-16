@@ -137,6 +137,8 @@
     "tabAgenda": "Planer",
     "tabTodo": "To-Do",
     "tabCover": "Cover",
+    "tabDiary": "Mein Tagebuch",
+    "tabNotebooks": "Meine Notizen",
     "initialTitle": "In allen Seiten suchen",
     "initialSubtitle": "Suche in Seitentiteln, Notizen, Aufgaben oder Covern.",
     "noResultsTitle": "Keine Ergebnisse gefunden",

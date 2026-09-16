@@ -57,13 +57,17 @@ export const searchAllData = async (
   rawQuery,
   options = { category: 'all' },
   cachedPages = null,
-  cachedCover = null
+  cachedCover = null,
+  cachedDiary = null,
+  cachedNotebooks = null
 ) => {
   const query = normalizeTurkish(rawQuery);
   if (!query || query.length === 0) return [];
 
   const pages = cachedPages || (await StorageService.getPages()) || [];
   const cover = cachedCover !== null ? cachedCover : await StorageService.getCover();
+  const diary = cachedDiary !== null ? cachedDiary : await StorageService.getDiary();
+  const notebooks = cachedNotebooks !== null ? cachedNotebooks : await StorageService.getNotebooks();
 
   const results = [];
 
@@ -120,7 +124,7 @@ export const searchAllData = async (
     // Kategori Filtresi Kontrolü
     if (options.category === 'ajandam' && page.category === 'todo') continue;
     if (options.category === 'todo' && page.category !== 'todo') continue;
-    if (options.category === 'cover') continue;
+    if (options.category === 'cover' || options.category === 'gunlugum' || options.category === 'notlarim') continue;
 
     const pageMatches = [];
 
@@ -224,18 +228,18 @@ export const searchAllData = async (
       const categoryEmoji = isTodo
         ? '☑️'
         : page.category === 'monthly'
-        ? '🗓️'
-        : page.category === 'weekly'
-        ? '📅'
-        : '📝';
+          ? '🗓️'
+          : page.category === 'weekly'
+            ? '📅'
+            : '📝';
 
       const categoryName = isTodo
         ? 'Yapılacaklar'
         : page.category === 'monthly'
-        ? 'Aylık Plan'
-        : page.category === 'weekly'
-        ? 'Haftalık Plan'
-        : 'Ajanda Sayfası';
+          ? 'Aylık Plan'
+          : page.category === 'weekly'
+            ? 'Haftalık Plan'
+            : 'Ajanda Sayfası';
 
       const hasHandwriting = pageMatches.some((m) => m.isHandwriting);
 
@@ -253,6 +257,193 @@ export const searchAllData = async (
         hasTitleMatch: pageMatches.some((m) => m.isTitleMatch),
         isHandwritingMatch: hasHandwriting,
       });
+    }
+  }
+
+  // 3. Günlüğüm Taraması (My Diary)
+  if (
+    (options.category === 'all' || options.category === 'gunlugum' || options.category === 'diary') &&
+    diary
+  ) {
+    // A. Günlük Kapağı
+    const diaryCoverMatches = [];
+    if (diary.title && normalizeTurkish(diary.title).includes(query)) {
+      diaryCoverMatches.push({
+        type: 'title',
+        snippet: diary.title,
+        field: 'Kapak Başlığı',
+        isTitleMatch: true,
+      });
+    }
+    if (Array.isArray(diary.coverTextBlocks)) {
+      for (const block of diary.coverTextBlocks) {
+        if (block?.text && normalizeTurkish(block.text).includes(query)) {
+          diaryCoverMatches.push({
+            type: 'textBlock',
+            snippet: extractSnippet(block.text, rawQuery),
+            field: 'Kapak Notu',
+          });
+        }
+      }
+    }
+    if (diaryCoverMatches.length > 0) {
+      results.push({
+        id: 'diary_cover',
+        title: diary.title || 'Günlük Kapağı',
+        category: 'gunlugum',
+        categoryName: 'Günlüğüm',
+        categoryEmoji: '🌸',
+        createdAt: diary.updatedAt || diary.createdAt || null,
+        route: '/gunlugum',
+        matches: diaryCoverMatches,
+        primarySnippet: diaryCoverMatches[0].snippet,
+        field: diaryCoverMatches[0].field,
+        hasTitleMatch: diaryCoverMatches.some((m) => m.isTitleMatch),
+        isHandwritingMatch: false,
+      });
+    }
+
+    // B. Günlük Sayfaları
+    if (Array.isArray(diary.pages)) {
+      diary.pages.forEach((page, pageIndex) => {
+        const pageMatches = [];
+
+        // Serbest Metin Kutuları (Klavye veya El Yazısı Dönüşümü)
+        if (Array.isArray(page.textBlocks)) {
+          for (const block of page.textBlocks) {
+            if (block?.text && normalizeTurkish(block.text).includes(query)) {
+              pageMatches.push({
+                type: 'textBlock',
+                snippet: extractSnippet(block.text, rawQuery),
+                field: `Sayfa ${page.pageNumber || pageIndex + 1} Notu`,
+              });
+            }
+          }
+        }
+
+        // El Yazısı (varsa recognizedText)
+        if (page.recognizedText && normalizeTurkish(page.recognizedText).includes(query)) {
+          pageMatches.push({
+            type: 'handwriting',
+            snippet: extractSnippet(page.recognizedText, rawQuery),
+            field: 'El Yazısı',
+            isHandwriting: true,
+          });
+        }
+
+        if (pageMatches.length > 0) {
+          const hasHandwriting = pageMatches.some((m) => m.isHandwriting);
+          results.push({
+            id: `diary_${page.pageId || pageIndex}`,
+            title: `Günlüğüm - Sayfa ${page.pageNumber || pageIndex + 1}`,
+            category: 'gunlugum',
+            categoryName: 'Günlüğüm',
+            categoryEmoji: '🌸',
+            createdAt: page.createdAt || diary.updatedAt || null,
+            route: `/gunlugum/pages?pageIndex=${pageIndex}&pageId=${page.pageId || ''}`,
+            matches: pageMatches,
+            primarySnippet: pageMatches[0].snippet,
+            field: pageMatches[0].field,
+            hasTitleMatch: false,
+            isHandwritingMatch: hasHandwriting,
+          });
+        }
+      });
+    }
+  }
+
+  // 4. Notlarım (Defterler) Taraması (Notebooks)
+  if (
+    (options.category === 'all' || options.category === 'notlarim' || options.category === 'notebooks') &&
+    Array.isArray(notebooks)
+  ) {
+    for (const nb of notebooks) {
+      if (!nb) continue;
+
+      // A. Defter Başlığı ve Kapağı
+      const nbCoverMatches = [];
+      const titleMatches = nb.title && normalizeTurkish(nb.title).includes(query);
+      if (titleMatches) {
+        nbCoverMatches.push({
+          type: 'title',
+          snippet: nb.title,
+          field: 'Defter Başlığı',
+          isTitleMatch: true,
+        });
+      }
+      if (Array.isArray(nb.coverTextBlocks)) {
+        for (const block of nb.coverTextBlocks) {
+          if (block?.text && normalizeTurkish(block.text).includes(query)) {
+            nbCoverMatches.push({
+              type: 'textBlock',
+              snippet: extractSnippet(block.text, rawQuery),
+              field: 'Kapak Notu',
+            });
+          }
+        }
+      }
+      if (nbCoverMatches.length > 0) {
+        results.push({
+          id: `nb_cover_${nb.id}`,
+          title: nb.title || 'Defter Kapağı',
+          category: 'notlarim',
+          categoryName: nb.title || 'Notlarım',
+          categoryEmoji: '📓',
+          createdAt: nb.updatedAt || nb.createdAt || null,
+          route: `/defterlerim/${nb.id}`,
+          matches: nbCoverMatches,
+          primarySnippet: nbCoverMatches[0].snippet,
+          field: nbCoverMatches[0].field,
+          hasTitleMatch: titleMatches,
+          isHandwritingMatch: false,
+        });
+      }
+
+      // B. Defter Sayfaları
+      if (Array.isArray(nb.pages)) {
+        nb.pages.forEach((page, pageIndex) => {
+          const pageMatches = [];
+
+          if (Array.isArray(page.textBlocks)) {
+            for (const block of page.textBlocks) {
+              if (block?.text && normalizeTurkish(block.text).includes(query)) {
+                pageMatches.push({
+                  type: 'textBlock',
+                  snippet: extractSnippet(block.text, rawQuery),
+                  field: `Sayfa ${page.pageNumber || pageIndex + 1} Notu`,
+                });
+              }
+            }
+          }
+
+          if (page.recognizedText && normalizeTurkish(page.recognizedText).includes(query)) {
+            pageMatches.push({
+              type: 'handwriting',
+              snippet: extractSnippet(page.recognizedText, rawQuery),
+              field: 'El Yazısı',
+              isHandwriting: true,
+            });
+          }
+
+          if (pageMatches.length > 0) {
+            const hasHandwriting = pageMatches.some((m) => m.isHandwriting);
+            results.push({
+              id: `nb_${nb.id}_${page.pageId || pageIndex}`,
+              title: `${nb.title || 'Defter'} - Sayfa ${page.pageNumber || pageIndex + 1}`,
+              category: 'notlarim',
+              categoryName: nb.title || 'Notlarım',
+              categoryEmoji: '📓',
+              createdAt: page.createdAt || nb.updatedAt || null,
+              route: `/defterlerim/${nb.id}/pages?pageIndex=${pageIndex}&pageId=${page.pageId || ''}`,
+              matches: pageMatches,
+              primarySnippet: pageMatches[0].snippet,
+              field: pageMatches[0].field,
+              hasTitleMatch: false,
+              isHandwritingMatch: hasHandwriting,
+            });
+          }
+        });
+      }
     }
   }
 
