@@ -17,9 +17,11 @@ import PageThumbnail from '../../components/PageThumbnail';
 import AddTodoModal from '../../components/AddTodoModal';
 import ListSkeleton from '../../components/ui/ListSkeleton';
 import UndoToast from '../../components/ui/UndoToast';
+import ReminderPickerModal from '../../components/ui/ReminderPickerModal';
 import GlobalFilterHeader, { isSameDay, formatFilterDate } from '../../components/ui/GlobalFilterHeader';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 import { getPageDisplayTitle } from '../../utils/pageTitleHelper';
+import { NotificationService } from '../../services/notificationService';
 
 /**
  * TodoListScreen - Yapılacaklar Ana Ekranı
@@ -36,6 +38,7 @@ export default function TodoListScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [filterDate, setFilterDate] = useState(null);
   const [undoToast, setUndoToast] = useState({ visible: false, message: '' });
+  const [reminderTarget, setReminderTarget] = useState(null);
 
   // Geri al (Undo) için bekleyen silme referansı
   const pendingDeleteRef = useRef(null);
@@ -81,6 +84,79 @@ export default function TodoListScreen() {
       }
     },
     []
+  );
+
+  // Hatırlatıcı Kaydet
+  const handleSaveReminder = useCallback(
+    async (selectedDate) => {
+      if (!reminderTarget) return;
+      try {
+        if (reminderTarget.reminder?.notificationId) {
+          await NotificationService.cancelScheduledNotification(reminderTarget.reminder.notificationId);
+        }
+
+        const notifResult = await NotificationService.scheduleReminderNotification({
+          title: getPageDisplayTitle(reminderTarget, t),
+          body: t('reminder.notificationBody', 'Yapılacaklar listeniz için hatırlatıcı!'),
+          date: selectedDate,
+          t,
+          data: {
+            pageId: reminderTarget.id,
+            category: reminderTarget.category,
+            route: `/todolist/${reminderTarget.id}`,
+          },
+        });
+
+        if (!notifResult?.success || !notifResult?.notificationId) {
+          return;
+        }
+
+        const updatedReminder = {
+          notificationId: notifResult.notificationId,
+          date: selectedDate.toISOString(),
+        };
+
+        const updatedPage = {
+          ...reminderTarget,
+          reminder: updatedReminder,
+        };
+
+        await StorageService.updatePage(reminderTarget.id, { reminder: updatedReminder });
+        setTodoPages((prev) =>
+          prev.map((p) => (p.id === reminderTarget.id ? updatedPage : p))
+        );
+        setReminderTarget(null);
+      } catch (error) {
+        console.warn('Hatırlatıcı kaydedilirken hata:', error);
+      }
+    },
+    [reminderTarget, t]
+  );
+
+  // Hatırlatıcı Kaldır
+  const handleRemoveReminder = useCallback(
+    async () => {
+      if (!reminderTarget) return;
+      try {
+        if (reminderTarget.reminder?.notificationId) {
+          await NotificationService.cancelScheduledNotification(reminderTarget.reminder.notificationId);
+        }
+
+        const updatedPage = {
+          ...reminderTarget,
+          reminder: null,
+        };
+
+        await StorageService.updatePage(reminderTarget.id, { reminder: null });
+        setTodoPages((prev) =>
+          prev.map((p) => (p.id === reminderTarget.id ? updatedPage : p))
+        );
+        setReminderTarget(null);
+      } catch (error) {
+        console.warn('Hatırlatıcı kaldırılırken hata:', error);
+      }
+    },
+    [reminderTarget]
   );
 
   // To-Do sil (Soft Delete + Geri Al)
@@ -211,6 +287,7 @@ export default function TodoListScreen() {
                 onPress={() => handleOpenTodo(item)}
                 onLongPress={() => handleDeleteTodo(item)}
                 onDelete={() => handleDeleteTodo(item)}
+                onReminder={() => setReminderTarget(item)}
               />
             )}
             contentContainerStyle={[
@@ -237,6 +314,16 @@ export default function TodoListScreen() {
         visible={isAddModalVisible}
         onClose={() => setIsAddModalVisible(false)}
         onAdd={handleAddTodo}
+      />
+
+      {/* Hatırlatıcı Seçim Modalı */}
+      <ReminderPickerModal
+        visible={!!reminderTarget}
+        itemTitle={reminderTarget ? getPageDisplayTitle(reminderTarget, t) : ''}
+        initialDate={reminderTarget?.reminder?.date}
+        onSave={handleSaveReminder}
+        onRemove={handleRemoveReminder}
+        onClose={() => setReminderTarget(null)}
       />
 
       {/* Geri Al (Undo) Bildirimi */}

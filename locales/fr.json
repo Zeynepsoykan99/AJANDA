@@ -272,5 +272,24 @@
     "unlockWithBiometric": "Déverrouiller avec {{type}}",
     "authFailed": "Échec de l'authentification. Veuillez réessayer.",
     "biometricNotAvailable": "Aucun verrouillage biométrique ou code n'est configuré sur votre appareil."
+  },
+  "reminder": {
+    "title": "Définir un Rappel",
+    "quickOptions": "Options Rapides",
+    "quickIn1Hour": "Dans 1 heure",
+    "quickTonight": "Ce soir (20:00)",
+    "quickTomorrowMorning": "Demain matin (09:00)",
+    "quickTomorrowEvening": "Demain soir (20:00)",
+    "customDateTime": "Date et Heure Personnalisées",
+    "hour": "Heure",
+    "minute": "Minute",
+    "pastWarning": "Veuillez choisir une date et heure futures.",
+    "removeReminder": "Supprimer le Rappel",
+    "save": "Enregistrer le Rappel",
+    "notificationBody": "Rappel pour votre liste de tâches !",
+    "agendaNotificationBody": "Rappel pour votre page d'agenda !",
+    "permissionDeniedTitle": "Autorisation de Notification Requise",
+    "permissionDeniedMessage": "Veuillez activer les autorisations de notification dans les Paramètres.",
+    "goToSettings": "Aller aux Paramètres"
   }
 }

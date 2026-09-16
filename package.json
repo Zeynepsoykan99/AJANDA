@@ -11,6 +11,7 @@
     "expo-linking": "~8.0.12",
     "expo-local-authentication": "~17.0.9",
     "expo-localization": "~17.0.9",
+    "expo-notifications": "~0.32.17",
     "expo-router": "~6.0.24",
     "expo-status-bar": "~3.0.9",
     "i18next": "^26.4.2",

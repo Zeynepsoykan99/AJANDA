@@ -4,6 +4,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { NotificationService } from './notificationService';
 
 const KEYS = {
   THEME: '@ajanda_theme',
@@ -341,6 +342,10 @@ export const StorageService = {
   deletePage: async (pageId) => {
     try {
       const pages = await StorageService.getPages();
+      const pageToDelete = pages.find((p) => p.id === pageId);
+      if (pageToDelete?.reminder?.notificationId) {
+        NotificationService.cancelScheduledNotification(pageToDelete.reminder.notificationId).catch(() => {});
+      }
       const filtered = pages.filter((p) => p.id !== pageId);
       await AsyncStorage.setItem(KEYS.PAGES, JSON.stringify(filtered));
       return filtered;

@@ -272,5 +272,24 @@
     "unlockWithBiometric": "Mit {{type}} entsperren",
     "authFailed": "Authentifizierung fehlgeschlagen. Bitte erneut versuchen.",
     "biometricNotAvailable": "Auf Ihrem Gerät ist keine biometrische Sperre oder ein Passcode eingerichtet."
+  },
+  "reminder": {
+    "title": "Erinnerung einstellen",
+    "quickOptions": "Schnellauswahl",
+    "quickIn1Hour": "In 1 Stunde",
+    "quickTonight": "Heute Abend (20:00)",
+    "quickTomorrowMorning": "Morgen früh (09:00)",
+    "quickTomorrowEvening": "Morgen Abend (20:00)",
+    "customDateTime": "Benutzerdefiniertes Datum & Uhrzeit",
+    "hour": "Stunde",
+    "minute": "Minute",
+    "pastWarning": "Bitte wählen Sie ein zukünftiges Datum und eine Uhrzeit.",
+    "removeReminder": "Erinnerung entfernen",
+    "save": "Erinnerung speichern",
+    "notificationBody": "Erinnerung für Ihre Aufgabenliste!",
+    "agendaNotificationBody": "Erinnerung für Ihre Kalenderseite!",
+    "permissionDeniedTitle": "Benachrichtigungsberechtigung erforderlich",
+    "permissionDeniedMessage": "Bitte aktivieren Sie Benachrichtigungen in den Einstellungen.",
+    "goToSettings": "Zu den Einstellungen"
   }
 }

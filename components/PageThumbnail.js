@@ -12,8 +12,11 @@ import { getPageDisplayTitle, getCategoryDisplayName } from '../utils/pageTitleH
  * @param {object} page - Sayfa verisi (pageSchema)
  * @param {function} onPress - Sayfaya tıklama
  * @param {function} onLongPress - Uzun basma (silme vb.)
+ * @param {function} [onDelete] - Sayfayı silme
+ * @param {function} [onReminder] - Hatırlatıcı kurma / düzenleme
  */
-export default function PageThumbnail({ page, onPress, onLongPress, onDelete }) {
+export default function PageThumbnail({ page, onPress, onLongPress, onDelete, onReminder }) {
+
   const { t, i18n } = useTranslation();
   const category = PAGE_CATEGORIES.find((c) => c.id === page.category);
   const template = getPageTemplate(page.category, page.templateId);
@@ -117,6 +120,14 @@ export default function PageThumbnail({ page, onPress, onLongPress, onDelete }) 
             >
               {category?.emoji} {getCategoryDisplayName(page.category, t, category?.name)}
             </Text>
+            {page.reminder?.date && (
+              <View style={[styles.reminderBadge, { backgroundColor: templateColors.accent + '20' }]}>
+                <MaterialCommunityIcons name="bell-ring" size={11} color={templateColors.accent} />
+                <Text style={[styles.reminderText, { color: templateColors.accent }]}>
+                  {new Date(page.reminder.date).toLocaleTimeString(currentLocale, { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </View>
+            )}
           </View>
           <Text style={[styles.summary, { color: templateColors.accent + '99' }]}>
             {getSummary()}{createdDate ? ` · ${createdDate}` : ''}
@@ -124,8 +135,27 @@ export default function PageThumbnail({ page, onPress, onLongPress, onDelete }) 
         </View>
       </TouchableOpacity>
 
-      {/* Sağ: İkonlar (Silme Butonu Bağımsız) */}
+      {/* Sağ: İkonlar (Hatırlatıcı & Silme Butonları Bağımsız) */}
       <View style={styles.rightActions}>
+        {onReminder && (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => onReminder(page)}
+            style={[
+              styles.actionButton,
+              page.reminder?.date
+                ? { backgroundColor: templateColors.accent + '20' }
+                : { backgroundColor: '#0000000A' },
+            ]}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <MaterialCommunityIcons
+              name={page.reminder?.date ? 'bell-ring' : 'bell-outline'}
+              size={18}
+              color={page.reminder?.date ? templateColors.accent : '#888'}
+            />
+          </TouchableOpacity>
+        )}
         {onDelete && (
           <TouchableOpacity
             activeOpacity={0.7}
@@ -136,7 +166,7 @@ export default function PageThumbnail({ page, onPress, onLongPress, onDelete }) 
             <View pointerEvents="none">
               <MaterialCommunityIcons
                 name="trash-can-outline"
-                size={20}
+                size={18}
                 color="#E53935"
               />
             </View>
@@ -144,7 +174,7 @@ export default function PageThumbnail({ page, onPress, onLongPress, onDelete }) 
         )}
         <MaterialCommunityIcons
           name="chevron-right"
-          size={22}
+          size={20}
           color={templateColors.accent + '60'}
         />
       </View>
@@ -191,6 +221,7 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
   },
   categoryBadge: {
     fontSize: 11,
@@ -200,6 +231,18 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     overflow: 'hidden',
   },
+  reminderBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  reminderText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
   summary: {
     fontSize: 12,
     fontWeight: '500',
@@ -207,11 +250,19 @@ const styles = StyleSheet.create({
   rightActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+  },
+  actionButton: {
+    padding: 7,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   deleteButton: {
-    padding: 8,
-    borderRadius: 20,
+    padding: 7,
+    borderRadius: 18,
     backgroundColor: '#FFEbee',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

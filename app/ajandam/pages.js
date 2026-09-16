@@ -17,9 +17,11 @@ import PageThumbnail from '../../components/PageThumbnail';
 import AddPageModal from '../../components/AddPageModal';
 import ListSkeleton from '../../components/ui/ListSkeleton';
 import UndoToast from '../../components/ui/UndoToast';
+import ReminderPickerModal from '../../components/ui/ReminderPickerModal';
 import GlobalFilterHeader, { isSameDay, formatFilterDate } from '../../components/ui/GlobalFilterHeader';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 import { getPageDisplayTitle } from '../../utils/pageTitleHelper';
+import { NotificationService } from '../../services/notificationService';
 
 /**
  * PagesScreen - Ajanda Sayfa Listesi
@@ -36,6 +38,7 @@ export default function PagesScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [filterDate, setFilterDate] = useState(null);
   const [undoToast, setUndoToast] = useState({ visible: false, message: '' });
+  const [reminderTarget, setReminderTarget] = useState(null);
 
   // Geri al (Undo) için bekleyen silme referansı
   const pendingDeleteRef = useRef(null);
@@ -51,7 +54,6 @@ export default function PagesScreen() {
     () => formatFilterDate(filterDate, i18n.language),
     [filterDate, i18n.language]
   );
-
 
   // Sayfaları yükle (Ekran her odaklandığında çalışır)
   useFocusEffect(
@@ -82,6 +84,79 @@ export default function PagesScreen() {
       }
     },
     []
+  );
+
+  // Hatırlatıcı Kaydet
+  const handleSaveReminder = useCallback(
+    async (selectedDate) => {
+      if (!reminderTarget) return;
+      try {
+        if (reminderTarget.reminder?.notificationId) {
+          await NotificationService.cancelScheduledNotification(reminderTarget.reminder.notificationId);
+        }
+
+        const notifResult = await NotificationService.scheduleReminderNotification({
+          title: getPageDisplayTitle(reminderTarget, t),
+          body: t('reminder.agendaNotificationBody', 'Ajanda sayfanız için hatırlatıcı!'),
+          date: selectedDate,
+          t,
+          data: {
+            pageId: reminderTarget.id,
+            category: reminderTarget.category,
+            route: `/ajandam/${reminderTarget.id}`,
+          },
+        });
+
+        if (!notifResult?.success || !notifResult?.notificationId) {
+          return;
+        }
+
+        const updatedReminder = {
+          notificationId: notifResult.notificationId,
+          date: selectedDate.toISOString(),
+        };
+
+        const updatedPage = {
+          ...reminderTarget,
+          reminder: updatedReminder,
+        };
+
+        await StorageService.updatePage(reminderTarget.id, { reminder: updatedReminder });
+        setPages((prev) =>
+          prev.map((p) => (p.id === reminderTarget.id ? updatedPage : p))
+        );
+        setReminderTarget(null);
+      } catch (error) {
+        console.warn('Hatırlatıcı kaydedilirken hata:', error);
+      }
+    },
+    [reminderTarget, t]
+  );
+
+  // Hatırlatıcı Kaldır
+  const handleRemoveReminder = useCallback(
+    async () => {
+      if (!reminderTarget) return;
+      try {
+        if (reminderTarget.reminder?.notificationId) {
+          await NotificationService.cancelScheduledNotification(reminderTarget.reminder.notificationId);
+        }
+
+        const updatedPage = {
+          ...reminderTarget,
+          reminder: null,
+        };
+
+        await StorageService.updatePage(reminderTarget.id, { reminder: null });
+        setPages((prev) =>
+          prev.map((p) => (p.id === reminderTarget.id ? updatedPage : p))
+        );
+        setReminderTarget(null);
+      } catch (error) {
+        console.warn('Hatırlatıcı kaldırılırken hata:', error);
+      }
+    },
+    [reminderTarget]
   );
 
   // Sayfa sil (Soft Delete + Geri Al)
@@ -212,6 +287,7 @@ export default function PagesScreen() {
                 onPress={() => handleOpenPage(item)}
                 onLongPress={() => handleDeletePage(item)}
                 onDelete={() => handleDeletePage(item)}
+                onReminder={() => setReminderTarget(item)}
               />
             )}
             contentContainerStyle={[
@@ -238,6 +314,16 @@ export default function PagesScreen() {
         visible={isAddModalVisible}
         onClose={() => setIsAddModalVisible(false)}
         onAdd={handleAddPage}
+      />
+
+      {/* Hatırlatıcı Seçim Modalı */}
+      <ReminderPickerModal
+        visible={!!reminderTarget}
+        itemTitle={reminderTarget ? getPageDisplayTitle(reminderTarget, t) : ''}
+        initialDate={reminderTarget?.reminder?.date}
+        onSave={handleSaveReminder}
+        onRemove={handleRemoveReminder}
+        onClose={() => setReminderTarget(null)}
       />
 
       {/* Geri Al (Undo) Bildirimi */}

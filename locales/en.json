@@ -272,5 +272,24 @@
     "unlockWithBiometric": "Unlock with {{type}}",
     "authFailed": "Authentication failed. Please try again.",
     "biometricNotAvailable": "Biometric authentication or passcode is not set up on your device."
+  },
+  "reminder": {
+    "title": "Set Reminder",
+    "quickOptions": "Quick Options",
+    "quickIn1Hour": "In 1 hour",
+    "quickTonight": "Tonight (20:00)",
+    "quickTomorrowMorning": "Tomorrow morning (09:00)",
+    "quickTomorrowEvening": "Tomorrow evening (20:00)",
+    "customDateTime": "Custom Date & Time",
+    "hour": "Hour",
+    "minute": "Minute",
+    "pastWarning": "Please select a future date and time.",
+    "removeReminder": "Remove Reminder",
+    "save": "Save Reminder",
+    "notificationBody": "Reminder for your to-do list!",
+    "agendaNotificationBody": "Reminder for your agenda page!",
+    "permissionDeniedTitle": "Notification Permission Required",
+    "permissionDeniedMessage": "Please enable notification permissions in Settings to set reminders.",
+    "goToSettings": "Go to Settings"
   }
 }

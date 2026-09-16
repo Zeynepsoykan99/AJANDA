@@ -32,7 +32,9 @@ import DrawingToolbar from '../../components/drawing/DrawingToolbar';
 import ZoomableCanvas from '../../components/drawing/ZoomableCanvas';
 import TextCanvas from '../../components/text/TextCanvas';
 import UndoToast from '../../components/ui/UndoToast';
+import ReminderPickerModal from '../../components/ui/ReminderPickerModal';
 import { recognizeHandwriting, recognizeSelectedStrokes } from '../../services/handwritingService';
+import { NotificationService } from '../../services/notificationService';
 import LassoActionMenu from '../../components/drawing/LassoActionMenu';
 import RecognitionConfirmationModal from '../../components/drawing/RecognitionConfirmationModal';
 import { fitTextToBounds, clusterStrokesByColorAndProximity } from '../../utils/lassoGeometry';
@@ -59,6 +61,7 @@ export default function PageViewScreen() {
   const targetEdgeColor = template ? getTemplateEdgeColor(template, colors.background) : colors.background;
   const { animatedStyle: animatedBgStyle } = useDynamicEdgeColor(targetEdgeColor, colors.background, 300);
   const [isStickerMenuVisible, setIsStickerMenuVisible] = useState(false);
+  const [isReminderModalVisible, setIsReminderModalVisible] = useState(false);
   const [undoToast, setUndoToast] = useState({ visible: false, message: '' });
   const pendingStickerDeleteRef = useRef(null);
 
@@ -741,6 +744,75 @@ export default function PageViewScreen() {
     }
   }, [page, router, t]);
 
+  // Hatırlatıcı Kaydet
+  const handleSaveReminder = useCallback(
+    async (selectedDate) => {
+      if (!page) return;
+      try {
+        if (page.reminder?.notificationId) {
+          await NotificationService.cancelScheduledNotification(page.reminder.notificationId);
+        }
+
+        const notifResult = await NotificationService.scheduleReminderNotification({
+          title: getPageDisplayTitle(page, t),
+          body: t('reminder.agendaNotificationBody', 'Ajanda sayfanız için hatırlatıcı!'),
+          date: selectedDate,
+          t,
+          data: {
+            pageId: page.id,
+            category: page.category,
+            route: `/ajandam/${page.id}`,
+          },
+        });
+
+        if (!notifResult?.success || !notifResult?.notificationId) {
+          return;
+        }
+
+        const updatedReminder = {
+          notificationId: notifResult.notificationId,
+          date: selectedDate.toISOString(),
+        };
+
+        const updated = {
+          ...page,
+          reminder: updatedReminder,
+        };
+
+        await StorageService.updatePage(page.id, { reminder: updatedReminder });
+        setPage(updated);
+        setIsReminderModalVisible(false);
+      } catch (error) {
+        console.warn('Hatırlatıcı kaydedilirken hata:', error);
+      }
+    },
+    [page, t]
+  );
+
+  // Hatırlatıcı Kaldır
+  const handleRemoveReminder = useCallback(
+    async () => {
+      if (!page) return;
+      try {
+        if (page.reminder?.notificationId) {
+          await NotificationService.cancelScheduledNotification(page.reminder.notificationId);
+        }
+
+        const updated = {
+          ...page,
+          reminder: null,
+        };
+
+        await StorageService.updatePage(page.id, { reminder: null });
+        setPage(updated);
+        setIsReminderModalVisible(false);
+      } catch (error) {
+        console.warn('Hatırlatıcı kaldırılırken hata:', error);
+      }
+    },
+    [page]
+  );
+
   if (isLoading) {
     return (
       <AnimatedSafeAreaView
@@ -871,6 +943,24 @@ export default function PageViewScreen() {
         </View>
 
         <View style={styles.headerRightGroup}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => setIsReminderModalVisible(true)}
+            style={[
+              styles.headerButton,
+              {
+                backgroundColor: page?.reminder?.date ? colors.accent + '20' : colors.card,
+                borderColor: page?.reminder?.date ? colors.accent : colors.border,
+              },
+            ]}
+          >
+            <MaterialCommunityIcons
+              name={page?.reminder?.date ? 'bell-ring' : 'bell-outline'}
+              size={18}
+              color={page?.reminder?.date ? colors.accent : colors.textSecondary}
+            />
+          </TouchableOpacity>
+
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => setIsStickerMenuVisible(true)}
@@ -1013,6 +1103,16 @@ export default function PageViewScreen() {
         clusters={recognizedData.clusters}
         onConfirm={handleConfirmConversion}
         onCancel={() => setIsRecognitionModalVisible(false)}
+      />
+
+      {/* Hatırlatıcı Seçim Modalı */}
+      <ReminderPickerModal
+        visible={isReminderModalVisible}
+        itemTitle={page ? getPageDisplayTitle(page, t) : ''}
+        initialDate={page?.reminder?.date}
+        onSave={handleSaveReminder}
+        onRemove={handleRemoveReminder}
+        onClose={() => setIsReminderModalVisible(false)}
       />
 
       {/* Geri Al (Undo) Bildirimi */}

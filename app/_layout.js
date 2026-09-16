@@ -1,12 +1,18 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import '../i18n';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ThemeProvider, useTheme } from '../context/ThemeContext';
 import Skeleton from '../components/ui/Skeleton';
 import { View, StyleSheet } from 'react-native';
+import InAppNotificationBanner from '../components/ui/InAppNotificationBanner';
+import {
+  configureNotificationHandler,
+  setupNotificationChannel,
+  addNotificationListeners,
+} from '../services/notificationService';
 
 export default function RootLayout() {
   return (
@@ -21,7 +27,48 @@ export default function RootLayout() {
 }
 
 function ThemedApp() {
+  const router = useRouter();
   const { colors, isLoaded } = useTheme();
+
+  // Ön plan uygulama içi bildirim banner durumu
+  const [inAppBanner, setInAppBanner] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    data: null,
+  });
+
+  // Bildirim altyapısını ve dinleyicilerini başlat
+  useEffect(() => {
+    configureNotificationHandler();
+    setupNotificationChannel();
+
+    const unsubscribe = addNotificationListeners({
+      onReceived: (notification) => {
+        const content = notification?.request?.content || {};
+        setInAppBanner({
+          visible: true,
+          title: content.title || 'AJANDA Hatırlatıcısı',
+          message: content.body || '',
+          data: content.data || null,
+        });
+      },
+      onResponse: (response) => {
+        const data = response?.notification?.request?.content?.data;
+        if (data?.route) {
+          router.push(data.route);
+        } else if (data?.pageId && data?.category === 'todo') {
+          router.push(`/todolist/${data.pageId}`);
+        } else if (data?.pageId && data?.category) {
+          router.push(`/ajandam/${data.pageId}`);
+        }
+      },
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [router]);
 
   // Tema yüklenene kadar tam ekran zarif bir iskelet göster
   if (!isLoaded) {
@@ -62,6 +109,16 @@ function ThemedApp() {
           },
         }}
       />
+
+      {/* Ön Plan Bildirim Banner'ı */}
+      <InAppNotificationBanner
+        visible={inAppBanner.visible}
+        title={inAppBanner.title}
+        message={inAppBanner.message}
+        data={inAppBanner.data}
+        onDismiss={() => setInAppBanner((prev) => ({ ...prev, visible: false }))}
+      />
     </>
   );
 }
+

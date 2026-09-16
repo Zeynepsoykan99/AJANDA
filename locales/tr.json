@@ -272,5 +272,24 @@
     "unlockWithBiometric": "{{type}} ile Kilidi Aç",
     "authFailed": "Kimlik doğrulanamadı. Lütfen tekrar deneyin.",
     "biometricNotAvailable": "Cihazınızda biyometrik kilit veya ekran parolası tanımlı değil."
+  },
+  "reminder": {
+    "title": "Hatırlatıcı Kur",
+    "quickOptions": "Hızlı Seçenekler",
+    "quickIn1Hour": "1 saat sonra",
+    "quickTonight": "Bu akşam (20:00)",
+    "quickTomorrowMorning": "Yarın sabah (09:00)",
+    "quickTomorrowEvening": "Yarın akşam (20:00)",
+    "customDateTime": "Özel Tarih & Saat",
+    "hour": "Saat",
+    "minute": "Dakika",
+    "pastWarning": "Lütfen gelecekteki bir tarih ve saat seçin.",
+    "removeReminder": "Hatırlatıcıyı Kaldır",
+    "save": "Hatırlatıcıyı Kaydet",
+    "notificationBody": "Yapılacaklar listeniz için hatırlatıcı!",
+    "agendaNotificationBody": "Ajanda sayfanız için hatırlatıcı!",
+    "permissionDeniedTitle": "Bildirim İzni Gerekli",
+    "permissionDeniedMessage": "Hatırlatıcı kurabilmek için ayarlardan bildirim izni vermeniz gerekmektedir.",
+    "goToSettings": "Ayarlara Git"
   }
 }

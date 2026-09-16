@@ -4,6 +4,49 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-16] - Uygulama İçi Hatırlatıcılar ve Yerel Bildirim Sistemi (Local Notifications & Reminders)
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Kullanıcıların "Ajandam" ve "Yapılacaklar" (To-Do) listelerindeki öğeler için ileri tarihli ve saatli yerel hatırlatıcılar kurabilmesi, zamanı geldiğinde hem uygulama arka plandayken sistem bildirimiyle hem de uygulama açıkken (foreground) arayüzü kesintiye uğratmayan zarif bir açılır banner kartıyla uyarılabilmesi.
+- **Hedefler:**
+  1. **Bildirim Servisi (`services/notificationService.js`):** `expo-notifications` kütüphanesi ile yerel bildirim planlama (`scheduleReminderNotification`), iptal etme (`cancelScheduledNotification`), dinleyici yönetimi (`addNotificationListeners`), Android yüksek öncelikli bildirim kanalı ve izin akışı.
+  2. **Kullanıcı Dostu İzin Yönetimi (Permissions):** İlk hatırlatıcı oluşturulurken güvenli izin talebi; izin reddedildiğinde veya kalıcı olarak engellendiğinde kullanıcıyı kırmayan, ayarlara yönlendiren bilgilendirici diyalog (`Alert.alert` + `Linking.openSettings`).
+  3. **Tarih & Saat Seçici Modalı (`components/ui/ReminderPickerModal.js`):** Hızlı hazır seçenekler ("1 saat sonra", "Bu akşam (20:00)", "Yarın sabah (09:00)", "Yarın akşam (20:00)"), takvim modalı ile gün seçimi, 24 saatlik etkileşimli saat & dakika kadranları, geçmiş zaman doğrulama kilidi ve haptik uyarı.
+  4. **Ön Plan Bildirim Kartı (`components/ui/InAppNotificationBanner.js`):** Uygulama açıkken gelen bildirimler için safe-area uyumlu, Reanimated destekli yumuşak açılır dropdown banner kartı; dokunulduğunda doğrudan ilgili sayfaya (`/todolist/[pageId]` veya `/ajandam/[pageId]`) yönlendirme, haptik titreşim ve 5 saniye sonra otomatik kapanma.
+  5. **UI & Kart Entegrasyonu:**
+     - `PageThumbnail`: Kartın sağ aksiyonlarında zil butonu (aktifse dolgulu ve vurgulu tema renginde, pasifse gri hatlı), kart meta satırında kurulan saati gösteren küçük çan rozeti.
+     - Liste Ekranları (`app/todolist/index.js` ve `app/ajandam/pages.js`): Hatırlatıcı kurma, güncelleme, silme ve sayfa silindiğinde (`handleDeleteTodo` / `handleDeletePage`) zamanlanmış bildirimi otomatik iptal etme.
+     - Sayfa Düzenleme Ekranları (`app/todolist/[pageId].js` ve `app/ajandam/[pageId].js`): Üst çubukta bağımsız zil butonu ve modal entegrasyonu.
+     - Depolama Servisi (`services/storageService.js`): `deletePage` metodunda sayfaya bağlı bildirim varsa otomatik temizleme garantisi.
+  6. **Çoklu Dil Desteği:** 5 dilde (TR, EN, DE, ES, FR) eksiksiz `reminder` çeviri anahtarları.
+
+### 🔧 Yapılan Geliştirmeler ve Düzenlemeler
+1. **Paket Kurulumu:** `expo-notifications` SDK 54 ile tam uyumlu olarak projeye eklendi.
+2. **`services/notificationService.js`:**
+   - Foreground modunda standart OS uyarısını bastırıp ses ve uygulama içi kartı etkin kılan `configureNotificationHandler` oluşturuldu.
+   - Android için titreşim ve LED ışığı destekli "default" kanalı (`setupNotificationChannel`) yapılandırıldı.
+   - Bildirim izinlerini nazikçe isteyen ve gerekirse Ayarlar sayfasına yönlendiren `requestPermissions` kuruldu.
+   - `scheduleReminderNotification`, `cancelScheduledNotification`, `getAllScheduledNotifications` ve dinleyicileri yöneten `addNotificationListeners` eklendi.
+3. **`components/ui/ReminderPickerModal.js`:**
+   - Hızlı butonlar, `DatePickerModal` takvim entegrasyonu, saat/dakika artırma-azaltma stepper'ları, canlı önizleme ve hatırlatıcı kaldırma opsiyonu inşa edildi.
+4. **`components/ui/InAppNotificationBanner.js` & `app/_layout.js`:**
+   - Uygulama köküne (`_layout.js`) yerleştirilen banner, foreground bildirimleri `Notifications.addNotificationReceivedListener` ile yakalayıp ekranda gösterir.
+   - Arka planda gelen bildirime tıklandığında `addNotificationResponseReceivedListener` ile doğrudan hedef sayfaya yönlendirilir.
+5. **`components/PageThumbnail.js`:**
+   - `onReminder` desteği, zil aksiyon butonu (`bell-outline` / `bell-ring`) ve `reminderBadge` yerleştirildi.
+6. **`app/todolist/` & `app/ajandam/`:**
+   - Hem liste ekranlarında (`index.js`, `pages.js`) hem de detay/tuval ekranlarında (`[pageId].js`) hatırlatıcı modalı ve zil butonu bağlandı.
+7. **`services/storageService.js`:**
+   - `deletePage` metodunda sayfanın `reminder?.notificationId` değeri varsa bildirim zamanlayıcısı işletim sisteminden güvenle iptal edilir.
+8. **Çoklu Dil Desteği (`locales/*.json`):**
+   - TR, EN, DE, ES ve FR dosyalarına `reminder` anahtarları eksiksiz eklendi.
+
+### ✅ Doğrulama & Testler
+- `validate_reminders.js`: 5 dil dosyası ve 10 adet değiştirilen/yeni JS dosyası Babel AST sözdizim testinden %100 başarıyla geçti.
+- `node tests/zoomableCanvas.test.js`: Tüm matematiksel birim testleri başarıyla geçti.
+
+---
+
 ## 📅 [2026-09-16] - Global Arama ve Tarih Filtreleme Header'ı: Ajandam, Günlüğüm ve Defterlerim Entegrasyonu
 
 ### 🔍 Kapsam ve İhtiyaç

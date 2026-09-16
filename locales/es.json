@@ -272,5 +272,24 @@
     "unlockWithBiometric": "Desbloquear con {{type}}",
     "authFailed": "Error de autenticación. Inténtalo de nuevo.",
     "biometricNotAvailable": "No hay bloqueo biométrico ni contraseña configurada en tu dispositivo."
+  },
+  "reminder": {
+    "title": "Configurar Recordatorio",
+    "quickOptions": "Opciones Rápidas",
+    "quickIn1Hour": "En 1 hora",
+    "quickTonight": "Esta noche (20:00)",
+    "quickTomorrowMorning": "Mañana por la mañana (09:00)",
+    "quickTomorrowEvening": "Mañana por la tarde (20:00)",
+    "customDateTime": "Fecha y Hora Personalizada",
+    "hour": "Hora",
+    "minute": "Minuto",
+    "pastWarning": "Por favor, seleccione una fecha y hora futura.",
+    "removeReminder": "Eliminar Recordatorio",
+    "save": "Guardar Recordatorio",
+    "notificationBody": "¡Recordatorio para tu lista de tareas!",
+    "agendaNotificationBody": "¡Recordatorio para tu página de agenda!",
+    "permissionDeniedTitle": "Permiso de Notificación Requerido",
+    "permissionDeniedMessage": "Por favor, active los permisos de notificación en los Ajustes.",
+    "goToSettings": "Ir a Ajustes"
   }
 }
