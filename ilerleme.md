@@ -4,6 +4,35 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-16] - Günlüğüm & Notlarım: Tuval Üzerine Satır Uyumlu Inline TextInput
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** "Günlüğüm" ve "Notlarım" bölümlerinde klavye ile metin girerken odak bozucu kutucuklar veya harici pencereler yerine doğrudan seçilen kağıt şablonunun (çizgili, kareli, noktalı, düz) üzerine ve tam satır aralıklarına oturacak şekilde gerçek bir defter yazım deneyimi inşa edilmesi.
+- **Hedefler:**
+  1. **Tek Kaynaklı Metrik Mimarisi (`constants/paperRulings.js`):** Çizgileri çizen `PaperSheet` ile metin girişini yöneten `NotebookInlineText` bileşenlerini ortak satır aralığı (`pitch`), yazı boyutu (`fontSize`), satır yüksekliği (`lineHeight`), taban ofseti (`baselineOffset`) ve marj değerlerine bağlama.
+  2. **Doğrudan Tuval Üzerine Yazım (`components/stationery/NotebookInlineText.js`):** Arka planı şeffaf, çerçevesiz, `multiline`, Android'de `includeFontPadding: false` ve web'de outline sıfırlamalı doğrudan kağıt üzerine serilen `TextInput`.
+  3. **Matematiksel Satır Hizalaması (Line Height Sync):** $\text{lineHeight} = \text{linePitch}$ ve $\text{paddingTop} = \text{rulingTop} - \text{baselineOffset}$ formülüyle 1'den 30'a kadar tüm satırların ve Enter ile geçilen yeni satırların kağıt çizgileriyle 0.000px sapmasız tam üst üste oturması.
+  4. **Çift Tıklama ve Araç Çubuğu Odaklaması:** Araç çubuğundaki "Klavye" butonuna tıklandığında veya kağıda çift dokunulduğunda otomatik klavye açılışı ve odak (`inputRef.current.focus()`).
+  5. **Çakışma ve Jest Güvenliği:** `ZoomableCanvas`'ın iki parmaklı zum/kaydırması ile tek parmaklı yazı yazma/imleç hareketlerinin ayrıştırılması; metin modunda yatay sayfa kaydırmanın kilitlenmesi; çizim modunda metin katmanının dokunuşları engellememesi.
+  6. **Arama ve Kalıcılık:** Sayfa metninin hem `page.data.content` hem `page.content` alanlarında debounced olarak saklanması; `searchNotebookPages` ve `searchAllData` üzerinden tam metin olarak taranabilmesi.
+
+### 🔧 Yapılan Geliştirmeler ve Düzenlemeler
+1. **`constants/paperRulings.js` [NEW]:** Çizgili (32px), Kareli (24px), Noktalı (28px) ve Düz (28px) şablonlar için satır yüksekliği ve taban çizgisi kalibrasyon metrikleri tanımlandı.
+2. **`components/stationery/PaperSheet.js`:** Sabit piksel değerleri `PAPER_RULING_CONFIG` ile merkezi hale getirildi.
+3. **`components/stationery/NotebookInlineText.js` [NEW]:** Kağıt şablonunun çizgileri üzerine kenetlenen şeffaf, pürüzsüz ve debounced metin giriş bileşeni geliştirildi.
+4. **`components/drawing/ZoomableCanvas.js`:** `onDoubleTap` desteği eklendi; kağıda çift dokunulduğunda doğrudan metin moduna geçiş bağlandı.
+5. **`components/notebook/NotebookPagesView.js`:** Boş `sheetInner` yerine `NotebookInlineText` yerleştirildi; `handlePageContentChange` callback'i ile sayfa bazlı içerik saklama sağlandı.
+6. **`services/searchService.js`:** `searchAllData` ve `searchNotebookPages` fonksiyonlarına doğrudan sayfa metnini (`page.data?.content || page.content`) arama desteği eklendi.
+7. **Çoklu Dil Desteği (`locales/*.json`):** 5 dile `notebooks.inlinePlaceholder` metni eklendi.
+
+### ✅ Doğrulama & Testler
+- `test_line_height_sync.js`: 5 dil dosyası ve 6 JavaScript dosyası Babel AST ile %100 başarıyla parse edildi.
+- Matematiksel doğrulama: 3 farklı çizgi türünde 30 satır boyunca $Y_{line} - Y_{baseline} = 0.000\text{px}$ sapma ile tam eşleşti.
+- Arama testi: Doğrudan sayfa metni ve serbest metin blokları başarıyla arandı.
+- `node tests/zoomableCanvas.test.js`: 6/6 tuval testi hatasız tamamlandı.
+
+---
+
 ## 📅 [2026-09-16] - Sesli Notlar (Audio Recording & Playback) Modülü
 
 ### 🔍 Kapsam ve İhtiyaç

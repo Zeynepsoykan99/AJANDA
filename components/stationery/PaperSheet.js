@@ -1,14 +1,16 @@
 import React, { useState, useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
+import { PAPER_RULING_CONFIG } from '../../constants/paperRulings';
 
-// Doku ölçüleri (stillerle birebir uyumlu olmalı)
-const RULING_TOP = 36; // rulingContainer paddingTop
+// Doku ölçüleri (PAPER_RULING_CONFIG ile birebir senkronize)
+const RULING_TOP = PAPER_RULING_CONFIG.lined.rulingTop; // 36
 const RULING_SIDE = 12; // rulingContainer paddingHorizontal
-const LINE_PITCH = 28; // çizgi yüksekliği 1 + marginBottom 27
-const GRID_PITCH = 24; // ızgara çizgisi 1 + margin 23
+const LINE_PITCH = PAPER_RULING_CONFIG.lined.linePitch; // 32
+const GRID_PITCH = PAPER_RULING_CONFIG.grid.linePitch; // 24
 const DOT_SIZE = 2.5;
-const DOT_PITCH = 26.5; // nokta 2.5 + boşluk 24; satır ve sütunda aynı aralık -> kare ızgara
+const DOT_PITCH = PAPER_RULING_CONFIG.dotted.linePitch; // 28
 const DOT_ROW_SIDE = 8; // dottedRow paddingHorizontal
+const MARGIN_LEFT = PAPER_RULING_CONFIG.lined.marginLineLeft || 40;
 
 // Ölçüm gelmeden önceki ilk render için eski sabit değerler
 const FALLBACK_COUNTS = { lines: 30, gridRows: 40, gridCols: 30, dotRows: 24, dotCols: 16 };
@@ -185,7 +187,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     bottom: 0,
-    left: 36,
+    left: MARGIN_LEFT,
     width: 1.5,
     zIndex: 1,
   },

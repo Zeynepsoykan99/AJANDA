@@ -312,7 +312,17 @@ export const searchAllData = async (
       diary.pages.forEach((page, pageIndex) => {
         const pageMatches = [];
 
-        // Serbest Metin Kutuları (Klavye veya El Yazısı Dönüşümü)
+        // A. Doğrudan Sayfa Metni (Inline Content)
+        const diaryPageContent = page.data?.content || page.content || '';
+        if (diaryPageContent && normalizeTurkish(diaryPageContent).includes(query)) {
+          pageMatches.push({
+            type: 'textBlock',
+            snippet: extractSnippet(diaryPageContent, rawQuery),
+            field: `Sayfa ${page.pageNumber || pageIndex + 1} Günlük Notu`,
+          });
+        }
+
+        // B. Serbest Metin Kutuları (Klavye veya El Yazısı Dönüşümü)
         if (Array.isArray(page.textBlocks)) {
           for (const block of page.textBlocks) {
             if (block?.text && normalizeTurkish(block.text).includes(query)) {
@@ -418,6 +428,17 @@ export const searchAllData = async (
         nb.pages.forEach((page, pageIndex) => {
           const pageMatches = [];
 
+          // A. Doğrudan Sayfa Metni (Inline Content)
+          const nbPageContent = page.data?.content || page.content || '';
+          if (nbPageContent && normalizeTurkish(nbPageContent).includes(query)) {
+            pageMatches.push({
+              type: 'textBlock',
+              snippet: extractSnippet(nbPageContent, rawQuery),
+              field: `Sayfa ${page.pageNumber || pageIndex + 1} Defter Notu`,
+            });
+          }
+
+          // B. Serbest Metin Kutuları
           if (Array.isArray(page.textBlocks)) {
             for (const block of page.textBlocks) {
               if (block?.text && normalizeTurkish(block.text).includes(query)) {
@@ -492,9 +513,19 @@ export const searchNotebookPages = (pages, rawQuery) => {
 
   const results = [];
   pages.forEach((page, pageIndex) => {
-    const matchingTexts = (Array.isArray(page?.textBlocks) ? page.textBlocks : [])
+    const matchingTexts = [];
+
+    // 1. Doğrudan sayfa metni (inline content)
+    const pageContent = page?.data?.content || page?.content || '';
+    if (pageContent && normalizeTurkish(pageContent).includes(query)) {
+      matchingTexts.push(pageContent);
+    }
+
+    // 2. Serbest metin kutuları (textBlocks)
+    (Array.isArray(page?.textBlocks) ? page.textBlocks : [])
       .map((block) => (typeof block?.text === 'string' ? block.text : ''))
-      .filter((text) => text && normalizeTurkish(text).includes(query));
+      .filter((text) => text && normalizeTurkish(text).includes(query))
+      .forEach((t) => matchingTexts.push(t));
 
     if (matchingTexts.length > 0) {
       results.push({

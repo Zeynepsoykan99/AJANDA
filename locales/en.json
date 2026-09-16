@@ -256,7 +256,8 @@
     "searchPlaceholder": "Search words in note pages...",
     "noResults": "No results found",
     "resultCount": "Matches on {{count}} pages",
-    "matchCount": "{{count}} matches"
+    "matchCount": "{{count}} matches",
+    "inlinePlaceholder": "Start writing here..."
   },
   "security": {
     "lockNotebook": "Lock This Notebook",

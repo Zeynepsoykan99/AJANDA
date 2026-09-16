@@ -256,7 +256,8 @@
     "searchPlaceholder": "Wörter in Notizseiten suchen...",
     "noResults": "Keine Ergebnisse gefunden",
     "resultCount": "Treffer auf {{count}} Seiten",
-    "matchCount": "{{count}} Treffer"
+    "matchCount": "{{count}} Treffer",
+    "inlinePlaceholder": "Hier zu schreiben beginnen..."
   },
   "security": {
     "lockNotebook": "Dieses Notizbuch sperren",

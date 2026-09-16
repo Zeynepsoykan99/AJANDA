@@ -26,6 +26,7 @@ import {
 } from '../../constants/pageTemplates';
 
 import PaperSheet from '../../components/stationery/PaperSheet';
+import NotebookInlineText from '../../components/stationery/NotebookInlineText';
 import PaperTemplateModal from '../../components/PaperTemplateModal';
 import NotebookContainer from '../../components/stationery/NotebookContainer';
 import DrawingCanvas from '../../components/drawing/DrawingCanvas';
@@ -576,6 +577,43 @@ export default function NotebookPagesView({
     []
   );
 
+  // Sayfa Doğrudan Metin İçeriğini Güncelle (Line-height uyumlu inline text)
+  const handlePageContentChange = useCallback(
+    (pageIndex, newContent) => {
+      setNotebook((prev) => {
+        const currentPages = [...(prev?.pages || [])];
+        if (!currentPages[pageIndex]) return prev;
+
+        const pageToUpdate = currentPages[pageIndex];
+        const updatedPage = {
+          ...pageToUpdate,
+          content: newContent,
+          data: {
+            ...(pageToUpdate.data || {}),
+            content: newContent,
+          },
+        };
+
+        currentPages[pageIndex] = updatedPage;
+        const updated = { ...prev, pages: currentPages };
+
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = setTimeout(async () => {
+          await storageRef.current.updatePage(pageToUpdate.pageId, {
+            content: newContent,
+            data: {
+              ...(pageToUpdate.data || {}),
+              content: newContent,
+            },
+          });
+        }, 400);
+
+        return updated;
+      });
+    },
+    []
+  );
+
   // Çizimi Geri Al
   const handleUndoDrawing = useCallback(() => {
     if (!activePage) return;
@@ -1098,6 +1136,7 @@ export default function NotebookPagesView({
                   else delete canvasRefs.current[p.pageId];
                 }}
                 onTransformChange={isActive ? handleActiveTransformChange : undefined}
+                onDoubleTap={isActive ? () => setActiveMode('text') : undefined}
                 isDrawingMode={isActive && activeMode === 'drawing'}
                 isTextMode={isActive && activeMode === 'text'}
                 minScale={1.0}
@@ -1123,14 +1162,25 @@ export default function NotebookPagesView({
                     showMargin={paper.ruling === 'lined'}
                     style={styles.paperSheet}
                   >
-                    {/* Boş alan - PaperSheet ruling dokusu içerir */}
-                    <View style={styles.sheetInner} />
+                    {/* Doğrudan Kağıt Üzerine Satır Hizalı Metin Girişi */}
+                    <NotebookInlineText
+                      content={p.data?.content || p.content || ''}
+                      onChangeContent={(text) => handlePageContentChange(index, text)}
+                      ruling={paper.ruling}
+                      showMargin={paper.ruling === 'lined'}
+                      isActive={isActive}
+                      isTextMode={isActive && activeMode === 'text'}
+                      isDrawingMode={isActive && activeMode === 'drawing'}
+                      onActivateTextMode={() => setActiveMode('text')}
+                      textColor={textColor}
+                      textFontSize={textFontSize}
+                    />
                   </PaperSheet>
                 </NotebookContainer>
 
-                {/* Serbest Metin Katmanı */}
+                {/* Serbest Metin Katmanı (Lasso ile el yazısından dönüştürülen bloklar) */}
                 <TextCanvas
-                  isTextMode={isActive && activeMode === 'text'}
+                  isTextMode={false}
                   isDrawingMode={isActive && activeMode === 'drawing'}
                   textBlocks={p.textBlocks || []}
                   onTextBlocksChange={(blocks) => handleTextBlocksChange(index, blocks)}
@@ -1142,8 +1192,6 @@ export default function NotebookPagesView({
                       ? 'none'
                       : activeMode === 'drawing'
                       ? 'none'
-                      : activeMode === 'text'
-                      ? 'auto'
                       : 'box-none'
                   }
                 />

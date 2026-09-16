@@ -256,7 +256,8 @@
     "searchPlaceholder": "Buscar palabras en las páginas...",
     "noResults": "No se encontraron resultados",
     "resultCount": "Coincidencias en {{count}} páginas",
-    "matchCount": "{{count}} coincidencias"
+    "matchCount": "{{count}} coincidencias",
+    "inlinePlaceholder": "Comienza a escribir aquí..."
   },
   "security": {
     "lockNotebook": "Bloquear este cuaderno",

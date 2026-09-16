@@ -256,7 +256,8 @@
     "searchPlaceholder": "Not sayfalarında kelime ara...",
     "noResults": "Sonuç bulunamadı",
     "resultCount": "{{count}} sayfada eşleşme",
-    "matchCount": "{{count}} eşleşme"
+    "matchCount": "{{count}} eşleşme",
+    "inlinePlaceholder": "Buraya yazmaya başlayın..."
   },
   "security": {
     "lockNotebook": "Bu Defteri Kilitle",

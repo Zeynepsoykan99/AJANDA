@@ -256,7 +256,8 @@
     "searchPlaceholder": "Rechercher des mots dans les pages...",
     "noResults": "Aucun résultat",
     "resultCount": "Correspondances sur {{count}} pages",
-    "matchCount": "{{count}} correspondances"
+    "matchCount": "{{count}} correspondances",
+    "inlinePlaceholder": "Commencez à écrire ici..."
   },
   "security": {
     "lockNotebook": "Verrouiller ce carnet",

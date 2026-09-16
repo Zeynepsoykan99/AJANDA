@@ -55,6 +55,7 @@ const ZoomableCanvas = forwardRef(function ZoomableCanvas(
     maxScale = 4.0,
     style,
     onTransformChange,
+    onDoubleTap,
   },
   ref
 ) {
@@ -242,6 +243,10 @@ const ZoomableCanvas = forwardRef(function ZoomableCanvas(
     .enabled(!isDrawingMode && !isTextMode)
     .onEnd((event) => {
       'worklet';
+      if (onDoubleTap) {
+        runOnJS(onDoubleTap)();
+        return;
+      }
       if (scale.value > 1.05) {
         // %100'e sıfırla
         scale.value = withSpring(1.0, { damping: 18, stiffness: 180 });
