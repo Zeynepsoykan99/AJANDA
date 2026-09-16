@@ -291,5 +291,22 @@
     "permissionDeniedTitle": "Benachrichtigungsberechtigung erforderlich",
     "permissionDeniedMessage": "Bitte aktivieren Sie Benachrichtigungen in den Einstellungen.",
     "goToSettings": "Zu den Einstellungen"
+  },
+  "audio": {
+    "recordTitle": "Sprachnotiz aufnehmen",
+    "defaultTitle": "Sprachnotiz",
+    "startRecord": "Aufnahme starten",
+    "stopRecord": "Aufnahme stoppen",
+    "recording": "Aufnahme läuft...",
+    "tapToRecord": "Tippen Sie auf das Mikrofon, um die Aufnahme zu starten",
+    "readyToSave": "Aufnahme bereit",
+    "reRecord": "Neu aufnehmen",
+    "saveToPage": "Zur Seite hinzufügen",
+    "notesPill": "{{count}} Sprachnotiz",
+    "notesDeckTitle": "Sprachnotizen ({{count}})",
+    "deleteConfirmTitle": "Sprachnotiz löschen",
+    "deleteConfirmMessage": "Möchten Sie diese Sprachnotiz wirklich löschen? Dieser Vorgang kann nicht rückgängig gemacht werden.",
+    "micPermissionTitle": "Mikrofonberechtigung erforderlich",
+    "micPermissionMessage": "Bitte aktivieren Sie die Mikrofonberechtigung in den Einstellungen."
   }
 }

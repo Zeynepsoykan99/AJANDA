@@ -291,5 +291,22 @@
     "permissionDeniedTitle": "Notification Permission Required",
     "permissionDeniedMessage": "Please enable notification permissions in Settings to set reminders.",
     "goToSettings": "Go to Settings"
+  },
+  "audio": {
+    "recordTitle": "Record Audio Note",
+    "defaultTitle": "Audio Note",
+    "startRecord": "Start Recording",
+    "stopRecord": "Stop Recording",
+    "recording": "Recording...",
+    "tapToRecord": "Tap microphone to start recording",
+    "readyToSave": "Recording ready",
+    "reRecord": "Re-record",
+    "saveToPage": "Add to Page",
+    "notesPill": "{{count}} Audio Note",
+    "notesDeckTitle": "Audio Notes ({{count}})",
+    "deleteConfirmTitle": "Delete Audio Note",
+    "deleteConfirmMessage": "Are you sure you want to delete this audio note? This action cannot be undone.",
+    "micPermissionTitle": "Microphone Permission Required",
+    "micPermissionMessage": "Please enable microphone permission in Settings to record audio notes."
   }
 }

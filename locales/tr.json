@@ -291,5 +291,22 @@
     "permissionDeniedTitle": "Bildirim İzni Gerekli",
     "permissionDeniedMessage": "Hatırlatıcı kurabilmek için ayarlardan bildirim izni vermeniz gerekmektedir.",
     "goToSettings": "Ayarlara Git"
+  },
+  "audio": {
+    "recordTitle": "Sesli Not Kaydet",
+    "defaultTitle": "Sesli Not",
+    "startRecord": "Kayda Başla",
+    "stopRecord": "Kaydı Durdur",
+    "recording": "Kaydediliyor...",
+    "tapToRecord": "Kayda başlamak için mikrofona dokunun",
+    "readyToSave": "Kayıt hazır",
+    "reRecord": "Yeniden",
+    "saveToPage": "Sayfaya Ekle",
+    "notesPill": "{{count}} Sesli Not",
+    "notesDeckTitle": "Sesli Notlar ({{count}})",
+    "deleteConfirmTitle": "Ses Kaydını Sil",
+    "deleteConfirmMessage": "Bu ses kaydını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
+    "micPermissionTitle": "Mikrofon İzni Gerekli",
+    "micPermissionMessage": "Ses kaydı alabilmek için lütfen ayarlardan mikrofon erişimine izin verin."
   }
 }

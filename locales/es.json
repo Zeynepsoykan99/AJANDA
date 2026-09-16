@@ -291,5 +291,22 @@
     "permissionDeniedTitle": "Permiso de Notificación Requerido",
     "permissionDeniedMessage": "Por favor, active los permisos de notificación en los Ajustes.",
     "goToSettings": "Ir a Ajustes"
+  },
+  "audio": {
+    "recordTitle": "Grabar Nota de Voz",
+    "defaultTitle": "Nota de Voz",
+    "startRecord": "Iniciar Grabación",
+    "stopRecord": "Detener Grabación",
+    "recording": "Grabando...",
+    "tapToRecord": "Toca el micrófono para comenzar a grabar",
+    "readyToSave": "Grabación lista",
+    "reRecord": "Re-grabar",
+    "saveToPage": "Añadir a la Página",
+    "notesPill": "{{count}} Nota de Voz",
+    "notesDeckTitle": "Notas de Voz ({{count}})",
+    "deleteConfirmTitle": "Eliminar Nota de Voz",
+    "deleteConfirmMessage": "¿Estás seguro de que deseas eliminar esta nota de voz? Esta acción no se puede deshacer.",
+    "micPermissionTitle": "Permiso de Micrófono Requerido",
+    "micPermissionMessage": "Por favor, active los permisos de micrófono en los Ajustes."
   }
 }

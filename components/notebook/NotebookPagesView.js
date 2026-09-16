@@ -40,6 +40,9 @@ import RecognitionConfirmationModal from '../../components/drawing/RecognitionCo
 import NotebookSearchSheet from './NotebookSearchSheet';
 import NotebookLockGate from './NotebookLockGate';
 import DatePickerModal from '../../components/ui/DatePickerModal';
+import AudioRecorderModal from '../audio/AudioRecorderModal';
+import AudioNotesDeck from '../audio/AudioNotesDeck';
+import { AudioService } from '../../services/audioService';
 import { isSameDay, formatFilterDate } from '../../components/ui/GlobalFilterHeader';
 import { isSessionUnlocked } from '../../services/biometricService';
 
@@ -107,6 +110,7 @@ export default function NotebookPagesView({
   const [templateSheetMode, setTemplateSheetMode] = useState(null);
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  const [isAudioModalVisible, setIsAudioModalVisible] = useState(false);
   const [undoToast, setUndoToast] = useState({ visible: false, message: '' });
 
 
@@ -198,6 +202,31 @@ export default function NotebookPagesView({
   const pages = notebook?.pages || [];
   const headerTitle = typeof title === 'function' ? title(notebook) : title;
   const activePage = pages[currentPageIndex] || pages[0];
+
+  // Sesli Not Ekle
+  const handleAddAudioNote = useCallback(async (newAudioNote) => {
+    if (!activePage) return;
+    const updatedAudioNotes = [...(activePage.audioNotes || []), newAudioNote];
+    const updatedNotebook = await storageRef.current.updatePage(activePage.pageId, {
+      audioNotes: updatedAudioNotes,
+    });
+    if (updatedNotebook) {
+      setNotebook(updatedNotebook);
+    }
+  }, [activePage]);
+
+  // Sesli Not Sil
+  const handleDeleteAudioNote = useCallback(async (audioNote) => {
+    if (!activePage) return;
+    await AudioService.deleteAudioFile(audioNote.uri);
+    const updatedAudioNotes = (activePage.audioNotes || []).filter((n) => n.id !== audioNote.id);
+    const updatedNotebook = await storageRef.current.updatePage(activePage.pageId, {
+      audioNotes: updatedAudioNotes,
+    });
+    if (updatedNotebook) {
+      setNotebook(updatedNotebook);
+    }
+  }, [activePage]);
 
   // Aktif sayfanın kağıt şablonu (sayfanın kendi şablonu -> günlük varsayılanı -> çizgili)
   const activePaperTemplateId = resolvePagePaperTemplateId(activePage, notebook);
@@ -974,6 +1003,26 @@ export default function NotebookPagesView({
 
           <TouchableOpacity
             activeOpacity={0.7}
+            onPress={() => setIsAudioModalVisible(true)}
+            style={[
+              styles.headerButton,
+              compactHeader && styles.headerButtonCompact,
+              {
+                backgroundColor: activePage?.audioNotes?.length ? colors.accent + '20' : colors.card,
+                borderColor: activePage?.audioNotes?.length ? colors.accent : colors.border,
+              },
+            ]}
+            accessibilityLabel={t('audio.recordTitle', 'Sesli Not Kaydet')}
+          >
+            <MaterialCommunityIcons
+              name="microphone"
+              size={19}
+              color={activePage?.audioNotes?.length ? colors.accent : colors.textSecondary}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.7}
             onPress={() => setIsStickerMenuVisible(true)}
             style={[styles.headerButton, compactHeader && styles.headerButtonCompact, { backgroundColor: colors.card, borderColor: colors.border }]}
           >
@@ -1216,6 +1265,21 @@ export default function NotebookPagesView({
         clusters={recognizedData.clusters}
         onConfirm={handleConfirmConversion}
         onCancel={() => setIsRecognitionModalVisible(false)}
+      />
+
+      {/* Aktif Sayfanın Sesli Notları */}
+      <AudioNotesDeck
+        audioNotes={activePage?.audioNotes || []}
+        onDelete={handleDeleteAudioNote}
+        onOpenRecorder={() => setIsAudioModalVisible(true)}
+      />
+
+      {/* Ses Kayıt Modalı */}
+      <AudioRecorderModal
+        visible={isAudioModalVisible}
+        pageId={activePage?.pageId}
+        onClose={() => setIsAudioModalVisible(false)}
+        onSave={handleAddAudioNote}
       />
 
       {/* Geri Al / Bildirim Toast'ı */}

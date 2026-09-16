@@ -4,6 +4,53 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-16] - Sesli Notlar (Audio Recording & Playback) Modülü
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Uygulamayı bir multimedya defterine dönüştürmek amacıyla aktif sayfaya ("Ajandam", "Yapılacaklar", "Günlüğüm", "Defterlerim") bir veya birden fazla ses kaydı ekleyebilme, bunları sayfa üzerinde oynatabilme, ilerleme çubuğuyla sarmalama (scrubbing) yapabilme ve yetim dosya bırakmadan yönetebilme.
+- **Hedefler:**
+  1. **Ses Altyapısı ve İzinler (`services/audioService.js`):** `expo-av` kütüphanesiyle mikrofon izinlerini yönetme, yüksek kalitede ses kaydı başlatma/durdurma ve ses modu ayarları (hoparlör önceliği, sessiz modda çalma).
+  2. **Dosya Kalıcılığı (File Persistence):** Ses kayıtlarını geçici önbellekten (`cacheDirectory`) uygulamanın kalıcı belge dizinine (`FileSystem.documentDirectory/audio_notes/`) güvenle taşıma. Kayıt metadatasını (`{ id, uri, durationMs, createdAt, title }`) ilgili sayfanın `audioNotes` dizisine entegre etme.
+  3. **UI Entegrasyonu (`AudioNotePlayer` & `AudioRecorderModal`):** 
+     - Şık bir `AudioNotePlayer` bileşeni (Play/Pause, scrubbable/dokunmatik ilerleme çubuğu, `00:15 / 01:30` süre göstergesi ve çöp kutusu silme butonu).
+     - Modern bir `AudioRecorderModal` (canlı dalga/nabız animasyonu, anlık kayıt sayacı, önizleme oynatma, yeniden kaydetme ve sayfaya ekleme).
+     - Sayfa düzenini boğmayan, daraltılıp genişletilebilen `AudioNotesDeck` bileşeni.
+  4. **Jest / Çizim Çakışmalarını Önleme (Gesture Conflict Prevention):** Tuvalin 2 parmaklı zum/kaydırma (`ZoomableCanvas`), çizim katmanı ve çıkartma sürükleme jestleriyle çakışmayan izole dokunma yönetimi (`pointerEvents="auto"`, `onStartShouldSetResponder`).
+  5. **Yetim Dosya Temizliği (Orphan Cleanup):** Sayfa veya defter silindiğinde (`deletePage`, `deleteNotebook`, `deleteNotebookPage`) ilişkili tüm ses dosyalarının cihaz diskinden asenkron olarak silinmesi.
+  6. **Çoklu Dil Desteği:** 5 dilde (TR, EN, DE, ES, FR) eksiksiz `audio` çeviri anahtarları.
+
+### 🔧 Yapılan Geliştirmeler ve Düzenlemeler
+1. **Paket Kurulumu:** `expo-av` (~16.0.8) ve `expo-file-system` (~19.0.24) yüklendi. `app.json` dosyasına `NSMicrophoneUsageDescription` (iOS) ve `RECORD_AUDIO` (Android) izin tanımları eklendi.
+2. **`services/audioService.js`:**
+   - İzin sorgulama ve kullanıcıyı ayarlara yönlendiren güvenli izin talebi (`requestPermissions`).
+   - Kayıt başlatma/durdurma (`startRecording`, `stopRecording`), iOS/Android ses modu yapılandırması.
+   - Kalıcı dizine taşıma (`saveAudioPermanently`), tekli ve toplu dosya temizleme (`deleteAudioFile`, `deleteAudioFiles`).
+   - Süre biçimlendirici (`formatDuration` -> `00:00`).
+3. **`services/storageService.js`:**
+   - `deletePage`, `deleteNotebook` ve `deleteNotebookPage` fonksiyonları sayfadaki `audioNotes` listesini kontrol edip diskteki dosyaları `AudioService.deleteAudioFiles` ile temizleyecek şekilde güncellendi.
+4. **`components/audio/AudioNotePlayer.js`:**
+   - Play/Pause kontrolü, `Audio.Sound` yaşam döngüsü ve çalma durumu dinleyicisi (`setOnPlaybackStatusUpdate`).
+   - Dokunarak ilerleme çubuğu üzerinde sarma (seek / scrub) yeteneği.
+   - Sayfada birden fazla ses kaydı varken aynı anda sadece birinin çalmasını sağlayan koordinasyon (`activeAudioId`).
+   - Çöp kutusu butonu ile onaylı silme diyaloğu (`Alert.alert`).
+   - Tuval jestleriyle çakışmayı önleyen `pointerEvents="auto"` ve `onStartShouldSetResponder` dokunuş izolasyonu.
+5. **`components/audio/AudioRecorderModal.js`:**
+   - Reanimated nabız dalgası animasyonu, anlık kayıt sayacı (`00:00`), kayıt durdurma, kaydedilen sesi modal içinde önizleme, yeniden kaydetme ve onaylayıp sayfaya ekleme akışı.
+6. **`components/audio/AudioNotesDeck.js`:**
+   - Sayfa tuvali üzerinde kompakt bir hap rozet ("🎙️ 2 Sesli Not") olarak yerleşen, dokunulduğunda akordeon şeklinde açılıp ses oynatıcı kartlarını ve "+" yeni ses ekleme butonunu sergileyen estetik yüzen arayüz.
+7. **Sayfa Entegrasyonları:**
+   - `app/todolist/[pageId].js`: Üst menü çubuğuna mikrofon butonu, modal yönetimi ve ses notları destesi entegre edildi.
+   - `app/ajandam/[pageId].js`: Üst menü çubuğuna mikrofon butonu, modal yönetimi ve ses notları destesi entegre edildi.
+   - `components/notebook/NotebookPagesView.js` (`gunlugum` & `defterlerim` sayfaları): Üst araç çubuğuna mikrofon butonu, modal ve ses destesi entegre edildi.
+8. **Çoklu Dil Desteği (`locales/*.json`):**
+   - TR, EN, DE, ES ve FR dosyalarına `audio` çeviri anahtarları eksiksiz eklendi.
+
+### ✅ Doğrulama & Testler
+- `validate_audio_notes.js`: 5 dil dosyası ve 8 adet değiştirilen/yeni JS dosyası Babel AST sözdizim testinden ve süre mantık birim testlerinden %100 başarıyla geçti.
+- `node tests/zoomableCanvas.test.js`: 6/6 matematiksel tuval birim testi başarıyla geçti.
+
+---
+
 ## 📅 [2026-09-16] - Uygulama İçi Hatırlatıcılar ve Yerel Bildirim Sistemi (Local Notifications & Reminders)
 
 ### 🔍 Kapsam ve İhtiyaç

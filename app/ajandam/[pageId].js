@@ -33,8 +33,11 @@ import ZoomableCanvas from '../../components/drawing/ZoomableCanvas';
 import TextCanvas from '../../components/text/TextCanvas';
 import UndoToast from '../../components/ui/UndoToast';
 import ReminderPickerModal from '../../components/ui/ReminderPickerModal';
+import AudioRecorderModal from '../../components/audio/AudioRecorderModal';
+import AudioNotesDeck from '../../components/audio/AudioNotesDeck';
 import { recognizeHandwriting, recognizeSelectedStrokes } from '../../services/handwritingService';
 import { NotificationService } from '../../services/notificationService';
+import { AudioService } from '../../services/audioService';
 import LassoActionMenu from '../../components/drawing/LassoActionMenu';
 import RecognitionConfirmationModal from '../../components/drawing/RecognitionConfirmationModal';
 import { fitTextToBounds, clusterStrokesByColorAndProximity } from '../../utils/lassoGeometry';
@@ -62,6 +65,7 @@ export default function PageViewScreen() {
   const { animatedStyle: animatedBgStyle } = useDynamicEdgeColor(targetEdgeColor, colors.background, 300);
   const [isStickerMenuVisible, setIsStickerMenuVisible] = useState(false);
   const [isReminderModalVisible, setIsReminderModalVisible] = useState(false);
+  const [isAudioModalVisible, setIsAudioModalVisible] = useState(false);
   const [undoToast, setUndoToast] = useState({ visible: false, message: '' });
   const pendingStickerDeleteRef = useRef(null);
 
@@ -813,6 +817,25 @@ export default function PageViewScreen() {
     [page]
   );
 
+  // Sesli Not Ekle
+  const handleAddAudioNote = useCallback((newAudioNote) => {
+    setPage((prev) => {
+      const updatedAudioNotes = [...(prev.audioNotes || []), newAudioNote];
+      StorageService.updatePage(prev.id, { audioNotes: updatedAudioNotes });
+      return { ...prev, audioNotes: updatedAudioNotes };
+    });
+  }, []);
+
+  // Sesli Not Sil
+  const handleDeleteAudioNote = useCallback(async (audioNote) => {
+    await AudioService.deleteAudioFile(audioNote.uri);
+    setPage((prev) => {
+      const updatedAudioNotes = (prev.audioNotes || []).filter((n) => n.id !== audioNote.id);
+      StorageService.updatePage(prev.id, { audioNotes: updatedAudioNotes });
+      return { ...prev, audioNotes: updatedAudioNotes };
+    });
+  }, []);
+
   if (isLoading) {
     return (
       <AnimatedSafeAreaView
@@ -943,6 +966,24 @@ export default function PageViewScreen() {
         </View>
 
         <View style={styles.headerRightGroup}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => setIsAudioModalVisible(true)}
+            style={[
+              styles.headerButton,
+              {
+                backgroundColor: page?.audioNotes?.length ? colors.accent + '20' : colors.card,
+                borderColor: page?.audioNotes?.length ? colors.accent : colors.border,
+              },
+            ]}
+          >
+            <MaterialCommunityIcons
+              name="microphone"
+              size={18}
+              color={page?.audioNotes?.length ? colors.accent : colors.textSecondary}
+            />
+          </TouchableOpacity>
+
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => setIsReminderModalVisible(true)}
@@ -1113,6 +1154,21 @@ export default function PageViewScreen() {
         onSave={handleSaveReminder}
         onRemove={handleRemoveReminder}
         onClose={() => setIsReminderModalVisible(false)}
+      />
+
+      {/* Ses Kayıt Modalı */}
+      <AudioRecorderModal
+        visible={isAudioModalVisible}
+        pageId={page?.id}
+        onClose={() => setIsAudioModalVisible(false)}
+        onSave={handleAddAudioNote}
+      />
+
+      {/* Sayfa Sesli Notlar Güvertesi */}
+      <AudioNotesDeck
+        audioNotes={page.audioNotes || []}
+        onDelete={handleDeleteAudioNote}
+        onOpenRecorder={() => setIsAudioModalVisible(true)}
       />
 
       {/* Geri Al (Undo) Bildirimi */}

@@ -10,7 +10,8 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSFaceIDUsageDescription": "Günlüğünüzü ve kişisel defterlerinizi korumak için Face ID doğrulaması kullanılır."
+        "NSFaceIDUsageDescription": "Günlüğünüzü ve kişisel defterlerinizi korumak için Face ID doğrulaması kullanılır.",
+        "NSMicrophoneUsageDescription": "Sayfalarınıza sesli notlar eklemek ve kaydetmek için mikrofon erişimi gereklidir."
       }
     },
     "android": {
@@ -19,7 +20,10 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "permissions": [
+        "RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"

@@ -291,5 +291,22 @@
     "permissionDeniedTitle": "Autorisation de Notification Requise",
     "permissionDeniedMessage": "Veuillez activer les autorisations de notification dans les Paramètres.",
     "goToSettings": "Aller aux Paramètres"
+  },
+  "audio": {
+    "recordTitle": "Enregistrer une Note Vocale",
+    "defaultTitle": "Note Vocale",
+    "startRecord": "Démarrer l'enregistrement",
+    "stopRecord": "Arrêter l'enregistrement",
+    "recording": "Enregistrement en cours...",
+    "tapToRecord": "Appuyez sur le microphone pour commencer",
+    "readyToSave": "Enregistrement prêt",
+    "reRecord": "Réenregistrer",
+    "saveToPage": "Ajouter à la Page",
+    "notesPill": "{{count}} Note Vocale",
+    "notesDeckTitle": "Notes Vocales ({{count}})",
+    "deleteConfirmTitle": "Supprimer la Note Vocale",
+    "deleteConfirmMessage": "Voulez-vous vraiment supprimer cette note vocale ? Cette action est irréversible.",
+    "micPermissionTitle": "Autorisation du Microphone Requise",
+    "micPermissionMessage": "Veuillez autoriser l'accès au microphone dans les Paramètres."
   }
 }

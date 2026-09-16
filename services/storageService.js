@@ -5,6 +5,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NotificationService } from './notificationService';
+import { AudioService } from './audioService';
 
 const KEYS = {
   THEME: '@ajanda_theme',
@@ -346,6 +347,9 @@ export const StorageService = {
       if (pageToDelete?.reminder?.notificationId) {
         NotificationService.cancelScheduledNotification(pageToDelete.reminder.notificationId).catch(() => {});
       }
+      if (pageToDelete?.audioNotes && pageToDelete.audioNotes.length > 0) {
+        AudioService.deleteAudioFiles(pageToDelete.audioNotes).catch(() => {});
+      }
       const filtered = pages.filter((p) => p.id !== pageId);
       await AsyncStorage.setItem(KEYS.PAGES, JSON.stringify(filtered));
       return filtered;
@@ -543,6 +547,13 @@ export const StorageService = {
         const notebooks = await readNotebooks();
         const deleted = notebooks.find((nb) => nb.id === notebookId);
         if (!deleted) return null;
+        if (deleted?.pages) {
+          deleted.pages.forEach((p) => {
+            if (p?.audioNotes?.length) {
+              AudioService.deleteAudioFiles(p.audioNotes).catch(() => {});
+            }
+          });
+        }
         await writeNotebooks(notebooks.filter((nb) => nb.id !== notebookId));
         return deleted;
       } catch (error) {
@@ -595,9 +606,15 @@ export const StorageService = {
   deleteNotebookPage: async (notebookId, pageId) =>
     withJournalLock(async () => {
       try {
-        const result = await mutateNotebook(notebookId, (nb) => ({
-          notebook: notebookWithDeletedPage(nb, pageId),
-        }));
+        const result = await mutateNotebook(notebookId, (nb) => {
+          const pageToDelete = (nb.pages || []).find((p) => p.pageId === pageId);
+          if (pageToDelete?.audioNotes?.length) {
+            AudioService.deleteAudioFiles(pageToDelete.audioNotes).catch(() => {});
+          }
+          return {
+            notebook: notebookWithDeletedPage(nb, pageId),
+          };
+        });
         return result ? result.notebook : null;
       } catch (error) {
         console.warn('StorageService.deleteNotebookPage hata:', error);
