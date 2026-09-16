@@ -22,6 +22,7 @@ export default function DraggableSticker({
   sticker,
   isSelected,
   onSelect,
+  onDeselect,
   onMove,
   onResize,
   onDelete,
@@ -45,6 +46,8 @@ export default function DraggableSticker({
   // Sürükleme gesture'ı + Akıllı Hizalama (Snapping)
   const panGesture = Gesture.Pan()
     .maxPointers(1)
+    .activeOffsetX([-5, 5])
+    .activeOffsetY([-5, 5])
     .onStart(() => {
       savedTranslateX.value = translateX.value;
       savedTranslateY.value = translateY.value;
@@ -113,18 +116,41 @@ export default function DraggableSticker({
       if (onMove) {
         runOnJS(onMove)(sticker.id, translateX.value, translateY.value);
       }
-    });
-
-  // Seçim (Tap) gesture'ı
-  const tapGesture = Gesture.Tap()
-    .onEnd(() => {
-      if (onSelect) {
-        runOnJS(onSelect)(sticker.id);
+      // Sürükleme bittiğinde kesikli seçim çerçevesini kaldır
+      if (onDeselect) {
+        runOnJS(onDeselect)();
+      }
+    })
+    .onFinalize(() => {
+      isActive.value = false;
+      if (isSnappedV.value || isSnappedH.value) {
+        isSnappedV.value = false;
+        isSnappedH.value = false;
+      }
+      if (onSnapChange) {
+        runOnJS(onSnapChange)({ v: false, h: false });
+      }
+      if (onDeselect) {
+        runOnJS(onDeselect)();
       }
     });
 
-  // Ana sticker için tap ve pan aynı anda çalışabilir
-  const mainGesture = Gesture.Simultaneous(panGesture, tapGesture);
+  // Seçim (Tap) gesture'ı - Sadece parmak 5px'den az hareket ettiğinde çalışır
+  const tapGesture = Gesture.Tap()
+    .maxDuration(250)
+    .maxDistance(5)
+    .onEnd((_event, success) => {
+      if (success) {
+        runOnJS(triggerHaptic)();
+        if (onSelect) {
+          runOnJS(onSelect)(sticker.id);
+        }
+      }
+    });
+
+  // Jest Önceliği: Sürükleme (Pan) başladığında Tap jesti iptal edilir (Exclusive).
+  // Böylece sürükle-bırak sonrasında sticker yanlışlıkla seçili kalmaz.
+  const mainGesture = Gesture.Exclusive(panGesture, tapGesture);
 
   // Yeniden boyutlandırma (Resize) gesture'ı
   const resizePanGesture = Gesture.Pan()

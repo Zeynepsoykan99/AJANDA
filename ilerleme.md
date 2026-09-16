@@ -4,6 +4,34 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-16] - Sticker Etkileşim İyileştirmesi: Sürükleme Bitişinde ve Tuval Dokunuşunda Seçimi Kaldırma (Deselect)
+
+### 🔍 Kapsam ve İhtiyaç
+- **Sorun:** Kullanıcı bir sticker'ı sürükleyip bıraktıktan sonra, sticker'ın etrafındaki kesikli çizgiyle çevrili seçim kutusu (`selectionBorder`) ve kontrol butonları ekranda sabit kalıyordu; bu durum temiz not alma deneyimini ve sayfa estetiğini olumsuz etkiliyordu.
+- **Hedef:** 
+  1. Sürükle-bırak işlemi bittiği anda kesikli çerçevenin otomatik kalkması,
+  2. Sticker boyutlandırıldıktan sonra veya seçiliyken tuvalin (canvas'ın) boş bir yerine dokunulduğunda seçimin global olarak temizlenmesi,
+  3. Kalem modu ve Pinch-to-Zoom özellikleriyle sıfır çakışma sağlanması.
+
+### 🔧 Yapılan Düzeltmeler ve İyileştirmeler
+
+#### 1. Sürükleme Bitişinde Otomatik Deselect (`components/stickers/DraggableSticker.js`)
+- `mainGesture = Gesture.Exclusive(panGesture, tapGesture)` mimarisine geçildi.
+- `panGesture` için `activeOffsetX/Y([-5, 5])` ve `tapGesture` için `maxDistance(5)` / `maxDuration(250)` tanımlandı. Sürükleme başladığında `tapGesture` derhal iptal edilir ve drag sonunda yanlışlıkla `onSelect` tetiklenmesi önlenir.
+- `panGesture.onEnd` ve `panGesture.onFinalize` aşamalarına `onDeselect` çağrısı eklendi; parmak kaldırıldığı an `selectedStickerId` sıfırlanarak kesikli çerçeve anında kaybolur.
+- Kesikli çerçeve ve kontrol butonları (silme, boyutlandırma), yalnızca kullanıcı sticker'a hareket ettirmeden **net bir şekilde tıkladığında (tap)** açılır.
+
+#### 2. Tuvale Dokunarak Seçimi Kaldırma (`components/stickers/StickerCanvas.js`)
+- Yalnızca bir sticker seçiliyken sticker'ların arkasına yerleşen şeffaf bir `GestureDetector` (`backdropTapGesture`) eklendi. Kullanıcı tuvalin boş bir yerine dokunduğunda `setSelectedStickerId(null)` tetiklenerek seçim kaldırılır.
+- Kalemle çizim yapıldığında (`isDrawingActive`), `useAnimatedReaction` ile sticker seçimi 0ms gecikmeyle anında kaldırılır; kalemin ilk vuruşu gecikmeden tuvale yansır.
+- Çizim moduna geçildiğinde aktif sticker seçimi `useEffect` ile otomatik temizlenir.
+
+### ✅ Doğrulama & Testler
+- `node tests/zoomableCanvas.test.js`: 6/6 matematiksel birim testi başarılı.
+- Babel AST parse kontrolü: `DraggableSticker.js` ve `StickerCanvas.js` 0 sözdizimi hatası ile doğrulandı.
+
+---
+
 ## 📅 [2026-09-16] - UX İyileştirmeleri: Kalem Modunda Sticker Taşıma, Floating Toolbar Gesture Çakışması & Dinamik Sayfa Şablonu Kalıtımı
 
 ### 🔍 Kapsam ve İhtiyaç

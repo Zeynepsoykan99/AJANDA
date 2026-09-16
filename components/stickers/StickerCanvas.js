@@ -1,5 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { useAnimatedReaction, runOnJS } from 'react-native-reanimated';
+import { useZoomableCanvas } from '../drawing/ZoomableCanvas';
 import DraggableSticker from './DraggableSticker';
 
 /**
@@ -25,6 +28,33 @@ export default function StickerCanvas({
   const [selectedStickerId, setSelectedStickerId] = useState(null);
   const [canvasLayout, setCanvasLayout] = useState({ width: 0, height: 0 });
   const [guideLines, setGuideLines] = useState({ v: false, h: false });
+  const { isDrawingActive } = useZoomableCanvas();
+
+  // Çizim başladığında aktif sticker seçimini anında kaldır (0ms gecikme, akıcı UX)
+  useAnimatedReaction(
+    () => isDrawingActive?.value,
+    (active) => {
+      if (active && selectedStickerId) {
+        runOnJS(setSelectedStickerId)(null);
+      }
+    }
+  );
+
+  // Mod değiştiğinde (örn. çizim moduna geçildiğinde) seçimi kaldır
+  useEffect(() => {
+    if (isDrawingMode && selectedStickerId) {
+      setSelectedStickerId(null);
+    }
+  }, [isDrawingMode]);
+
+  // Tuval boşluğuna dokunulduğunda seçimi kaldırma jesti (Deselect on Outside Tap)
+  const backdropTapGesture = Gesture.Tap()
+    .maxDuration(300)
+    .maxDistance(8)
+    .onEnd(() => {
+      'worklet';
+      runOnJS(setSelectedStickerId)(null);
+    });
 
   const handleSnapChange = useCallback((snap) => {
     setGuideLines((prev) => ({ ...prev, ...snap }));
@@ -53,14 +83,11 @@ export default function StickerCanvas({
         />
       )}
 
-      {selectedStickerId && !isDrawingMode && (
-        <View
-          style={StyleSheet.absoluteFill}
-          onStartShouldSetResponder={() => {
-            setSelectedStickerId(null);
-            return true;
-          }}
-        />
+      {/* Tuvale dokunarak seçimi kaldırma katmanı (yalnızca bir sticker seçiliyken aktiftir) */}
+      {selectedStickerId && (
+        <GestureDetector gesture={backdropTapGesture}>
+          <View style={StyleSheet.absoluteFill} />
+        </GestureDetector>
       )}
 
       {(stickers || []).map((sticker) => (
@@ -68,7 +95,8 @@ export default function StickerCanvas({
           key={sticker.id}
           sticker={sticker}
           isSelected={selectedStickerId === sticker.id}
-          onSelect={(id) => setSelectedStickerId(id)}
+          onSelect={(id) => setSelectedStickerId((prev) => (prev === id ? null : id))}
+          onDeselect={() => setSelectedStickerId(null)}
           onMove={onStickerMove}
           onResize={onStickerResize}
           onDelete={(id) => {
