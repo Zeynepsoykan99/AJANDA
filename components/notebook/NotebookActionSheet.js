@@ -19,9 +19,11 @@ export default function NotebookActionSheet({
   visible,
   notebookTitle,
   isLocked = false,
+  isPinned = false,
   onClose,
   onRename,
   onToggleLock,
+  onTogglePin,
   onDelete,
 }) {
   const { t } = useTranslation();
@@ -30,6 +32,25 @@ export default function NotebookActionSheet({
   return (
     <BottomSheet visible={visible} onClose={onClose} title={notebookTitle}>
       <View style={styles.actions}>
+        {onTogglePin ? (
+          <TouchableOpacity
+            activeOpacity={0.75}
+            onPress={onTogglePin}
+            style={[styles.actionRow, { borderColor: colors.border + '80', backgroundColor: colors.card }]}
+          >
+            <MaterialCommunityIcons
+              name={isPinned ? 'pin-off-outline' : 'pin-outline'}
+              size={20}
+              color={colors.accent}
+            />
+            <Text style={[styles.actionText, { color: colors.textPrimary }]}>
+              {isPinned
+                ? t('notebooks.unpin', 'Sabitlemeyi Kaldır')
+                : t('notebooks.pinToTop', 'Başa Sabitle')}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+
         <TouchableOpacity
           activeOpacity={0.75}
           onPress={onRename}

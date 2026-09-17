@@ -465,6 +465,29 @@
     "retry": "Réessayer",
     "copied": "Texte copié",
     "badge": "Note Vocale"
+  },
+  "notebooks": {
+    "pinToTop": "Épingler en haut",
+    "unpin": "Désépingler",
+    "rename": "Renommer",
+    "addNotebook": "Ajouter un carnet",
+    "emptyTitle": "Pas encore de carnet",
+    "emptyDesc": "Créez votre premier carnet avec le bouton + en haut à droite."
+  },
+  "indexFlags": {
+    "newTitle": "Nouveau Marque-page Post-it",
+    "editTitle": "Modifier le Marque-page",
+    "preview": "Aperçu",
+    "selectColor": "Choisir la couleur Post-it",
+    "labelTitle": "Étiquette / Note (facultatif)",
+    "labelPlaceholder": "Ex: Important, Examen, Idée...",
+    "defaultLabel": "Marque-page",
+    "addBtn": "Ajouter le Marque-page",
+    "suggestionImportant": "Important",
+    "suggestionExam": "Examen",
+    "suggestionMeeting": "Réunion",
+    "suggestionIdea": "Idée",
+    "suggestionUrgent": "Urgent"
   }
 }
 

@@ -4,6 +4,53 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-17] - Defter Sabitleme (Pinning) ve Dijital Post-it Sayfa İşaretleyicileri (Page Index Flags)
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** 
+  1. Defterler rafında (Notlarım) favori defterlerin listenin en başında tutulabilmesi için sabitleme (Pin to Top) özelliği.
+  2. Gerçek kırtasiye deneyiminden ilham alan 5 klasik renkte (mor, pembe, sarı, yeşil, turuncu) yarı saydam yapışkanlı ve dışa sarkan kulakçıklı Dijital Post-it Sayfa İşaretleyicileri (Page Index Flags) sistemi.
+- **Kök Nedenler ve Çözümler:**
+  1. **Defter Sabitleme (Pin to Top) Altyapısı (`services/storageService.js`, `app/defterlerim/index.js`, `NotebookActionSheet.js`):**
+     - Defter şemasına `isPinned: boolean` eklendi (`NOTEBOOK_META_FIELDS` listesine dahil edildi).
+     - `sortNotebooksByUpdatedAt` fonksiyonu sabitlenen defterleri en başa alacak şekilde güncellendi.
+     - `StorageService.toggleNotebookPin` metodu eklendi.
+     - Defter kartları üzerine zarif dokunulabilir 📌 raptiye butonu (`shelfPinButton`) yerleştirildi. Sabitlenmiş defterler altın/kehribar konturla belirginleştirildi.
+     - Defter eylem menüsüne (`NotebookActionSheet`) "📌 Başa Sabitle" / "📌 Sabitlemeyi Kaldır" butonu eklendi.
+  2. **Dijital Post-it Sayfa İşaretleyicileri (`components/stationery/`):**
+     - `constants/indexFlagColors.js`: Mor (`#BA68C8`), Pembe (`#F06292`), Sarı (`#FFD54F`), Yeşil (`#81C784`) ve Turuncu (`#FFB74D`) tonlarıyla şeffaf yapışkan gövde ve fosforlu kulakçık paleti oluşturuldu.
+     - `PageIndexFlag.js`: Kağıda binen yarı saydam yapışkan gövde ve dışa taşan renkli kulakçık yapısı tasarlandı; 'page' (tam) ve 'mini' (küçük resim) modları desteklendi.
+     - `IndexFlagEditModal.js`: 5 renk seçici buton, hızlı öneri çipleri ("Önemli", "Sınav", "Toplantı", "Fikir", "Acil"), metin girişi, silme ve önizleme alanı içeren şık modal geliştirildi.
+     - `IndexFlagsRail.js`: Sayfanın sağ dış kenarına monte edilen, bayrakları sergileyen ve "+" ekleme butonu barındıran askı rayı geliştirildi.
+  3. **Tüm Sayfalara Entegrasyon (`NotebookPagesView.js`, `ajandam/[pageId].js`, `todolist/[pageId].js`):**
+     - Günlüğüm, Defterlerim, Ajandam ve To-Do sayfalarına `IndexFlagsRail` monte edildi.
+     - `handleSaveIndexFlag` ve `handleDeleteIndexFlag` işleyicileriyle bayraklar `AsyncStorage`'a kalıcı olarak kaydedildi.
+  4. **Sayfa Önizleme Kartlarında (Thumbnail) Yer İmi Görünümü (`components/PageThumbnail.js`):**
+     - Sayfa listelerinde kartların üst/sağ kenarından sarkan renkli mini Post-it kulakçıkları render edildi; tıklandığında doğrudan sayfayı açması sağlandı.
+  5. **Çoklu Dil Desteği (`locales/{tr,en,de,es,fr}.json`):**
+     - `notebooks` (pin/unpin) ve `indexFlags` çeviri anahtarları 5 dile eksiksiz eklendi.
+
+### 📁 Değiştirilen ve Eklenen Dosyalar
+- [`constants/indexFlagColors.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/constants/indexFlagColors.js) [NEW]
+- [`components/stationery/PageIndexFlag.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/stationery/PageIndexFlag.js) [NEW]
+- [`components/stationery/IndexFlagEditModal.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/stationery/IndexFlagEditModal.js) [NEW]
+- [`components/stationery/IndexFlagsRail.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/stationery/IndexFlagsRail.js) [NEW]
+- [`services/storageService.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/services/storageService.js)
+- [`app/defterlerim/index.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/defterlerim/index.js)
+- [`components/notebook/NotebookActionSheet.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/notebook/NotebookActionSheet.js)
+- [`components/notebook/NotebookPagesView.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/notebook/NotebookPagesView.js)
+- [`app/ajandam/[pageId].js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/ajandam/[pageId].js)
+- [`app/todolist/[pageId].js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/todolist/[pageId].js)
+- [`components/PageThumbnail.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/PageThumbnail.js)
+- [`locales/tr.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/tr.json)
+- [`locales/en.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/en.json)
+- [`locales/de.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/de.json)
+- [`locales/es.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/es.json)
+- [`locales/fr.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/fr.json)
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+---
+
 ## 📅 [2026-09-17] - Akıllı Sesli Notlar (Audio Recording & Speech-to-Text Transcription) Tam Entegrasyonu
 
 ### 🔍 Kapsam ve İhtiyaç

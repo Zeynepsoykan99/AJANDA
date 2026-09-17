@@ -465,6 +465,29 @@
     "retry": "Retry",
     "copied": "Text copied",
     "badge": "Voice Note"
+  },
+  "notebooks": {
+    "pinToTop": "Pin to Top",
+    "unpin": "Unpin",
+    "rename": "Rename",
+    "addNotebook": "Add Notebook",
+    "emptyTitle": "No notebooks yet",
+    "emptyDesc": "Create your first notebook using the + button on the top right."
+  },
+  "indexFlags": {
+    "newTitle": "New Post-it Index Flag",
+    "editTitle": "Edit Index Flag",
+    "preview": "Preview",
+    "selectColor": "Select Post-it Color",
+    "labelTitle": "Label / Note (Optional)",
+    "labelPlaceholder": "e.g. Important, Exam, Idea...",
+    "defaultLabel": "Flag",
+    "addBtn": "Add Flag",
+    "suggestionImportant": "Important",
+    "suggestionExam": "Exam",
+    "suggestionMeeting": "Meeting",
+    "suggestionIdea": "Idea",
+    "suggestionUrgent": "Urgent"
   }
 }
 

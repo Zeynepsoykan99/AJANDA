@@ -29,6 +29,7 @@ import UndoToast from '../../components/ui/UndoToast';
 import ReminderPickerModal from '../../components/ui/ReminderPickerModal';
 import AudioRecorderModal from '../../components/audio/AudioRecorderModal';
 import AudioNotesDeck from '../../components/audio/AudioNotesDeck';
+import IndexFlagsRail from '../../components/stationery/IndexFlagsRail';
 import { recognizeHandwriting, recognizeSelectedStrokes } from '../../services/handwritingService';
 import { NotificationService } from '../../services/notificationService';
 import { AudioService } from '../../services/audioService';
@@ -836,6 +837,32 @@ export default function TodoViewScreen() {
     [handleTranscriptReady, i18n?.language]
   );
 
+  // Post-it Sayfa İşareti Kaydet (Ekle veya Güncelle)
+  const handleSaveIndexFlag = useCallback((flagData) => {
+    setPage((prev) => {
+      const existingFlags = prev.indexFlags || [];
+      const flagIdx = existingFlags.findIndex((f) => f.id === flagData.id);
+      let updatedFlags;
+      if (flagIdx >= 0) {
+        updatedFlags = [...existingFlags];
+        updatedFlags[flagIdx] = flagData;
+      } else {
+        updatedFlags = [...existingFlags, flagData];
+      }
+      StorageService.updatePage(prev.id, { indexFlags: updatedFlags });
+      return { ...prev, indexFlags: updatedFlags };
+    });
+  }, []);
+
+  // Post-it Sayfa İşareti Sil
+  const handleDeleteIndexFlag = useCallback((flagId) => {
+    setPage((prev) => {
+      const updatedFlags = (prev.indexFlags || []).filter((f) => f.id !== flagId);
+      StorageService.updatePage(prev.id, { indexFlags: updatedFlags });
+      return { ...prev, indexFlags: updatedFlags };
+    });
+  }, []);
+
   if (isLoading) {
     return (
       <AnimatedSafeAreaView
@@ -1054,6 +1081,13 @@ export default function TodoViewScreen() {
           onStickerResize={handleStickerResize}
           onStickerDelete={handleStickerDelete}
           isDrawingMode={activeMode === 'drawing'}
+        />
+
+        {/* Post-it Sayfa İşaretleyicileri Rayı */}
+        <IndexFlagsRail
+          flags={page.indexFlags || []}
+          onSaveFlag={handleSaveIndexFlag}
+          onDeleteFlag={handleDeleteIndexFlag}
         />
       </ZoomableCanvas>
 

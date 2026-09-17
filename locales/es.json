@@ -465,6 +465,29 @@
     "retry": "Reintentar",
     "copied": "Texto copiado",
     "badge": "Nota de Voz"
+  },
+  "notebooks": {
+    "pinToTop": "Fijar al principio",
+    "unpin": "Desfijar",
+    "rename": "Renombrar",
+    "addNotebook": "Agregar Cuaderno",
+    "emptyTitle": "Aún no hay cuadernos",
+    "emptyDesc": "Crea tu primer cuaderno con el botón + de arriba a la derecha."
+  },
+  "indexFlags": {
+    "newTitle": "Nuevo Marcador Post-it",
+    "editTitle": "Editar Marcador",
+    "preview": "Vista previa",
+    "selectColor": "Elegir color Post-it",
+    "labelTitle": "Etiqueta / Nota (opcional)",
+    "labelPlaceholder": "Ej: Importante, Examen, Idea...",
+    "defaultLabel": "Marcador",
+    "addBtn": "Agregar Marcador",
+    "suggestionImportant": "Importante",
+    "suggestionExam": "Examen",
+    "suggestionMeeting": "Reunión",
+    "suggestionIdea": "Idea",
+    "suggestionUrgent": "Urgente"
   }
 }
 

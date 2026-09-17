@@ -160,6 +160,13 @@ export default function NotebooksScreen() {
     });
   }, [actionTarget, t]);
 
+  const handleTogglePin = useCallback(async (notebook) => {
+    if (!notebook?.id) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await StorageService.toggleNotebookPin(notebook.id);
+    await loadNotebooks();
+  }, [loadNotebooks]);
+
   const handleUndoDelete = useCallback(async () => {
     const notebook = undoActionRef.current;
     undoActionRef.current = null;
@@ -186,10 +193,30 @@ export default function NotebooksScreen() {
           style={styles.cardTouchable}
           accessibilityLabel={item.title}
         >
-          <View style={styles.coverShadow}>
+          <View style={[styles.coverShadow, item.isPinned && styles.coverShadowPinned]}>
             <ImageWithSkeleton source={cover.imageSource} style={styles.coverImage} resizeMode="cover" />
             {/* Cilt sırtı */}
             <View style={styles.coverSpine} pointerEvents="none" />
+            {/* Sabitleme (Pin) Butonu / Rozeti */}
+            <TouchableOpacity
+              activeOpacity={0.75}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleTogglePin(item);
+              }}
+              style={[
+                styles.shelfPinButton,
+                item.isPinned ? styles.shelfPinButtonActive : styles.shelfPinButtonInactive,
+              ]}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel={item.isPinned ? t('notebooks.unpin', 'Sabitlemeyi Kaldır') : t('notebooks.pinToTop', 'Başa Sabitle')}
+            >
+              <MaterialCommunityIcons
+                name={item.isPinned ? 'pin' : 'pin-outline'}
+                size={14}
+                color={item.isPinned ? '#FFFFFF' : '#424242'}
+              />
+            </TouchableOpacity>
             {/* Kilit Rozeti */}
             {item.isLocked ? (
               <View style={styles.shelfLockBadge} pointerEvents="none">
@@ -296,9 +323,15 @@ export default function NotebooksScreen() {
         visible={!!actionTarget}
         notebookTitle={actionTarget?.title}
         isLocked={!!actionTarget?.isLocked}
+        isPinned={!!actionTarget?.isPinned}
         onClose={() => setActionTarget(null)}
         onRename={handleOpenRename}
         onToggleLock={handleToggleLock}
+        onTogglePin={() => {
+          const target = actionTarget;
+          setActionTarget(null);
+          handleTogglePin(target);
+        }}
         onDelete={handleDelete}
       />
 
@@ -406,6 +439,34 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  shelfPinButton: {
+    position: 'absolute',
+    top: 8,
+    left: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  shelfPinButtonActive: {
+    backgroundColor: '#E65100',
+  },
+  shelfPinButtonInactive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(0,0,0,0.15)',
+  },
+  coverShadowPinned: {
+    borderWidth: 2,
+    borderColor: '#FFB74D',
   },
   cardTitle: {
     marginTop: 10,

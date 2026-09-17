@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { PAGE_CATEGORIES, getPageTemplate } from '../constants/pageTemplates';
 import { getPageDisplayTitle, getCategoryDisplayName } from '../utils/pageTitleHelper';
+import PageIndexFlag from './stationery/PageIndexFlag';
 
 /**
  * PageThumbnail - Sayfa önizleme kartı
@@ -75,10 +76,24 @@ export default function PageThumbnail({ page, onPress, onLongPress, onDelete, on
         styles.card,
         {
           backgroundColor: templateColors.bg,
-          borderColor: templateColors.accent + '30',
+          borderColor: templateColors.accent + '25',
         },
       ]}
     >
+      {/* Üst Kenardan Sarkan Post-it Sayfa İşaretleyicileri */}
+      {Array.isArray(page.indexFlags) && page.indexFlags.length > 0 && (
+        <View style={styles.indexFlagsRow} pointerEvents="box-none">
+          {page.indexFlags.slice(0, 3).map((flag) => (
+            <PageIndexFlag
+              key={flag.id}
+              flag={flag}
+              mode="mini"
+              onPress={onPress}
+            />
+          ))}
+        </View>
+      )}
+
       {/* Sol ve Orta Kısım Tıklanabilir Alan */}
       <TouchableOpacity
         activeOpacity={0.7}
@@ -196,6 +211,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+  },
+  indexFlagsRow: {
+    position: 'absolute',
+    top: -9,
+    right: 42,
+    flexDirection: 'row',
+    gap: 4,
+    zIndex: 10,
   },
   cardTouchable: {
     flex: 1,

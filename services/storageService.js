@@ -28,7 +28,7 @@ const withJournalLock = (task) => {
 };
 
 // Kapak ekranının yazabileceği üst düzey defter alanları (pages asla buradan yazılmaz)
-const NOTEBOOK_META_FIELDS = ['title', 'coverTemplateId', 'paperTemplateId', 'coverDrawings', 'coverTextBlocks', 'lastPageIndex', 'isLocked'];
+const NOTEBOOK_META_FIELDS = ['title', 'coverTemplateId', 'paperTemplateId', 'coverDrawings', 'coverTextBlocks', 'lastPageIndex', 'isLocked', 'isPinned'];
 
 const DEFAULT_PAPER_TEMPLATE_ID = 'blank_lined';
 const DEFAULT_COVER_TEMPLATE_ID = 'cover_1';
@@ -43,6 +43,7 @@ const createEmptyNotebookPage = (paperTemplateId) => ({
   textBlocks: [],
   stickers: [],
   audioNotes: [],
+  indexFlags: [],
   data: { content: '' },
 });
 
@@ -273,9 +274,16 @@ const writeNotebooks = async (notebooks) => {
   return notebooks;
 };
 
-// En son düzenlenen defter en üstte
+// Sabitlenen defterler en üstte, ardından en son düzenlenen
 const sortNotebooksByUpdatedAt = (notebooks) =>
-  [...notebooks].sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+  [...notebooks].sort((a, b) => {
+    const aPinned = Boolean(a?.isPinned);
+    const bPinned = Boolean(b?.isPinned);
+    if (bPinned !== aPinned) {
+      return bPinned ? 1 : -1;
+    }
+    return new Date(b?.updatedAt || 0) - new Date(a?.updatedAt || 0);
+  });
 
 /**
  * Tek bir defteri güncel liste üzerinde değiştirip kaydeder.
@@ -561,6 +569,7 @@ export const StorageService = {
           paperTemplateId: DEFAULT_PAPER_TEMPLATE_ID,
           coverDrawings: [],
           coverTextBlocks: [],
+          isPinned: false,
           createdAt: now,
           updatedAt: now,
           pages: [createEmptyNotebookPage(DEFAULT_PAPER_TEMPLATE_ID)],
@@ -586,6 +595,22 @@ export const StorageService = {
         return result ? result.notebook : null;
       } catch (error) {
         console.warn('StorageService.updateNotebookMeta hata:', error);
+        return null;
+      }
+    }),
+
+  /**
+   * Defterin sabitlenme (pin/unpin) durumunu tersine çevirir.
+   */
+  toggleNotebookPin: async (notebookId) =>
+    withJournalLock(async () => {
+      try {
+        const result = await mutateNotebook(notebookId, (nb) => ({
+          notebook: { ...nb, isPinned: !nb.isPinned },
+        }));
+        return result ? result.notebook : null;
+      } catch (error) {
+        console.warn('StorageService.toggleNotebookPin hata:', error);
         return null;
       }
     }),

@@ -43,6 +43,7 @@ import NotebookLockGate from './NotebookLockGate';
 import DatePickerModal from '../../components/ui/DatePickerModal';
 import AudioRecorderModal from '../audio/AudioRecorderModal';
 import AudioNotesDeck from '../audio/AudioNotesDeck';
+import IndexFlagsRail from '../stationery/IndexFlagsRail';
 import { AudioService } from '../../services/audioService';
 import { isSameDay, formatFilterDate } from '../../components/ui/GlobalFilterHeader';
 import { SecurityService } from '../../services/securityService';
@@ -353,6 +354,64 @@ export default function NotebookPagesView({
       }
     },
     [handleTranscriptReady, i18n?.language]
+  );
+
+  // Post-it Sayfa İşareti Kaydet (Ekle veya Güncelle)
+  const handleSaveIndexFlag = useCallback(
+    async (pageIndex, flagData) => {
+      const targetPage = pages[pageIndex];
+      if (!targetPage) return;
+
+      const existingFlags = targetPage.indexFlags || [];
+      const flagIdx = existingFlags.findIndex((f) => f.id === flagData.id);
+      let updatedFlags;
+      if (flagIdx >= 0) {
+        updatedFlags = [...existingFlags];
+        updatedFlags[flagIdx] = flagData;
+      } else {
+        updatedFlags = [...existingFlags, flagData];
+      }
+
+      setNotebook((prev) => {
+        if (!prev?.pages) return prev;
+        const updatedPages = prev.pages.map((p, i) =>
+          i === pageIndex ? { ...p, indexFlags: updatedFlags } : p
+        );
+        return { ...prev, pages: updatedPages };
+      });
+
+      try {
+        await storageRef.current.updatePage(targetPage.pageId, { indexFlags: updatedFlags });
+      } catch (err) {
+        console.warn('Sayfa işareti kaydedilemedi:', err);
+      }
+    },
+    [pages]
+  );
+
+  // Post-it Sayfa İşareti Sil
+  const handleDeleteIndexFlag = useCallback(
+    async (pageIndex, flagId) => {
+      const targetPage = pages[pageIndex];
+      if (!targetPage) return;
+
+      const updatedFlags = (targetPage.indexFlags || []).filter((f) => f.id !== flagId);
+
+      setNotebook((prev) => {
+        if (!prev?.pages) return prev;
+        const updatedPages = prev.pages.map((p, i) =>
+          i === pageIndex ? { ...p, indexFlags: updatedFlags } : p
+        );
+        return { ...prev, pages: updatedPages };
+      });
+
+      try {
+        await storageRef.current.updatePage(targetPage.pageId, { indexFlags: updatedFlags });
+      } catch (err) {
+        console.warn('Sayfa işareti silinemedi:', err);
+      }
+    },
+    [pages]
   );
 
   // Aktif sayfanın kağıt şablonu (sayfanın kendi şablonu -> günlük varsayılanı -> çizgili)
@@ -1408,6 +1467,14 @@ export default function NotebookPagesView({
                           disabled={activeMode === 'drawing'}
                         />
                       )}
+
+                      {/* Post-it Sayfa İşaretleyicileri Rayı */}
+                      <IndexFlagsRail
+                        flags={p.indexFlags || []}
+                        onSaveFlag={(flagData) => handleSaveIndexFlag(index, flagData)}
+                        onDeleteFlag={(flagId) => handleDeleteIndexFlag(index, flagId)}
+                        readOnly={!isActive}
+                      />
                     </PaperSheet>
                   </NotebookContainer>
 

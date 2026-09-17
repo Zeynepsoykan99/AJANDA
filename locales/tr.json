@@ -465,6 +465,29 @@
     "retry": "Yeniden Dene",
     "copied": "Metin kopyalandı",
     "badge": "Sesli Not"
+  },
+  "notebooks": {
+    "pinToTop": "Başa Sabitle",
+    "unpin": "Sabitlemeyi Kaldır",
+    "rename": "Yeniden Adlandır",
+    "addNotebook": "Defter Ekle",
+    "emptyTitle": "Henüz defter yok",
+    "emptyDesc": "Sağ üstteki + butonuyla ilk defterini oluştur."
+  },
+  "indexFlags": {
+    "newTitle": "Yeni Post-it Sayfa İşareti",
+    "editTitle": "Sayfa İşaretini Düzenle",
+    "preview": "Önizleme",
+    "selectColor": "Post-it Rengi Seç",
+    "labelTitle": "Etiket / Not (İsteğe bağlı)",
+    "labelPlaceholder": "Örn: Önemli, Sınav, Fikir...",
+    "defaultLabel": "İşaret",
+    "addBtn": "Bayrak Ekle",
+    "suggestionImportant": "Önemli",
+    "suggestionExam": "Sınav",
+    "suggestionMeeting": "Toplantı",
+    "suggestionIdea": "Fikir",
+    "suggestionUrgent": "Acil"
   }
 }
 

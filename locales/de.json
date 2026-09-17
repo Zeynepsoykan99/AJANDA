@@ -465,6 +465,29 @@
     "retry": "Wiederholen",
     "copied": "Text kopiert",
     "badge": "Sprachnotiz"
+  },
+  "notebooks": {
+    "pinToTop": "Oben anheften",
+    "unpin": "Anheftung lösen",
+    "rename": "Umbenennen",
+    "addNotebook": "Notizbuch hinzufügen",
+    "emptyTitle": "Noch keine Notizbücher",
+    "emptyDesc": "Erstellen Sie Ihr erstes Notizbuch mit dem + Button oben rechts."
+  },
+  "indexFlags": {
+    "newTitle": "Neues Post-it Seitenlesezeichen",
+    "editTitle": "Seitenlesezeichen bearbeiten",
+    "preview": "Vorschau",
+    "selectColor": "Post-it Farbe wählen",
+    "labelTitle": "Beschriftung / Notiz (optional)",
+    "labelPlaceholder": "z.B. Wichtig, Prüfung, Idee...",
+    "defaultLabel": "Lesezeichen",
+    "addBtn": "Lesezeichen hinzufügen",
+    "suggestionImportant": "Wichtig",
+    "suggestionExam": "Prüfung",
+    "suggestionMeeting": "Meeting",
+    "suggestionIdea": "Idee",
+    "suggestionUrgent": "Dringend"
   }
 }
 
