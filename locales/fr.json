@@ -203,8 +203,6 @@
   },
   "diary": {
     "title": "Mon Journal",
-    "openDiary": "Ouvrir le Journal",
-    "openDiaryButton": "🌸 Ouvrir Mon Journal",
     "selectCover": "Changer la Couverture",
     "selectTemplate": "Choisir le Modèle de Page",
     "addPage": "Ajouter une Page",

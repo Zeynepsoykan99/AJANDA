@@ -203,8 +203,6 @@
   },
   "diary": {
     "title": "Mein Tagebuch",
-    "openDiary": "Tagebuch Öffnen",
-    "openDiaryButton": "🌸 Mein Tagebuch Öffnen",
     "selectCover": "Cover Ändern",
     "selectTemplate": "Seitenvorlage Wählen",
     "addPage": "Neue Seite Hinzufügen",

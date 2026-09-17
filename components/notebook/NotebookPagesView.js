@@ -45,7 +45,7 @@ import AudioRecorderModal from '../audio/AudioRecorderModal';
 import AudioNotesDeck from '../audio/AudioNotesDeck';
 import { AudioService } from '../../services/audioService';
 import { isSameDay, formatFilterDate } from '../../components/ui/GlobalFilterHeader';
-import { isSessionUnlocked } from '../../services/biometricService';
+import { SecurityService } from '../../services/securityService';
 import { captureRef } from 'react-native-view-shot';
 import * as Haptics from 'expo-haptics';
 import ExportLoadingModal from '../ui/ExportLoadingModal';
@@ -99,7 +99,7 @@ export default function NotebookPagesView({
 
   const [notebook, setNotebook] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [isUnlocked, setIsUnlocked] = useState(() => SecurityService.isSessionUnlocked('diary'));
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
 
   // Araç Çubuğu Aktif Mod: 'none' | 'drawing' | 'text'
@@ -179,7 +179,7 @@ export default function NotebookPagesView({
         const savedNotebook = await storageRef.current.load();
         setNotebook(savedNotebook);
 
-        const targetId = savedNotebook?.id || 'diary';
+        const targetId = SecurityService.normalizeTargetId(savedNotebook?.id || 'diary');
         const hasPin = await SecurityService.hasPin(targetId);
 
         if (savedNotebook?.isLocked && hasPin) {
@@ -1130,8 +1130,8 @@ export default function NotebookPagesView({
   }
 
   // Biyometrik Kilit Güvenlik Duvarı
-  const targetId = notebook?.id || 'diary';
-  if (notebook?.isLocked && !isUnlocked) {
+  const targetId = SecurityService.normalizeTargetId(notebook?.id || 'diary');
+  if (notebook?.isLocked && !isUnlocked && !SecurityService.isSessionUnlocked(targetId)) {
     const pageTitle = typeof title === 'function' ? title(notebook) : title;
     return (
       <NotebookLockGate

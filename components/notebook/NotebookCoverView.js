@@ -118,6 +118,7 @@ export default function NotebookCoverView({
   // Kapak çizimleri ve metinleri ayrı alanlara yazıldığı için ayrı debounce zamanlayıcıları kullanılır
   const drawingsSaveTimeoutRef = useRef(null);
   const textBlocksSaveTimeoutRef = useRef(null);
+  const isOpeningRef = useRef(false);
 
   // Defter verilerini yükle: ekran her odaklandığında güncel kayıt okunur.
   // Sayfalar ekranından geri dönüldüğünde kapak state'i bayat kalmaz.
@@ -263,23 +264,30 @@ export default function NotebookCoverView({
 
   // 2. Aşama: Defterin sayfalarını aç (Kilitliyse ve kayıtlı PIN varsa doğrula)
   const handleOpenNotebook = useCallback(async () => {
-    if (!notebook) return;
-    const targetId = notebook?.id || 'diary';
-    const hasPin = await SecurityService.hasPin(targetId);
+    if (!notebook || isOpeningRef.current) return;
+    isOpeningRef.current = true;
+    try {
+      const targetId = SecurityService.normalizeTargetId(notebook?.id || 'diary');
+      const hasPin = await SecurityService.hasPin(targetId);
 
-    // Sadece gerçekten kayıtlı bir PIN varsa ve oturum açık değilse şifre sor
-    if (hasPin && notebook?.isLocked && !SecurityService.isSessionUnlocked(targetId)) {
-      setPinModalState({
-        visible: true,
-        mode: 'verify',
-        onSuccessCallback: () => {
-          if (onOpen) onOpen();
-        },
-      });
-      return;
+      // Sadece gerçekten kayıtlı bir PIN varsa ve oturum açık değilse şifre sor
+      if (hasPin && notebook?.isLocked && !SecurityService.isSessionUnlocked(targetId)) {
+        setPinModalState({
+          visible: true,
+          mode: 'verify',
+          onSuccessCallback: () => {
+            if (onOpen) onOpen();
+          },
+        });
+        return;
+      }
+
+      if (onOpen) onOpen();
+    } finally {
+      setTimeout(() => {
+        isOpeningRef.current = false;
+      }, 500);
     }
-
-    if (onOpen) onOpen();
   }, [notebook, onOpen]);
 
   // Tarih seçildiğinde ilgili sayfayı bul ve yönlendir
@@ -649,15 +657,19 @@ export default function NotebookCoverView({
       <PinAuthModal
         visible={pinModalState.visible}
         mode={pinModalState.mode}
-        targetId={notebook?.id || 'diary'}
+        targetId={SecurityService.normalizeTargetId(notebook?.id || 'diary')}
         itemTitle={typeof getTitle === 'function' ? getTitle(notebook) : (notebook?.title || t('diary.title', 'Günlüğüm'))}
         onSuccess={(param) => {
+          isOpeningRef.current = false;
           if (pinModalState.onSuccessCallback) {
             pinModalState.onSuccessCallback(param);
           }
           setPinModalState((prev) => ({ ...prev, visible: false }));
         }}
-        onClose={() => setPinModalState((prev) => ({ ...prev, visible: false }))}
+        onClose={() => {
+          isOpeningRef.current = false;
+          setPinModalState((prev) => ({ ...prev, visible: false }));
+        }}
       />
     </AnimatedSafeAreaView>
   );

@@ -203,8 +203,6 @@
   },
   "diary": {
     "title": "Günlüğüm",
-    "openDiary": "Günlüğü Aç",
-    "openDiaryButton": "🌸 Günlüğümü Aç",
     "selectCover": "Kapak Değiştir",
     "selectTemplate": "Sayfa Şablonu Seç",
     "addPage": "Yeni Sayfa Ekle",

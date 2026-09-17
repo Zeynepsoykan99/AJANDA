@@ -84,7 +84,7 @@ export default function NotebookLockGate({
       });
 
       if (result.success) {
-        if (targetId) unlockSession(targetId);
+        if (targetId) SecurityService.unlockSession(targetId);
         if (onUnlock) onUnlock();
       } else if (result.error && result.error !== 'user_cancel' && result.error !== 'system_cancel') {
         setAuthError(t('security.authFailed', 'Kimlik doğrulanamadı. Lütfen tekrar deneyin.'));
@@ -96,11 +96,16 @@ export default function NotebookLockGate({
     }
   }, [isAuthenticating, title, targetId, onUnlock, t]);
 
-  // Ekran ilk açıldığında: Özel PIN varsa doğrudan PIN modalını aç, yoksa biyometriyi dene
+  // Ekran ilk açıldığında: Oturum zaten açıksa doğrudan kilidi aç; özel PIN varsa doğrudan PIN modalını aç, yoksa biyometriyi dene
   useEffect(() => {
     let isActive = true;
     (async () => {
       try {
+        if (SecurityService.isSessionUnlocked(targetId)) {
+          if (onUnlock) onUnlock();
+          return;
+        }
+
         const hasCustomPin = await SecurityService.hasPin(targetId);
         if (!isActive) return;
         if (hasCustomPin) {
@@ -118,7 +123,7 @@ export default function NotebookLockGate({
     return () => {
       isActive = false;
     };
-  }, [targetId, handleAuthenticate]);
+  }, [targetId, handleAuthenticate, onUnlock]);
 
   const handleBackPress = () => {
     if (onBack) {
@@ -246,7 +251,6 @@ export default function NotebookLockGate({
           setIsPinModalVisible(false);
           if (targetId) {
             SecurityService.unlockSession(targetId);
-            unlockSession(targetId);
           }
           if (onUnlock) onUnlock();
         }}

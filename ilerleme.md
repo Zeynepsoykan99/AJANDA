@@ -4,6 +4,31 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-17] - Günlüğüm (My Diary): Çift Şifre (Double Auth) Giderme ve Kapak UI Temizliği
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Günlüğüm modülü kilitliyken kapağa dokunulduğunda art arda iki kez şifre (PIN) sorulması hatası giderildi; kapak altındaki gereksiz ve tasarımı bozan "🌸 Günlüğümü Aç" butonu ve metni tamamen temizlendi.
+- **Kök Nedenler ve Çözümler:**
+  1. **Eksik `SecurityService` İçe Aktarımı (`NotebookPagesView.js`):** Sayfa verilerini yükleyen `useEffect` bloğu içerisinde `SecurityService.hasPin` ve `SecurityService.isSessionUnlocked` fonksiyonları çağrıldığı halde `SecurityService` import edilmemişti. Bu durum çalışma zamanında `ReferenceError: SecurityService is not defined` hatası oluşturarak `catch` bloğuna düşüyor ve `isUnlocked` state'i `false` kalıyordu. Sonuç olarak sayfa `notebook.isLocked && !isUnlocked` koşulu nedeniyle zorunlu olarak `NotebookLockGate` kilit ekranına yönlendiriliyordu. `SecurityService` içe aktarıldı.
+  2. **Senkron Açık Kilit Başlatması (`NotebookPagesView.js`):** `isUnlocked` state'i `useState(() => SecurityService.isSessionUnlocked('diary'))` ile başlatıldı ve `NotebookLockGate` render şartına `!SecurityService.isSessionUnlocked(targetId)` eklendi. Böylece kapakta şifreyi zaten başarıyla girmiş kullanıcılar için sayfalar ekranı ilk render anında bile kilit kapısına asla düşmez.
+  3. **Önleyici Oturum Kontrolü (`NotebookLockGate.js`):** Bileşenin `useEffect` bloğu başına `SecurityService.isSessionUnlocked(targetId)` kontrolü eklendi; oturum açıksa `onUnlock()` çağrılarak modalın 2. kez açılması engellendi.
+  4. **Kapak Tıklama ve Debounce Koruması (`NotebookCoverView.js`):** `handleOpenNotebook` işleyicisine `isOpeningRef` eklenerek hızlı çift dokunma ve mükerrer navigasyon/modal tetiklenmesi önlendi.
+  5. **Gereksiz UI Metninin Temizlenmesi:** `app/gunlugum/index.js` dosyasından `openButtonLabel` prop'u kaldırıldı. Kullanıcı doğrudan 3D interaktif kapak görseline dokunarak günlüğe erişmektedir. `locales/{tr,en,de,es,fr}.json` dosyalarından `openDiaryButton` ve `openDiary` anahtarları silindi.
+
+### 📁 Değiştirilen Dosyalar
+- [`components/notebook/NotebookPagesView.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/notebook/NotebookPagesView.js)
+- [`components/notebook/NotebookLockGate.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/notebook/NotebookLockGate.js)
+- [`components/notebook/NotebookCoverView.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/notebook/NotebookCoverView.js)
+- [`app/gunlugum/index.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/gunlugum/index.js)
+- [`locales/tr.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/tr.json)
+- [`locales/en.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/en.json)
+- [`locales/de.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/de.json)
+- [`locales/es.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/es.json)
+- [`locales/fr.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/fr.json)
+- [`scratch/validate_diary_single_auth.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/scratch/validate_diary_single_auth.js) [TEST]
+
+---
+
 ## 📅 [2026-09-17] - Tablet & Web Düzen ve Beyaz Boşluk Optimizasyonu (Full Bleed Layout & Overscroll Prevention)
 
 ### 🔍 Kapsam ve İhtiyaç

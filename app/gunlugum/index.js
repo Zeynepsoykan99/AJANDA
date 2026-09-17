@@ -34,7 +34,6 @@ export default function GunlugumCoverScreen() {
   return (
     <NotebookCoverView
       storage={storage}
-      openButtonLabel={t('diary.openDiaryButton', '🌸 Günlüğümü Aç')}
       onOpen={handleOpen}
       showSearch={true}
       showDatePicker={true}
