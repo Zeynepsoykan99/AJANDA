@@ -4,8 +4,8 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { NotificationService } from './notificationService';
-import { AudioService } from './audioService';
+import { NotificationService } from './notificationService.js';
+import { AudioService } from './audioService.js';
 
 const KEYS = {
   THEME: '@ajanda_theme',
@@ -443,6 +443,10 @@ export const StorageService = {
     withJournalLock(async () => {
       try {
         const diary = await readDiary();
+        const pageToDelete = (diary?.pages || []).find((p) => p.pageId === pageId);
+        if (pageToDelete?.audioNotes?.length) {
+          AudioService.deleteAudioFiles(pageToDelete.audioNotes).catch(() => {});
+        }
         return await writeDiary(notebookWithDeletedPage(diary, pageId));
       } catch (error) {
         console.warn('StorageService.deleteDiaryPage hata:', error);

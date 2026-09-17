@@ -19,12 +19,14 @@ import AudioNotePlayer from './AudioNotePlayer';
  * @param {Array<object>} props.audioNotes - [{ id, uri, durationMs, createdAt, title }]
  * @param {function} props.onDelete - (audioNote) => void
  * @param {function} props.onOpenRecorder - () => void
+ * @param {function} [props.onRetryTranscription] - (audioNote) => void
  * @param {object} [props.containerStyle]
  */
 export default function AudioNotesDeck({
   audioNotes = [],
   onDelete,
   onOpenRecorder,
+  onRetryTranscription,
   containerStyle,
 }) {
   const { t } = useTranslation();
@@ -113,6 +115,7 @@ export default function AudioNotesDeck({
                 onDelete={onDelete}
                 activeAudioId={activeAudioId}
                 onPlayStart={setActiveAudioId}
+                onRetryTranscription={onRetryTranscription}
               />
             ))}
           </ScrollView>

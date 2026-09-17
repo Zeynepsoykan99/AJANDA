@@ -316,6 +316,15 @@
     "loadingDesc": "Converting your page with high quality...",
     "errorTitle": "Export Error",
     "errorDesc": "An error occurred while exporting page to PDF. Please try again."
+  },
+  "transcript": {
+    "pending": "Transcribing audio...",
+    "completed": "Transcription",
+    "failed": "Transcription failed",
+    "retry": "Retry",
+    "copied": "Copied to clipboard",
+    "notAvailable": "Speech recognition is not supported on this device",
+    "badge": "Audio Note"
   }
 }
 

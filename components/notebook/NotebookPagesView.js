@@ -53,6 +53,7 @@ import { PdfExportService } from '../../services/pdfExportService';
 
 import { recognizeSelectedStrokes } from '../../services/handwritingService';
 import { fitTextToBounds, clusterStrokesByColorAndProximity } from '../../utils/lassoGeometry';
+import { transcribeAudioFile } from '../../services/transcriptionService';
 
 const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
 
@@ -236,6 +237,63 @@ export default function NotebookPagesView({
       setNotebook(updatedNotebook);
     }
   }, [activePage]);
+
+  // Sesli Not Transkripsiyonunu Güncelle (Arka plan asenkron STT tamamlandığında)
+  const handleTranscriptReady = useCallback(
+    async (audioNoteId, transcript, status = 'completed') => {
+      setNotebook((prev) => {
+        if (!prev?.pages) return prev;
+        let pageIdToUpdate = null;
+        let updatedAudioNotes = null;
+
+        const updatedPages = prev.pages.map((p) => {
+          const noteIndex = (p.audioNotes || []).findIndex((n) => n.id === audioNoteId);
+          if (noteIndex !== -1) {
+            pageIdToUpdate = p.pageId;
+            const newNotes = [...p.audioNotes];
+            newNotes[noteIndex] = {
+              ...newNotes[noteIndex],
+              transcript: transcript || newNotes[noteIndex].transcript,
+              transcriptStatus: status,
+            };
+            updatedAudioNotes = newNotes;
+            return { ...p, audioNotes: newNotes };
+          }
+          return p;
+        });
+
+        if (pageIdToUpdate && updatedAudioNotes) {
+          storageRef.current.updatePage(pageIdToUpdate, {
+            audioNotes: updatedAudioNotes,
+          });
+          return { ...prev, pages: updatedPages };
+        }
+        return prev;
+      });
+    },
+    []
+  );
+
+  // Başarısız Transkripsiyonu Yeniden Dene
+  const handleRetryTranscription = useCallback(
+    async (audioNote) => {
+      if (!audioNote?.uri || !audioNote?.id) return;
+      handleTranscriptReady(audioNote.id, null, 'pending');
+      try {
+        const lang = i18n?.language || 'tr';
+        const res = await transcribeAudioFile(audioNote.uri, { language: lang });
+        if (res.success && res.transcript) {
+          handleTranscriptReady(audioNote.id, res.transcript, 'completed');
+        } else {
+          handleTranscriptReady(audioNote.id, null, 'failed');
+        }
+      } catch (err) {
+        console.warn('Yeniden transkripsiyon denemesi hatası:', err);
+        handleTranscriptReady(audioNote.id, null, 'failed');
+      }
+    },
+    [handleTranscriptReady, i18n?.language]
+  );
 
   // Aktif sayfanın kağıt şablonu (sayfanın kendi şablonu -> günlük varsayılanı -> çizgili)
   const activePaperTemplateId = resolvePagePaperTemplateId(activePage, notebook);
@@ -1409,6 +1467,7 @@ export default function NotebookPagesView({
         audioNotes={activePage?.audioNotes || []}
         onDelete={handleDeleteAudioNote}
         onOpenRecorder={() => setIsAudioModalVisible(true)}
+        onRetryTranscription={handleRetryTranscription}
       />
 
       {/* Ses Kayıt Modalı */}
@@ -1417,6 +1476,7 @@ export default function NotebookPagesView({
         pageId={activePage?.pageId}
         onClose={() => setIsAudioModalVisible(false)}
         onSave={handleAddAudioNote}
+        onTranscriptReady={handleTranscriptReady}
       />
 
       {/* Geri Al / Bildirim Toast'ı */}

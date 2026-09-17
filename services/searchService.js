@@ -222,6 +222,20 @@ export const searchAllData = async (
       });
     }
 
+    // E. Sesli Not Transkripsiyonları
+    if (Array.isArray(page.audioNotes)) {
+      for (const note of page.audioNotes) {
+        if (note?.transcript && normalizeTurkish(note.transcript).includes(query)) {
+          pageMatches.push({
+            type: 'audioTranscript',
+            snippet: extractSnippet(note.transcript, rawQuery),
+            field: note.title || 'Sesli Not',
+            isAudioTranscript: true,
+          });
+        }
+      }
+    }
+
     // Eşleşme bulunduysa sonuca ekle
     if (pageMatches.length > 0) {
       const isTodo = page.category === 'todo';
@@ -345,6 +359,20 @@ export const searchAllData = async (
           });
         }
 
+        // C. Sesli Not Transkripsiyonları
+        if (Array.isArray(page.audioNotes)) {
+          for (const note of page.audioNotes) {
+            if (note?.transcript && normalizeTurkish(note.transcript).includes(query)) {
+              pageMatches.push({
+                type: 'audioTranscript',
+                snippet: extractSnippet(note.transcript, rawQuery),
+                field: `${note.title || 'Sesli Not'} (Sayfa ${page.pageNumber || pageIndex + 1})`,
+                isAudioTranscript: true,
+              });
+            }
+          }
+        }
+
         if (pageMatches.length > 0) {
           const isLocked = !!diary.isLocked;
           const hasHandwriting = pageMatches.some((m) => m.isHandwriting);
@@ -460,6 +488,20 @@ export const searchAllData = async (
             });
           }
 
+          // C. Sesli Not Transkripsiyonları
+          if (Array.isArray(page.audioNotes)) {
+            for (const note of page.audioNotes) {
+              if (note?.transcript && normalizeTurkish(note.transcript).includes(query)) {
+                pageMatches.push({
+                  type: 'audioTranscript',
+                  snippet: extractSnippet(note.transcript, rawQuery),
+                  field: `${note.title || 'Sesli Not'} (Sayfa ${page.pageNumber || pageIndex + 1})`,
+                  isAudioTranscript: true,
+                });
+              }
+            }
+          }
+
           if (pageMatches.length > 0) {
             const isLocked = !!nb.isLocked;
             const hasHandwriting = pageMatches.some((m) => m.isHandwriting);
@@ -524,6 +566,12 @@ export const searchNotebookPages = (pages, rawQuery) => {
     // 2. Serbest metin kutuları (textBlocks)
     (Array.isArray(page?.textBlocks) ? page.textBlocks : [])
       .map((block) => (typeof block?.text === 'string' ? block.text : ''))
+      .filter((text) => text && normalizeTurkish(text).includes(query))
+      .forEach((t) => matchingTexts.push(t));
+
+    // 3. Sesli Not Transkripsiyonları
+    (Array.isArray(page?.audioNotes) ? page.audioNotes : [])
+      .map((note) => (typeof note?.transcript === 'string' ? note.transcript : ''))
       .filter((text) => text && normalizeTurkish(text).includes(query))
       .forEach((t) => matchingTexts.push(t));
 

@@ -316,6 +316,15 @@
     "loadingDesc": "Convirtiendo tu página en alta calidad...",
     "errorTitle": "Error de exportación",
     "errorDesc": "Ocurrió un error al exportar la página a PDF. Por favor, intenta de nuevo."
+  },
+  "transcript": {
+    "pending": "Transcribiendo audio...",
+    "completed": "Transcripción",
+    "failed": "Transcripción fallida",
+    "retry": "Reintentar",
+    "copied": "Copiado al portapapeles",
+    "notAvailable": "El reconocimiento de voz no es compatible con este dispositivo",
+    "badge": "Nota de Voz"
   }
 }
 

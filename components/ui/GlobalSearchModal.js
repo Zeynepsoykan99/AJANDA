@@ -406,6 +406,14 @@ export default function GlobalSearchModal({
                                 </Text>
                               </View>
                             )}
+                            {item.matches?.some((m) => m.isAudioTranscript) && (
+                              <View style={[styles.handwritingBadge, { backgroundColor: '#FF8A6520' }]}>
+                                <MaterialCommunityIcons name="microphone" size={12} color="#E64A19" />
+                                <Text style={[styles.handwritingBadgeText, { color: '#E64A19' }]}>
+                                  {t('transcript.badge', 'Sesli Not')}
+                                </Text>
+                              </View>
+                            )}
                           </View>
                         </View>
 

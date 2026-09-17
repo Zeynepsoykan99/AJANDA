@@ -11,7 +11,8 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSFaceIDUsageDescription": "Günlüğünüzü ve kişisel defterlerinizi korumak için Face ID doğrulaması kullanılır.",
-        "NSMicrophoneUsageDescription": "Sayfalarınıza sesli notlar eklemek ve kaydetmek için mikrofon erişimi gereklidir."
+        "NSMicrophoneUsageDescription": "Sayfalarınıza sesli notlar eklemek ve kaydetmek için mikrofon erişimi gereklidir.",
+        "NSSpeechRecognitionUsageDescription": "Sesli notlarınızı otomatik olarak metne dönüştürmek ve aranabilir kılmak için ses tanıma izni gereklidir."
       }
     },
     "android": {
@@ -31,7 +32,8 @@
     "plugins": [
       "expo-router",
       "expo-localization",
-      "expo-local-authentication"
+      "expo-local-authentication",
+      "expo-speech-recognition"
     ]
   }
 }

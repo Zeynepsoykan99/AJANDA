@@ -316,6 +316,15 @@
     "loadingDesc": "Ihre Seite wird in hoher Qualität konvertiert...",
     "errorTitle": "Exportfehler",
     "errorDesc": "Beim Exportieren der Seite als PDF ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut."
+  },
+  "transcript": {
+    "pending": "Audio wird transkribiert...",
+    "completed": "Transkription",
+    "failed": "Transkription fehlgeschlagen",
+    "retry": "Wiederholen",
+    "copied": "In die Zwischenablage kopiert",
+    "notAvailable": "Spracherkennung wird auf diesem Gerät nicht unterstützt",
+    "badge": "Sprachnotiz"
   }
 }
 

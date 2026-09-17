@@ -28,6 +28,11 @@ import {
   deleteAudioFile,
   formatDuration,
 } from '../../services/audioService';
+import {
+  transcribeAudioFile,
+  isTranscriptionAvailable,
+  resolveTranscriptionLanguage,
+} from '../../services/transcriptionService';
 
 /**
  * AudioRecorderModal - Sesli Not Kayıt Modalı
@@ -37,14 +42,16 @@ import {
  * @param {string} props.pageId - Aktif sayfanın kimliği
  * @param {function} props.onClose - Modalı kapatma
  * @param {function} props.onSave - (audioNoteData) => void
+ * @param {function} [props.onTranscriptReady] - (audioNoteId, transcript, status) => void
  */
 export default function AudioRecorderModal({
   visible,
   pageId,
   onClose,
   onSave,
+  onTranscriptReady,
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors } = useTheme();
 
   // Durumlar: 'idle' | 'recording' | 'recorded'
@@ -251,12 +258,17 @@ export default function AudioRecorderModal({
         pageId || 'page'
       );
 
+      const isAvailable = isTranscriptionAvailable();
+
       const newAudioNote = {
         id: `audio_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
         uri: permanentUri,
         durationMs: durationMsRef.current || elapsedMs || 1000,
         createdAt: new Date().toISOString(),
         title: t('audio.defaultTitle', 'Sesli Not'),
+        transcript: null,
+        transcriptLanguage: resolveTranscriptionLanguage(i18n.language),
+        transcriptStatus: isAvailable ? 'pending' : null,
       };
 
       // Geçici URI ref'ini sıfırla ki cleanup silmesin
@@ -267,6 +279,22 @@ export default function AudioRecorderModal({
       }
 
       onClose && onClose();
+
+      // Arka planda asenkron transkripsiyonu başlat (UI bloklanmaz)
+      if (isAvailable && onTranscriptReady) {
+        transcribeAudioFile(permanentUri, { language: i18n.language })
+          .then((res) => {
+            if (res.success && res.transcript) {
+              onTranscriptReady(newAudioNote.id, res.transcript, 'completed');
+            } else {
+              onTranscriptReady(newAudioNote.id, null, 'failed');
+            }
+          })
+          .catch((err) => {
+            console.warn('Asenkron transkripsiyon hatası:', err);
+            onTranscriptReady(newAudioNote.id, null, 'failed');
+          });
+      }
     } catch (error) {
       console.warn('handleSaveToPage hatası:', error);
     }

@@ -316,6 +316,15 @@
     "loadingDesc": "Sayfanız yüksek kalitede dönüştürülüyor...",
     "errorTitle": "Dışa Aktarma Hatası",
     "errorDesc": "Sayfa PDF olarak dışa aktarılırken bir hata oluştu. Lütfen tekrar deneyin."
+  },
+  "transcript": {
+    "pending": "Metne dönüştürülüyor...",
+    "completed": "Transkripsiyon",
+    "failed": "Metne dönüştürülemedi",
+    "retry": "Yeniden Dene",
+    "copied": "Metin panoya kopyalandı",
+    "notAvailable": "Ses tanıma bu cihazda desteklenmiyor",
+    "badge": "Sesli Not"
   }
 }
 
