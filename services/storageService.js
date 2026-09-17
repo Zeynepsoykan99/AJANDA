@@ -38,9 +38,11 @@ const createEmptyNotebookPage = (paperTemplateId) => ({
   pageNumber: 1,
   paperTemplateId: paperTemplateId || DEFAULT_PAPER_TEMPLATE_ID,
   createdAt: new Date().toISOString(),
+  mood: null,
   drawings: [],
   textBlocks: [],
   stickers: [],
+  audioNotes: [],
   data: { content: '' },
 });
 
@@ -59,6 +61,16 @@ const normalizeNotebook = (source) => {
   if (!Array.isArray(notebook.pages) || notebook.pages.length === 0) {
     notebook.pages = [createEmptyNotebookPage(notebook.paperTemplateId)];
     return { notebook, changed };
+  }
+
+  // Sayfaların createdAt ve mood alanlarının geriye dönük uyumluluğunu sağla
+  if (notebook.pages.some((p) => !p.createdAt || p.mood === undefined)) {
+    notebook.pages = notebook.pages.map((p) => ({
+      ...p,
+      createdAt: p.createdAt || p.date || notebook.createdAt || new Date().toISOString(),
+      mood: p.mood !== undefined ? p.mood : null,
+    }));
+    changed = true;
   }
 
   if (notebook.pages.some((p) => !p.paperTemplateId)) {
@@ -113,10 +125,12 @@ const notebookWithAddedPage = (notebook, pageData = {}) => {
       (notebook.pages?.length ? notebook.pages[notebook.pages.length - 1]?.paperTemplateId : null) ||
       notebook.paperTemplateId ||
       DEFAULT_PAPER_TEMPLATE_ID,
-    createdAt: new Date().toISOString(),
+    createdAt: pageData.createdAt || new Date().toISOString(),
+    mood: pageData.mood !== undefined ? pageData.mood : null,
     drawings: pageData.drawings || [],
     textBlocks: pageData.textBlocks || [],
     stickers: pageData.stickers || [],
+    audioNotes: pageData.audioNotes || [],
     data: pageData.data || { content: '' },
     ...pageData,
   };

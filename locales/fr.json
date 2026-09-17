@@ -325,6 +325,20 @@
     "copied": "Copié dans le presse-papiers",
     "notAvailable": "La reconnaissance vocale n'est pas prise en charge sur cet appareil",
     "badge": "Note Vocale"
+  },
+  "mood": {
+    "title": "Comment vous sentez-vous aujourd'hui ?",
+    "subtitle": "Ajoutez une humeur reflétant ce que vous ressentez",
+    "clear": "Supprimer l'humeur",
+    "addMood": "Humeur",
+    "happy": "Heureux",
+    "focused": "Concentré",
+    "excited": "Enthousiaste",
+    "calm": "Paisible",
+    "grateful": "Reconnaissant",
+    "tired": "Fatigué",
+    "stressed": "Stressé",
+    "sad": "Triste"
   }
 }
 

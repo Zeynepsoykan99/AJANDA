@@ -325,6 +325,20 @@
     "copied": "Copied to clipboard",
     "notAvailable": "Speech recognition is not supported on this device",
     "badge": "Audio Note"
+  },
+  "mood": {
+    "title": "How Are You Feeling Today?",
+    "subtitle": "Add a mood reflecting how you feel on your diary page",
+    "clear": "Remove Mood",
+    "addMood": "Mood",
+    "happy": "Happy",
+    "focused": "Focused",
+    "excited": "Excited",
+    "calm": "Calm",
+    "grateful": "Grateful",
+    "tired": "Tired",
+    "stressed": "Stressed",
+    "sad": "Sad"
   }
 }
 

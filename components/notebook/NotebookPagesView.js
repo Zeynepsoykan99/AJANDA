@@ -50,6 +50,8 @@ import { captureRef } from 'react-native-view-shot';
 import * as Haptics from 'expo-haptics';
 import ExportLoadingModal from '../ui/ExportLoadingModal';
 import { PdfExportService } from '../../services/pdfExportService';
+import DiaryDateMoodBadge from '../diary/DiaryDateMoodBadge';
+import MoodPickerModal from '../diary/MoodPickerModal';
 
 import { recognizeSelectedStrokes } from '../../services/handwritingService';
 import { fitTextToBounds, clusterStrokesByColorAndProximity } from '../../utils/lassoGeometry';
@@ -85,6 +87,7 @@ export default function NotebookPagesView({
   newPageTemplateSource = 'activePage',
   initialPageIndex,
   initialPageId,
+  isDiary = false,
 }) {
   const { t, i18n } = useTranslation();
   const router = useRouter();
@@ -120,6 +123,10 @@ export default function NotebookPagesView({
   const [isExporting, setIsExporting] = useState(false);
   const [isExportLoading, setIsExportLoading] = useState(false);
   const [undoToast, setUndoToast] = useState({ visible: false, message: '' });
+
+  // Günlüğüm: Duygu Durumu (Mood) Seçici Durumu
+  const [isMoodPickerVisible, setIsMoodPickerVisible] = useState(false);
+  const [moodPickerPageIndex, setMoodPickerPageIndex] = useState(null);
 
 
   // Kement (Lasso) Seçim Durumu
@@ -212,6 +219,42 @@ export default function NotebookPagesView({
   const pages = notebook?.pages || [];
   const headerTitle = typeof title === 'function' ? title(notebook) : title;
   const activePage = pages[currentPageIndex] || pages[0];
+
+  // Günlüğüm: Duygu Durumu Seçici İşleyicileri
+  const handleOpenMoodPicker = useCallback((pageIndex) => {
+    setMoodPickerPageIndex(pageIndex);
+    setIsMoodPickerVisible(true);
+  }, []);
+
+  const handleCloseMoodPicker = useCallback(() => {
+    setIsMoodPickerVisible(false);
+    setMoodPickerPageIndex(null);
+  }, []);
+
+  const handleSelectMood = useCallback(
+    async (selectedMood) => {
+      const targetIdx = moodPickerPageIndex !== null ? moodPickerPageIndex : currentPageIndex;
+      const targetPage = pages[targetIdx];
+      if (!targetPage) return;
+
+      // Optimistik yerel state güncellemesi
+      setNotebook((prev) => {
+        if (!prev || !prev.pages) return prev;
+        const updatedPages = prev.pages.map((p, i) =>
+          i === targetIdx ? { ...p, mood: selectedMood } : p
+        );
+        return { ...prev, pages: updatedPages };
+      });
+
+      // Storage'a kaydet
+      try {
+        await storageRef.current.updatePage(targetPage.pageId, { mood: selectedMood });
+      } catch (err) {
+        console.warn('Duygu durumu kaydedilemedi:', err);
+      }
+    },
+    [moodPickerPageIndex, currentPageIndex, pages]
+  );
 
   // Sesli Not Ekle
   const handleAddAudioNote = useCallback(async (newAudioNote) => {
@@ -1320,6 +1363,16 @@ export default function NotebookPagesView({
                         textColor={textColor}
                         textFontSize={textFontSize}
                       />
+
+                      {/* Günlük Modunda: Sağ Üst Tarih ve Duygu Durumu Rozeti */}
+                      {isDiary && (
+                        <DiaryDateMoodBadge
+                          createdAt={p.createdAt || p.date}
+                          mood={p.mood}
+                          onPress={() => handleOpenMoodPicker(index)}
+                          disabled={activeMode === 'drawing'}
+                        />
+                      )}
                     </PaperSheet>
                   </NotebookContainer>
 
@@ -1490,6 +1543,23 @@ export default function NotebookPagesView({
 
       {/* PDF Dışa Aktarım Yükleme Modalı */}
       <ExportLoadingModal visible={isExportLoading} />
+
+      {/* Günlük Modu: Duygu Durumu Seçici Modal */}
+      {isDiary && (
+        <MoodPickerModal
+          visible={isMoodPickerVisible}
+          onClose={handleCloseMoodPicker}
+          currentMood={
+            (moodPickerPageIndex !== null ? pages[moodPickerPageIndex] : activePage)?.mood || null
+          }
+          onSelectMood={handleSelectMood}
+          pageDate={
+            (moodPickerPageIndex !== null ? pages[moodPickerPageIndex] : activePage)?.createdAt ||
+            (moodPickerPageIndex !== null ? pages[moodPickerPageIndex] : activePage)?.date ||
+            new Date()
+          }
+        />
+      )}
 
       {/* Yüzen Çizim ve Metin Araç Çubuğu */}
       <View style={styles.floatingToolbarContainer} pointerEvents="box-none">

@@ -325,6 +325,20 @@
     "copied": "Copiado al portapapeles",
     "notAvailable": "El reconocimiento de voz no es compatible con este dispositivo",
     "badge": "Nota de Voz"
+  },
+  "mood": {
+    "title": "¿Cómo te sientes hoy?",
+    "subtitle": "Añade un estado de ánimo que refleje cómo te sientes",
+    "clear": "Eliminar estado de ánimo",
+    "addMood": "Ánimo",
+    "happy": "Feliz",
+    "focused": "Enfocado",
+    "excited": "Emocionado",
+    "calm": "Tranquilo",
+    "grateful": "Agradecido",
+    "tired": "Cansado",
+    "stressed": "Estresado",
+    "sad": "Triste"
   }
 }
 

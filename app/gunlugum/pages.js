@@ -36,7 +36,7 @@ export default function GunlugumPagesScreen() {
       initialPageId={typeof pageId === 'string' ? pageId : undefined}
       enableSearch={true}
       enableDatePicker={true}
+      isDiary={true}
     />
-
   );
 }

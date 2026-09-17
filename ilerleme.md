@@ -4,6 +4,48 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-17] - Günlüğüm: Duygu Durumu Takibi (Mood Tracker) ve Sayfa Tarihi (Date & Mood Stamp)
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Kullanıcıların "Günlüğüm" (Diary) sayfalarında, tıpkı fiziksel bir günlükte olduğu gibi kağıdın sağ üst köşesinde o günün tarihini ve o anki duygu durumunu (mood emoji) görebilmeleri, istedikleri an nostaljik bir modal üzerinden ruh hallerini seçip değiştirebilmeleri veya temizleyebilmeleri. Bu özelliğin sadece Günlüğüm modülüne özel olması, Notlarım modülünde gizlenmesi ve zum/pan hareketleri ile PDF dışa aktarımlarıyla %100 uyumlu çalışması.
+- **Hedefler:**
+  1. **Veri Modeli ve Geriye Dönük Uyumluluk (`services/storageService.js`):** Sayfa nesnelerine `createdAt` ve `mood` alanlarının eklenmesi; eski versiyondan gelen sayfaların çökmemesi ve verilerinin korunması için `normalizeNotebook` ve `createEmptyNotebookPage` fonksiyonlarında eksiksiz fallback (`mood: null`, `createdAt: p.createdAt || p.date || ...`) sağlanması.
+  2. **Sağ Üst Köşe Rozeti (`components/diary/DiaryDateMoodBadge.js`):** Kağıdın sağ üst marj alanına (`top: 6, right: 14`), birinci yazım çizgisinin yukarısına oturan, fildişi kağıt rengi ve sıcak kahve tonlarında nostaljik posta mührü / kırtasiye rozeti. Çok dilli tarih gösterimi (`tr-TR`, `en-US`, `de-DE`, `es-ES`, `fr-FR`).
+  3. **Duygu Durumu Seçici Modal (`components/diary/MoodPickerModal.js`):** 8 temel ruh halini içeren (😊 Mutlu, 🎯 Odaklanmış, 🥳 Heyecanlı, 😌 Huzurlu, 🙏 Minnettar, 😫 Yorgun, 😰 Stresli, 😔 Üzgün) şık, alt sayfadan açılan (bottom sheet stili) duygu seçim modalı; aktif duygu vurgusu, "Duyguyu Kaldır" butonu ve dokunsal geri bildirim (Haptics).
+  4. **Sayfa İçi Entegrasyon & Zum Uyumluğu (`components/notebook/NotebookPagesView.js`):** `isDiary` prop'u ile modül ayrımı; rozetin `pageCaptureContainer` ve `PaperSheet` içerisine yerleştirilerek çift parmaklı zum/pan ile orantılı ölçeklenmesi ve `captureRef` ile A4 PDF'e doğrudan damgalanması; çizim modunda (`activeMode === 'drawing'`) `pointerEvents="none"` ile kalem/fırça hareketlerini engellememesi.
+  5. **Notlarım Modülü İzolasyonu (`app/defterlerim/[notebookId]/pages.js`):** Rozet ve modal yalnızca `app/gunlugum/pages.js` üzerinden `isDiary={true}` ile aktifleştirilmiş, Notlarım modülünde temiz sayfa düzeni korunmuştur.
+  6. **Çok Dilli Sözlük Desteği:** 5 dilde (`locales/{tr,en,de,es,fr}.json`) eksiksiz `mood` anahtarları.
+
+### 🔧 Yapılan Geliştirmeler ve Düzenlemeler
+1. **`services/storageService.js`:**
+   - `createEmptyNotebookPage` fonksiyonuna `createdAt` ve `mood: null` eklendi.
+   - `notebookWithAddedPage` fonksiyonuna `createdAt` ve `mood` parametreleri entegre edildi.
+   - `normalizeNotebook` fonksiyonunda geriye dönük uyumluluk (backfill) eklenerek eski sayfalarda eksik `createdAt` ve `mood` alanlarının otomatik onarılması sağlandı.
+2. **`components/diary/DiaryDateMoodBadge.js` [NEW]:**
+   - 8 duygu nesnesi (`MOODS`), `getMoodEmoji` ve çok dilli tarih biçimlendirici `formatBadgeDate` fonksiyonları tanımlandı.
+   - Kırtasiye estetiğinde yarı saydam, ince gölgeli, takvim ikonu, tarih ve duygu emojisi barındıran dokunmatik rozet bileşeni geliştirildi.
+3. **`components/diary/MoodPickerModal.js` [NEW]:**
+   - Seçilen sayfanın tarihini ve başlığını gösteren, 8'li duygu kartları ızgarası sunan, seçili duyguyu işaretleyen ve "Duyguyu Kaldır" seçeneği sunan nostaljik kart modalı oluşturuldu.
+4. **`components/notebook/NotebookPagesView.js`:**
+   - `isDiary = false` prop'u tanımlandı.
+   - `isMoodPickerVisible` ve `moodPickerPageIndex` state'leri ile `handleOpenMoodPicker`, `handleCloseMoodPicker` ve `handleSelectMood` fonksiyonları bağlandı.
+   - `PaperSheet` içerisine `isDiary && <DiaryDateMoodBadge ... />` yerleştirildi; çizim esnasında `disabled` bayrağı ile kilitlendi.
+   - Bileşenin en altına `MoodPickerModal` entegre edildi.
+5. **`app/gunlugum/pages.js`:**
+   - `NotebookPagesView` bileşenine `isDiary={true}` prop'u verildi.
+6. **Çok Dilli Sözlük Dosyaları (`locales/{tr,en,de,es,fr}.json`):**
+   - TR, EN, DE, ES ve FR dosyalarına `mood` bölümü (başlık, alt başlık, kaldır, 8 ruh hali çevirisi) eklendi.
+
+### ✅ Doğrulama & Testler
+- `scratch/validate_mood_tracker.js`:
+  - 5 dil dosyasındaki tüm `mood` anahtarlarının varlığı ve JSON bütünlüğü doğrulandı.
+  - `DiaryDateMoodBadge.js` üzerindeki 8 duygu emojisi ve çok dilli tarih formatlama fonksiyonları test edildi.
+  - `storageService.js` geriye dönük uyumluluk ve normalizasyon kuralları doğrulandı.
+  - `NotebookPagesView.js` ve `app/gunlugum/pages.js` entegrasyonu, `app/defterlerim` izolasyonu doğrulandı.
+- `tests/zoomableCanvas.test.js`: Matematiksel koordinat ve zum testleri 6/6 başarıyla geçti.
+
+---
+
 ## 📅 [2026-09-16] - Profesyonel PDF Olarak Dışa Aktarma (Export to PDF) Modülü
 
 ### 🔍 Kapsam ve İhtiyaç

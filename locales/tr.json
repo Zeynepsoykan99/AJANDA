@@ -325,6 +325,20 @@
     "copied": "Metin panoya kopyalandı",
     "notAvailable": "Ses tanıma bu cihazda desteklenmiyor",
     "badge": "Sesli Not"
+  },
+  "mood": {
+    "title": "Bugün Nasıl Hissediyorsun?",
+    "subtitle": "Günlük sayfana o anki ruh halini yansıtan bir duygu ekle",
+    "clear": "Duyguyu Kaldır",
+    "addMood": "His",
+    "happy": "Mutlu",
+    "focused": "Odaklanmış",
+    "excited": "Heyecanlı",
+    "calm": "Huzurlu",
+    "grateful": "Minnettar",
+    "tired": "Yorgun",
+    "stressed": "Stresli",
+    "sad": "Üzgün"
   }
 }
 
