@@ -296,6 +296,8 @@ export default function PagesScreen() {
             ]}
             ListEmptyComponent={renderEmptyState}
             showsVerticalScrollIndicator={false}
+            bounces={false}
+            overScrollMode="never"
           />
         )}
       </View>

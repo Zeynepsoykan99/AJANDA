@@ -16,7 +16,7 @@ export function useResponsiveLayout() {
 
   // İçerik genişliği hesaplama (tablet ekranlarında defteri ortalamak ve estetik tutmak için)
   const maxContentWidth = isTablet ? Math.min(width * 0.98, 1400) : width;
-  const maxContentHeight = isTablet ? Math.min(height * 0.90, 850) : height;
+  const maxContentHeight = isTablet ? Math.min(height * 0.96, 1600) : height;
 
   return {
     width,

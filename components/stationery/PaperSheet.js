@@ -12,8 +12,8 @@ const DOT_PITCH = PAPER_RULING_CONFIG.dotted.linePitch; // 28
 const DOT_ROW_SIDE = 8; // dottedRow paddingHorizontal
 const MARGIN_LEFT = PAPER_RULING_CONFIG.lined.marginLineLeft || 40;
 
-// Ölçüm gelmeden önceki ilk render için eski sabit değerler
-const FALLBACK_COUNTS = { lines: 30, gridRows: 40, gridCols: 30, dotRows: 24, dotCols: 16 };
+// Ölçüm gelmeden önceki ilk render için eski sabit değerler (Tabletler için de yeterli tavan)
+const FALLBACK_COUNTS = { lines: 50, gridRows: 60, gridCols: 40, dotRows: 40, dotCols: 30 };
 
 /**
  * Kağıdın gerçek boyutuna göre doku elemanı sayılarını hesaplar.
@@ -137,6 +137,8 @@ export default function PaperSheet({
 const styles = StyleSheet.create({
   sheet: {
     flex: 1,
+    height: '100%',
+    minHeight: '100%',
     borderRadius: 14,
     overflow: 'hidden',
     position: 'relative',
@@ -193,6 +195,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    height: '100%',
     zIndex: 2,
   },
 });

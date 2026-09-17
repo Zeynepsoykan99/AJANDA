@@ -1218,6 +1218,14 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 0,
     margin: 0,
+    height: '100%',
+    minHeight: '100%',
+    ...Platform.select({
+      web: {
+        overflow: 'hidden',
+        overscrollBehavior: 'none',
+      },
+    }),
   },
   floatingToolbarContainer: {
     ...StyleSheet.absoluteFillObject,
@@ -1268,12 +1276,22 @@ const styles = StyleSheet.create({
     flex: 1,
     position: 'relative',
     overflow: 'hidden',
+    height: '100%',
+    minHeight: '100%',
+    ...Platform.select({
+      web: {
+        touchAction: 'none',
+        overscrollBehavior: 'none',
+      },
+    }),
   },
   fullBleedContentArea: {
     flex: 1,
     padding: 0,
     margin: 0,
     overflow: 'hidden',
+    height: '100%',
+    minHeight: '100%',
   },
   fullBleedCanvas: {
     position: 'absolute',

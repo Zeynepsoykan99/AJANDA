@@ -203,6 +203,8 @@ export default function TodoPage({ template, data, onDataChange }) {
         <PaperSheet ruling="lined" style={styles.pageHalf}>
           <ScrollView
             showsVerticalScrollIndicator={false}
+            bounces={false}
+            overScrollMode="never"
             contentContainerStyle={styles.scrollContent}
           >
             <View style={styles.pageWatermark}>
@@ -220,6 +222,8 @@ export default function TodoPage({ template, data, onDataChange }) {
         <PaperSheet ruling="lined" style={styles.pageHalf}>
           <ScrollView
             showsVerticalScrollIndicator={false}
+            bounces={false}
+            overScrollMode="never"
             contentContainerStyle={styles.scrollContent}
           >
             {renderCategoryCard(CATEGORIES[2])}
@@ -247,6 +251,8 @@ export default function TodoPage({ template, data, onDataChange }) {
     <PaperSheet ruling="lined" style={styles.singlePage}>
       <ScrollView
         showsVerticalScrollIndicator={false}
+        bounces={false}
+        overScrollMode="never"
         contentContainerStyle={styles.mobileScroll}
       >
         {/* Başlık Rozeti */}
@@ -287,9 +293,11 @@ const styles = StyleSheet.create({
   },
   pageHalf: {
     flex: 1,
+    height: '100%',
     marginHorizontal: 4,
   },
   scrollContent: {
+    flexGrow: 1,
     padding: 14,
     paddingBottom: 24,
   },
@@ -309,8 +317,10 @@ const styles = StyleSheet.create({
 
   singlePage: {
     flex: 1,
+    height: '100%',
   },
   mobileScroll: {
+    flexGrow: 1,
     padding: 12,
     paddingBottom: 80,
   },

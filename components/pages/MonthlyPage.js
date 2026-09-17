@@ -266,7 +266,12 @@ export default function MonthlyPage({ template, data, onDataChange }) {
       <View style={styles.twoPageContainer}>
         {/* SOL: Geniş Masa Takvimi */}
         <PaperSheet ruling="blank" style={styles.leftPageHalf}>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollPad}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            overScrollMode="never"
+            contentContainerStyle={styles.scrollPad}
+          >
             {renderCalendarGrid()}
           </ScrollView>
         </PaperSheet>
@@ -276,7 +281,12 @@ export default function MonthlyPage({ template, data, onDataChange }) {
 
         {/* SAĞ: Aylık Notlar, Sınavlar ve Hedefler Paneli */}
         <PaperSheet ruling="lined" style={styles.rightPageHalf}>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollPad}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            overScrollMode="never"
+            contentContainerStyle={styles.scrollPad}
+          >
             <View style={styles.sideHeader}>
               <WashiTape
                 color="#CE93D8"
@@ -336,6 +346,8 @@ export default function MonthlyPage({ template, data, onDataChange }) {
     <PaperSheet ruling="blank" style={styles.singleContainer}>
       <ScrollView
         showsVerticalScrollIndicator={false}
+        bounces={false}
+        overScrollMode="never"
         contentContainerStyle={styles.mobileScroll}
       >
         {renderCalendarGrid()}
@@ -426,13 +438,16 @@ const styles = StyleSheet.create({
   },
   leftPageHalf: {
     flex: 1.3,
+    height: '100%',
     marginHorizontal: 4,
   },
   rightPageHalf: {
     flex: 0.9,
+    height: '100%',
     marginHorizontal: 4,
   },
   scrollPad: {
+    flexGrow: 1,
     padding: 12,
   },
   sideHeader: {
@@ -491,8 +506,10 @@ const styles = StyleSheet.create({
 
   singleContainer: {
     flex: 1,
+    height: '100%',
   },
   mobileScroll: {
+    flexGrow: 1,
     padding: 12,
     paddingBottom: 60,
   },

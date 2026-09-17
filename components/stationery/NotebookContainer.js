@@ -46,7 +46,7 @@ export default function NotebookContainer({
             backgroundColor: coverColor,
             borderColor: coverColor,
           },
-          isTablet && { minHeight: maxContentHeight * 0.94 },
+          isTablet && { minHeight: '96%', flex: 1 },
           style,
         ]}
       >
@@ -72,6 +72,7 @@ export default function NotebookContainer({
 const styles = StyleSheet.create({
   outerWrapper: {
     width: '100%',
+    height: '100%',
     alignSelf: 'center',
     paddingHorizontal: 8,
     position: 'relative',
@@ -117,6 +118,7 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 8,
     flex: 1,
+    height: '100%',
     position: 'relative',
   },
   pageStackBack: {
@@ -155,5 +157,6 @@ const styles = StyleSheet.create({
   },
   sheetContainer: {
     flex: 1,
+    height: '100%',
   },
 });

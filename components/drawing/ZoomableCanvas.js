@@ -409,10 +409,21 @@ const styles = StyleSheet.create({
   viewport: {
     overflow: 'hidden',
     position: 'relative',
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    ...Platform.select({
+      web: {
+        touchAction: 'none',
+        overscrollBehavior: 'none',
+      },
+    }),
   },
   canvasWrapper: {
     width: '100%',
     height: '100%',
+    flex: 1,
+    minHeight: '100%',
   },
   zoomBadge: {
     position: 'absolute',

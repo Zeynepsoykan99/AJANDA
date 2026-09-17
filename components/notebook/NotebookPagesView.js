@@ -1319,6 +1319,8 @@ export default function NotebookPagesView({
         pagingEnabled={true}
         showsHorizontalScrollIndicator={false}
         scrollEventThrottle={16}
+        bounces={false}
+        overScrollMode="never"
         onMomentumScrollEnd={handleMomentumScrollEnd}
         onScroll={handleScroll}
         onTouchStart={handleScrollTouchStart}
@@ -1734,8 +1736,11 @@ const styles = StyleSheet.create({
   },
   horizontalScrollView: {
     flex: 1,
+    height: '100%',
   },
   pageSlide: {
+    flex: 1,
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1748,10 +1753,12 @@ const styles = StyleSheet.create({
   canvasContainer: {
     flex: 1,
     width: '100%',
+    height: '100%',
     position: 'relative',
   },
   paperSheet: {
     flex: 1,
+    height: '100%',
   },
   sheetInner: {
     flex: 1,

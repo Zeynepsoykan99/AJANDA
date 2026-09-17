@@ -296,6 +296,8 @@ export default function TodoListScreen() {
             ]}
             ListEmptyComponent={renderEmptyState}
             showsVerticalScrollIndicator={false}
+            bounces={false}
+            overScrollMode="never"
           />
         )}
       </View>

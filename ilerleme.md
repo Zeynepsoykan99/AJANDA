@@ -4,6 +4,35 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-17] - Tablet & Web Düzen ve Beyaz Boşluk Optimizasyonu (Full Bleed Layout & Overscroll Prevention)
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Web modunda (`localhost:8081`) ve Chrome DevTools iPad/Tablet simülasyonunda sayfa görüntülendiğinde veya aşağı kaydırıldığında şablonun erkenden bitmesi ve altında devasa beyaz boşluk kalması sorunu giderildi.
+- **Kök Nedenler ve Çözümler:**
+  1. **Görsel Şablon ve Kapsayıcı Esnekliği (`ImageTemplatePage.js` & `ImageWithSkeleton.js`):** `resizeMode="cover"` mimarisine geçildi; `container`, `image` ve `fullBleedImage` stillerine `flex: 1`, `width: '100%'`, `height: '100%'`, `minHeight: '100%'` verilerek şablonların her ekran oranında sıfır boşlukla tam ekranı kaplaması sağlandı.
+  2. **Defter Kasası Yükseklik Tavanının Esnetilmesi (`NotebookContainer.js` & `useResponsiveLayout.js`):** `useResponsiveLayout.js` içindeki yapay 850px tavan kısıtı kaldırılarak dinamik `Math.min(height * 0.96, 1600)` oranına geçirildi. `NotebookContainer.js` içindeki `coverFrame`, `outerWrapper` ve `sheetContainer` stillerine `height: '100%'`, `minHeight: '96%'` esnekliği kazandırıldı.
+  3. **Overscroll ve Bouncing Engellemesi:** Web ortamında sayfanın gereksiz yere aşağı kaymasını ve gövde altındaki beyaz alanı açığa çıkarmasını engellemek için `ZoomableCanvas.js`, `app/todolist/[pageId].js` ve `app/ajandam/[pageId].js` stillerine `overscrollBehavior: 'none'`, `touchAction: 'none'`, `overflow: 'hidden'` eklendi.
+  4. **Sayfa ve Liste Kaydırma Optimizasyonu (`ScrollView` & `FlatList`):** `TodoPage.js`, `WeeklyPage.js`, `MonthlyPage.js`, `NotebookPagesView.js`, `app/todolist/index.js` ve `app/ajandam/pages.js` bileşenlerine `bounces={false}` (iOS), `overScrollMode="never"` (Android/Web) ve `contentContainerStyle` üzerinde `flexGrow: 1` eklendi.
+  5. **Kağıt Dokusu Çizgi Garantisi (`PaperSheet.js`):** `FALLBACK_COUNTS` tavan değerleri yükseltildi (lines: 50, grid: 60) ve `sheet`/`content` kapsayıcılarına `height: '100%'`, `minHeight: '100%'` desteği sağlandı.
+
+### 📁 Değiştirilen Dosyalar
+- [`hooks/useResponsiveLayout.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/hooks/useResponsiveLayout.js)
+- [`components/stationery/NotebookContainer.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/stationery/NotebookContainer.js)
+- [`components/ui/ImageWithSkeleton.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/ui/ImageWithSkeleton.js)
+- [`components/pages/ImageTemplatePage.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/pages/ImageTemplatePage.js)
+- [`components/drawing/ZoomableCanvas.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/drawing/ZoomableCanvas.js)
+- [`app/todolist/[pageId].js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/todolist/[pageId].js)
+- [`app/ajandam/[pageId].js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/ajandam/[pageId].js)
+- [`components/notebook/NotebookPagesView.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/notebook/NotebookPagesView.js)
+- [`components/pages/TodoPage.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/pages/TodoPage.js)
+- [`components/pages/WeeklyPage.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/pages/WeeklyPage.js)
+- [`components/pages/MonthlyPage.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/pages/MonthlyPage.js)
+- [`app/todolist/index.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/todolist/index.js)
+- [`app/ajandam/pages.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/ajandam/pages.js)
+- [`components/stationery/PaperSheet.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/stationery/PaperSheet.js)
+
+---
+
 ## 📅 [2026-09-17] - Günlük Kilidi (PIN): "Şifreyi Değiştir" (Change PIN) Özelliği ve 3 Aşamalı Güvenlik Akışı
 
 ### 🔍 Kapsam ve İhtiyaç

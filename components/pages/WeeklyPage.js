@@ -272,6 +272,8 @@ export default function WeeklyPage({ template, data, onDataChange }) {
           )}
           <ScrollView
             showsVerticalScrollIndicator={false}
+            bounces={false}
+            overScrollMode="never"
             contentContainerStyle={styles.pageScrollContent}
           >
             <View style={styles.pageCornerDeco}>
@@ -293,6 +295,8 @@ export default function WeeklyPage({ template, data, onDataChange }) {
           )}
           <ScrollView
             showsVerticalScrollIndicator={false}
+            bounces={false}
+            overScrollMode="never"
             contentContainerStyle={styles.pageScrollContent}
           >
             {[3, 4].map((i) => renderDayBlock(i))}
@@ -330,6 +334,8 @@ export default function WeeklyPage({ template, data, onDataChange }) {
       )}
       <ScrollView
         showsVerticalScrollIndicator={false}
+        bounces={false}
+        overScrollMode="never"
         contentContainerStyle={styles.mobileScrollContent}
       >
         <View style={styles.mobileHeaderBadge}>
@@ -370,9 +376,11 @@ const styles = StyleSheet.create({
   },
   pageHalf: {
     flex: 1,
+    height: '100%',
     marginHorizontal: 4,
   },
   pageScrollContent: {
+    flexGrow: 1,
     padding: 14,
     paddingBottom: 24,
   },
@@ -401,8 +409,10 @@ const styles = StyleSheet.create({
   // Mobil Tek Sayfa Düzeni
   singlePage: {
     flex: 1,
+    height: '100%',
   },
   mobileScrollContent: {
+    flexGrow: 1,
     padding: 12,
     paddingBottom: 80,
   },

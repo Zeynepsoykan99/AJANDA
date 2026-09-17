@@ -10,6 +10,7 @@ import Skeleton from './Skeleton';
 export default function ImageWithSkeleton({
   source,
   style,
+  imageStyle,
   resizeMode = 'cover',
   isBackground = false,
   children,
@@ -32,7 +33,8 @@ export default function ImageWithSkeleton({
     <View style={[styles.container, style]}>
       <ImageComponent
         source={source}
-        style={styles.image}
+        style={[styles.image, style]}
+        imageStyle={[styles.image, imageStyle]}
         resizeMode={resizeMode}
         onLoad={handleLoad}
       >
@@ -51,10 +53,14 @@ export default function ImageWithSkeleton({
 const styles = StyleSheet.create({
   container: {
     overflow: 'hidden',
+    flex: 1,
+    width: '100%',
+    height: '100%',
   },
   image: {
     width: '100%',
     height: '100%',
+    flex: 1,
   },
   skeletonOverlay: {
     ...StyleSheet.absoluteFillObject,

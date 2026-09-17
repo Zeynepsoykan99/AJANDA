@@ -17,7 +17,8 @@ export default function ImageTemplatePage({ template }) {
         isBackground={true}
         source={imageSource}
         style={[styles.fullBleedImage, { backgroundColor: edgeColor }]}
-        resizeMode="contain"
+        imageStyle={styles.imageStyle}
+        resizeMode="cover"
       />
     </View>
   );
@@ -26,6 +27,9 @@ export default function ImageTemplatePage({ template }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    width: '100%',
+    height: '100%',
+    minHeight: '100%',
     padding: 0,
     margin: 0,
     overflow: 'hidden',
@@ -35,5 +39,11 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     height: '100%',
+    minHeight: '100%',
+  },
+  imageStyle: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
 });
