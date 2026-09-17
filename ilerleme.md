@@ -4,6 +4,33 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-17] - Kalıcı Sunucu Kararlılık Kalkanı: Metro Watcher Optimizasyonu & Akıllı Başlatıcı
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Yerel geliştirme sunucusunun (Expo Metro Bundler) Windows üzerinde kilitlenmesi, sessizce çökmesi ve tarayıcıda *"Bu siteye ulaşılamıyor (ERR_CONNECTION_REFUSED)"* hatası vermesi sorunları kökten çözüldü.
+- **Kök Nedenler ve Çözümler:**
+  1. **Özel `metro.config.js` ve Windows Dosya İzleyici Kalkanı:**
+     - `@expo/metro-config` ile özel Metro konfigürasyonu oluşturuldu.
+     - `.git/`, `scratch/`, `.expo/`, `node_modules/.cache/` klasörleri `blockListPatterns` regex kurallarıyla dosya izleme havuzundan çıkarıldı. Git commit veya dosya yazımlarında Windows I/O kuyruğunun kilitlenmesi ve Metro'nun çökmesi kalıcı olarak engellendi.
+     - Windows ortamında çoklu çekirdek I/O darboğazını önlemek için `maxWorkers: Math.min(os.cpus().length, 4)` kuralı getirildi.
+  2. **Akıllı Sunucu Başlatıcı (`scripts/start-server.js`):**
+     - Her başlatmada otomatik olarak `freePort(8081)` çağrılarak zombi ve askıda kalan Node süreçleri zorla temizlendi (`taskkill /F /PID`).
+     - `NODE_OPTIONS='--max-old-space-size=4096'` ortam değişkeniyle Metro'nun derleme yapan tüm arka plan worker thread'lerine 4GB bellek tahsis edildi.
+     - Bayat `.expo` kilit klasörleri temizlenip Expo temiz önbellek (`-c`) ile başlatıldı.
+     - `SIGINT`/`SIGTERM` dinleyicileriyle sunucu kapatıldığında alt süreçlerin arkasında zombi port bırakmadan temiz kapanması sağlandı.
+  3. **`package.json` Entegrasyonu:**
+     - `start`, `web`, `android`, `ios` komutları doğrudan `scripts/start-server.js` başlatıcısına bağlandı.
+  4. **Sonsuz Render Döngüsü Denetimi:**
+     - 116 kaynak dosyası AST analizinden geçirildi; hiçbir bileşende döngüsel state sızıntısı bulunmadığı kesinleştirildi.
+
+### 📁 Değiştirilen ve Eklenen Dosyalar
+- [`metro.config.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/metro.config.js) [NEW]
+- [`scripts/start-server.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/scripts/start-server.js) [NEW]
+- [`package.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/package.json)
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+---
+
 ## 📅 [2026-09-17] - Defter Sabitleme (Pinning) ve Dijital Post-it Sayfa İşaretleyicileri (Page Index Flags)
 
 ### 🔍 Kapsam ve İhtiyaç
