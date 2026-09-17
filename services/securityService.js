@@ -138,6 +138,29 @@ export const SecurityService = {
   },
 
   /**
+   * Mevcut PIN kodunu doğrulayıp yeni PIN ile günceller (Change PIN)
+   * @param {string} oldPin
+   * @param {string} newPin
+   * @param {string} [targetId='diary']
+   * @returns {Promise<{ success: boolean, reason?: 'invalid_old_pin' | 'invalid_new_pin' | 'save_failed' }>}
+   */
+  async changePin(oldPin, newPin, targetId = 'diary') {
+    if (!oldPin || !newPin) {
+      return { success: false, reason: 'invalid_new_pin' };
+    }
+    const isOldValid = await this.verifyPin(oldPin, targetId);
+    if (!isOldValid) {
+      return { success: false, reason: 'invalid_old_pin' };
+    }
+    const saved = await this.setPin(newPin, targetId);
+    if (!saved) {
+      return { success: false, reason: 'save_failed' };
+    }
+    this.unlockSession(targetId);
+    return { success: true };
+  },
+
+  /**
    * Kayıtlı PIN kodunu siler (Kilidi kaldırır)
    * @param {string} [targetId='diary']
    * @returns {Promise<boolean>}

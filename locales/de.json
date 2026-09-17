@@ -284,7 +284,21 @@
     "pinMismatch": "PINs stimmen nicht überein. Bitte versuche es erneut.",
     "incorrectPin": "Falsche PIN. Bitte versuche es erneut.",
     "saveError": "PIN konnte nicht gespeichert werden",
-    "unlockWithPin": "Mit PIN entsperren"
+    "unlockWithPin": "Mit PIN entsperren",
+    "lockManagement": "Sperrverwaltung",
+    "changePin": "PIN ändern",
+    "changePinDesc": "Aktualisiere deine aktuelle PIN",
+    "removePinAction": "Sperre aufheben",
+    "removePinActionDesc": "PIN-Schutz deaktivieren",
+    "enterCurrentPinTitle": "Aktuelle PIN eingeben",
+    "enterCurrentPinDesc": "Gib deine aktuelle 4-stellige PIN ein, um fortzufahren",
+    "incorrectCurrentPin": "Aktuelle PIN ist falsch. Bitte versuche es erneut.",
+    "enterNewPinTitle": "Neue PIN festlegen",
+    "enterNewPinDesc": "Gib eine neue 4-stellige PIN ein",
+    "confirmNewPinTitle": "Neue PIN bestätigen",
+    "confirmNewPinDesc": "Gib deine neue PIN zur Bestätigung erneut ein",
+    "pinChangedTitle": "Erfolgreich",
+    "pinChangedSuccess": "Deine PIN wurde erfolgreich aktualisiert."
   },
   "reminder": {
     "title": "Erinnerung einstellen",

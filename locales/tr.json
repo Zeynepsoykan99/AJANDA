@@ -284,7 +284,21 @@
     "pinMismatch": "PIN kodları eşleşmedi. Tekrar deneyin.",
     "incorrectPin": "Hatalı PIN kodu. Tekrar deneyin.",
     "saveError": "PIN kaydedilemedi",
-    "unlockWithPin": "PIN ile Kilidi Aç"
+    "unlockWithPin": "PIN ile Kilidi Aç",
+    "lockManagement": "Kilit Yönetimi",
+    "changePin": "Şifreyi Değiştir",
+    "changePinDesc": "Mevcut PIN kodunuzu yenileyin",
+    "removePinAction": "Kilidi Kaldır",
+    "removePinActionDesc": "PIN korumasını devre dışı bırakın",
+    "enterCurrentPinTitle": "Mevcut Şifrenizi Girin",
+    "enterCurrentPinDesc": "Devam etmek için mevcut 4 haneli PIN kodunuzu girin",
+    "incorrectCurrentPin": "Mevcut PIN kodu hatalı. Tekrar deneyin.",
+    "enterNewPinTitle": "Yeni PIN Belirleyin",
+    "enterNewPinDesc": "4 haneli yeni bir PIN kodu girin",
+    "confirmNewPinTitle": "Yeni PIN'i Onaylayın",
+    "confirmNewPinDesc": "Yeni PIN kodunuzu doğrulamak için tekrar girin",
+    "pinChangedTitle": "Başarılı",
+    "pinChangedSuccess": "Şifreniz başarıyla güncellendi."
   },
   "reminder": {
     "title": "Hatırlatıcı Kur",

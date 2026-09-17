@@ -284,7 +284,21 @@
     "pinMismatch": "Les codes PIN ne correspondent pas. Réessayez.",
     "incorrectPin": "Code PIN incorrect. Réessayez.",
     "saveError": "Impossible d'enregistrer le PIN",
-    "unlockWithPin": "Déverrouiller avec le PIN"
+    "unlockWithPin": "Déverrouiller avec le PIN",
+    "lockManagement": "Gestion du Verrouillage",
+    "changePin": "Modifier le PIN",
+    "changePinDesc": "Mettez à jour votre code PIN actuel",
+    "removePinAction": "Supprimer le Verrouillage",
+    "removePinActionDesc": "Désactiver la protection par PIN",
+    "enterCurrentPinTitle": "Entrez le PIN Actuel",
+    "enterCurrentPinDesc": "Entrez votre PIN à 4 chiffres actuel pour continuer",
+    "incorrectCurrentPin": "Le PIN actuel est incorrect. Réessayez.",
+    "enterNewPinTitle": "Définir un Nouveau PIN",
+    "enterNewPinDesc": "Entrez un nouveau code PIN à 4 chiffres",
+    "confirmNewPinTitle": "Confirmer le Nouveau PIN",
+    "confirmNewPinDesc": "Entrez à nouveau votre nouveau PIN pour confirmer",
+    "pinChangedTitle": "Succès",
+    "pinChangedSuccess": "Votre code PIN a été mis à jour avec succès."
   },
   "reminder": {
     "title": "Définir un Rappel",

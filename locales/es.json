@@ -284,7 +284,21 @@
     "pinMismatch": "Los PIN no coinciden. Inténtalo de nuevo.",
     "incorrectPin": "PIN incorrecto. Inténtalo de nuevo.",
     "saveError": "No se pudo guardar el PIN",
-    "unlockWithPin": "Desbloquear con PIN"
+    "unlockWithPin": "Desbloquear con PIN",
+    "lockManagement": "Gestión del Bloqueo",
+    "changePin": "Cambiar PIN",
+    "changePinDesc": "Actualiza tu código PIN actual",
+    "removePinAction": "Eliminar Bloqueo",
+    "removePinActionDesc": "Desactivar la protección con PIN",
+    "enterCurrentPinTitle": "Introduce el PIN Actual",
+    "enterCurrentPinDesc": "Introduce tu PIN de 4 dígitos actual para continuar",
+    "incorrectCurrentPin": "El PIN actual es incorrecto. Inténtalo de nuevo.",
+    "enterNewPinTitle": "Establecer Nuevo PIN",
+    "enterNewPinDesc": "Introduce un nuevo código PIN de 4 dígitos",
+    "confirmNewPinTitle": "Confirmar Nuevo PIN",
+    "confirmNewPinDesc": "Vuelve a introducir tu nuevo PIN para confirmar",
+    "pinChangedTitle": "Éxito",
+    "pinChangedSuccess": "Tu PIN ha sido actualizado con éxito."
   },
   "reminder": {
     "title": "Configurar Recordatorio",

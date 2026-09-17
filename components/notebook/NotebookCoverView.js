@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
+  Platform,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,6 +23,7 @@ import {
   lockSession,
 } from '../../services/biometricService';
 import PinAuthModal from '../security/PinAuthModal';
+import LockManagementSheet from '../security/LockManagementSheet';
 import {
   DEFAULT_COVER_TEMPLATE_ID,
   getCoverTemplateById,
@@ -87,9 +89,10 @@ export default function NotebookCoverView({
   const [filterDate, setFilterDate] = useState(null);
   const [pinModalState, setPinModalState] = useState({
     visible: false,
-    mode: 'verify', // 'setup' | 'verify' | 'remove'
+    mode: 'verify', // 'setup' | 'verify' | 'remove' | 'change'
     onSuccessCallback: null,
   });
+  const [isLockManagementVisible, setIsLockManagementVisible] = useState(false);
 
 
   // Kapak Şablonu ve Dinamik Kenar Rengi
@@ -190,26 +193,15 @@ export default function NotebookCoverView({
     storageRef.current.updateMeta({ coverDrawings: updatedDrawings });
   }, [notebook?.coverDrawings]);
 
-  // Kilit durumunu değiştir (PIN Kurulumu ve Kaldırma)
+  // Kilit durumunu değiştir (PIN Kurulumu veya Kilit Yönetim Menüsü)
   const handleToggleLock = useCallback(async () => {
     if (!notebook) return;
     const targetId = notebook?.id || 'diary';
     const hasExistingPin = await SecurityService.hasPin(targetId);
 
     if (hasExistingPin) {
-      // 3. Aşama: Kilidi Kaldırma (Kullanıcının mevcut şifresi sorularak kaldırılır)
-      setPinModalState({
-        visible: true,
-        mode: 'remove',
-        onSuccessCallback: async () => {
-          setNotebook((prev) => ({ ...prev, isLocked: false }));
-          await storageRef.current.updateMeta({ isLocked: false });
-          SecurityService.lockSession(targetId);
-          try {
-            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          } catch (e) {}
-        },
-      });
+      // Hali hazırda kayıtlı PIN varsa: Kilit Yönetim Menüsünü ("Şifreyi Değiştir" / "Kilidi Kaldır") aç
+      setIsLockManagementVisible(true);
     } else {
       // 1. Aşama: İlk Kurulum (Kayıtlı PIN yoksa kesinlikle "Yeni PIN Belirle" açılır)
       setPinModalState({
@@ -225,6 +217,48 @@ export default function NotebookCoverView({
         },
       });
     }
+  }, [notebook]);
+
+  // Kilit Yönetimi: Şifreyi Değiştir (3 Aşamalı Akış)
+  const handleOpenChangePin = useCallback(() => {
+    const targetId = notebook?.id || 'diary';
+    setPinModalState({
+      visible: true,
+      mode: 'change',
+      onSuccessCallback: async () => {
+        setNotebook((prev) => ({ ...prev, isLocked: true }));
+        await storageRef.current.updateMeta({ isLocked: true });
+        SecurityService.unlockSession(targetId);
+
+        // Şık geri bildirim (Toast / Alert)
+        const successMsg = t('security.pinChangedSuccess', 'Şifreniz başarıyla güncellendi.');
+        const successTitle = t('security.pinChangedTitle', 'Başarılı');
+        if (Platform.OS === 'web') {
+          window.alert(successMsg);
+        } else {
+          Alert.alert(successTitle, successMsg, [
+            { text: t('common.ok', 'Tamam') },
+          ]);
+        }
+      },
+    });
+  }, [notebook, t]);
+
+  // Kilit Yönetimi: Kilidi Kaldır
+  const handleOpenRemovePin = useCallback(() => {
+    const targetId = notebook?.id || 'diary';
+    setPinModalState({
+      visible: true,
+      mode: 'remove',
+      onSuccessCallback: async () => {
+        setNotebook((prev) => ({ ...prev, isLocked: false }));
+        await storageRef.current.updateMeta({ isLocked: false });
+        SecurityService.lockSession(targetId);
+        try {
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } catch (e) {}
+      },
+    });
   }, [notebook]);
 
   // 2. Aşama: Defterin sayfalarını aç (Kilitliyse ve kayıtlı PIN varsa doğrula)
@@ -601,6 +635,15 @@ export default function NotebookCoverView({
           pages={notebook?.pages || []}
         />
       )}
+
+      {/* Kilit Yönetimi Menüsü (Şifreyi Değiştir / Kilidi Kaldır) */}
+      <LockManagementSheet
+        visible={isLockManagementVisible}
+        onClose={() => setIsLockManagementVisible(false)}
+        onChangePin={handleOpenChangePin}
+        onRemovePin={handleOpenRemovePin}
+        title={typeof getTitle === 'function' ? getTitle(notebook) : (notebook?.title || t('diary.title', 'Günlüğüm'))}
+      />
 
       {/* 4 Haneli PIN Güvenlik Modalı */}
       <PinAuthModal

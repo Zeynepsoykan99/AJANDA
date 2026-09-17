@@ -4,6 +4,32 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-17] - Günlük Kilidi (PIN): "Şifreyi Değiştir" (Change PIN) Özelliği ve 3 Aşamalı Güvenlik Akışı
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Kullanıcıların Günlüğüm (My Diary) modülündeki mevcut kilit şifrelerini (PIN) diledikleri zaman güvenli bir şekilde değiştirebilmeleri sağlandı.
+- **Mimari ve Güvenlik Akışı:**
+  1. **Arayüz Entegrasyonu (`LockManagementSheet`):** Kilitli günlük kapağında kilit ikonuna basıldığında doğrudan şık bir "Kilit Yönetimi" paneli (Bottom Sheet) açılır. Bu panel yalnızca kayıtlı bir PIN varsa açılır ve "Şifreyi Değiştir" ile "Kilidi Kaldır" seçeneklerini sunar.
+  2. **1. Aşama (Mevcut Şifre Doğrulaması):** "Şifreyi Değiştir" seçildiğinde sistem öncelikle kullanıcının mevcut şifresini sorar. Eski şifre doğru girilmeden bir sonraki aşamaya kesinlikle geçilmez (hatalı girişte shake ve hata uyarısı verilir).
+  3. **2. Aşama (Yeni Şifre Belirleme):** Eski şifre başarıyla doğrulandıktan sonra kullanıcıdan yeni 4 haneli PIN girmesi istenir.
+  4. **3. Aşama (Yeni Şifre Onaylama):** Yeni şifrenin tekrar girilmesi istenir. İki giriş eşleştiğinde donanımsal `SecureStore` (ve Web AsyncStorage fallback) üzerindeki şifre güncellenir (`overwrite`). Eşleşmezse hata uyarısı verilip 2. aşamaya geri dönülür.
+  5. **Geri Bildirim ve UI Kapanışı:** Şifre güncellendiğinde modal otomatik kapanır, başarı titreşimi verilir ve kullanıcıya şık bir bildirim (`Alert.alert` / Web `window.alert`) ile *"Şifreniz başarıyla güncellendi"* mesajı iletilir.
+  6. **Çoklu Dil:** TR, EN, DE, ES ve FR dil dosyalarına tüm yeni terimler (`lockManagement`, `changePin`, `enterCurrentPinTitle`, `enterNewPinTitle`, `confirmNewPinTitle`, `pinChangedSuccess` vb.) eklendi.
+
+### 📁 Değiştirilen ve Eklenen Dosyalar
+- [`components/security/LockManagementSheet.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/security/LockManagementSheet.js) [NEW]
+- [`components/security/PinAuthModal.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/security/PinAuthModal.js)
+- [`components/notebook/NotebookCoverView.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/notebook/NotebookCoverView.js)
+- [`services/securityService.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/services/securityService.js)
+- [`locales/tr.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/tr.json)
+- [`locales/en.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/en.json)
+- [`locales/de.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/de.json)
+- [`locales/es.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/es.json)
+- [`locales/fr.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/fr.json)
+- [`scratch/validate_change_pin_flow.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/scratch/validate_change_pin_flow.js) [NEW TEST]
+
+---
+
 ## 📅 [2026-09-17] - Hata Düzeltmesi: MoodPickerModal ScrollView İçe Aktarımı (Bugfix)
 
 ### 🔍 Kapsam ve İhtiyaç

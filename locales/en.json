@@ -284,7 +284,21 @@
     "pinMismatch": "PINs do not match. Please try again.",
     "incorrectPin": "Incorrect PIN. Please try again.",
     "saveError": "Could not save PIN",
-    "unlockWithPin": "Unlock with PIN"
+    "unlockWithPin": "Unlock with PIN",
+    "lockManagement": "Lock Management",
+    "changePin": "Change PIN",
+    "changePinDesc": "Update your current PIN code",
+    "removePinAction": "Remove Lock",
+    "removePinActionDesc": "Disable PIN protection",
+    "enterCurrentPinTitle": "Enter Current PIN",
+    "enterCurrentPinDesc": "Enter your current 4-digit PIN to continue",
+    "incorrectCurrentPin": "Current PIN is incorrect. Please try again.",
+    "enterNewPinTitle": "Set New PIN",
+    "enterNewPinDesc": "Enter a new 4-digit PIN code",
+    "confirmNewPinTitle": "Confirm New PIN",
+    "confirmNewPinDesc": "Re-enter your new PIN code to confirm",
+    "pinChangedTitle": "Success",
+    "pinChangedSuccess": "Your PIN has been updated successfully."
   },
   "reminder": {
     "title": "Set Reminder",

@@ -27,7 +27,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
  *
  * @param {object} props
  * @param {boolean} props.visible - Modal görünürlüğü
- * @param {'setup'|'verify'|'remove'} [props.mode='verify'] - Çalışma modu
+ * @param {'setup'|'verify'|'remove'|'change'} [props.mode='verify'] - Çalışma modu
  * @param {string} [props.targetId='diary'] - Hedef kimlik ('diary' veya defter kimliği)
  * @param {string} [props.itemTitle] - Kilitlenen öğe başlığı
  * @param {function} props.onSuccess - Başarılı doğrulama/kurulum callback'i
@@ -46,8 +46,9 @@ export default function PinAuthModal({
 
   // Pin Giriş State'leri
   const [pin, setPin] = useState('');
-  const [firstPin, setFirstPin] = useState(''); // Setup modunda ilk girilen PIN
+  const [firstPin, setFirstPin] = useState(''); // Setup ve Change modunda ilk girilen PIN
   const [setupStep, setSetupStep] = useState(1); // 1 = PIN belirle, 2 = PIN onayla
+  const [changeStep, setChangeStep] = useState(1); // 1 = Mevcut PIN, 2 = Yeni PIN, 3 = Yeni PIN Onayla
   const [errorMessage, setErrorMessage] = useState('');
   const [biometricInfo, setBiometricInfo] = useState({ type: 'none', icon: 'fingerprint' });
 
@@ -74,6 +75,7 @@ export default function PinAuthModal({
       setPin('');
       setFirstPin('');
       setSetupStep(1);
+      setChangeStep(1);
       setErrorMessage('');
     }
   }, [visible, mode]);
@@ -183,9 +185,59 @@ export default function PinAuthModal({
           triggerShake();
           setPin('');
         }
+      } else if (mode === 'change') {
+        // Şifre Değiştirme Modu (3 Aşamalı Akış: Mevcut PIN -> Yeni PIN -> Yeni PIN Onayla)
+        if (changeStep === 1) {
+          // 1. Aşama: Mevcut Şifreyi Doğrula (Eski şifre bilinmeden asla geçilemez)
+          const isCurrentValid = await SecurityService.verifyPin(enteredPin, targetId);
+          if (isCurrentValid) {
+            try {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            } catch {}
+            setChangeStep(2);
+            setPin('');
+            setErrorMessage('');
+          } else {
+            setErrorMessage(t('security.incorrectCurrentPin', 'Mevcut PIN kodu hatalı. Tekrar deneyin.'));
+            triggerShake();
+            setPin('');
+          }
+        } else if (changeStep === 2) {
+          // 2. Aşama: Yeni PIN'i Al
+          try {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          } catch {}
+          setFirstPin(enteredPin);
+          setPin('');
+          setChangeStep(3);
+          setErrorMessage('');
+        } else if (changeStep === 3) {
+          // 3. Aşama: Yeni PIN'i Onayla ve Kalıcı Olarak Güncelle (Overwrite)
+          if (enteredPin === firstPin) {
+            const saved = await SecurityService.setPin(enteredPin, targetId);
+            if (saved) {
+              try {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              } catch {}
+              SecurityService.unlockSession(targetId);
+              onSuccess && onSuccess({ action: 'changed', newPin: enteredPin });
+              onClose && onClose();
+            } else {
+              setErrorMessage(t('security.saveError', 'PIN kaydedilemedi'));
+              triggerShake();
+              setPin('');
+            }
+          } else {
+            setErrorMessage(t('security.pinMismatch', 'PIN kodları eşleşmedi. Tekrar deneyin.'));
+            triggerShake();
+            setPin('');
+            setChangeStep(2);
+            setFirstPin('');
+          }
+        }
       }
     },
-    [mode, setupStep, firstPin, targetId, onSuccess, onClose, triggerShake, t]
+    [mode, setupStep, changeStep, firstPin, targetId, onSuccess, onClose, triggerShake, t]
   );
 
   // Sayı Tuşuna Dokunulduğunda
@@ -233,6 +285,17 @@ export default function PinAuthModal({
   } else if (mode === 'remove') {
     modalTitle = t('security.removePinTitle', 'Kilidi Kaldır');
     modalSubtitle = t('security.removePinDesc', 'Kilidi kaldırmak için mevcut PIN kodunuzu girin');
+  } else if (mode === 'change') {
+    if (changeStep === 1) {
+      modalTitle = t('security.enterCurrentPinTitle', 'Mevcut Şifrenizi Girin');
+      modalSubtitle = t('security.enterCurrentPinDesc', 'Devam etmek için mevcut 4 haneli PIN kodunuzu girin');
+    } else if (changeStep === 2) {
+      modalTitle = t('security.enterNewPinTitle', 'Yeni PIN Belirleyin');
+      modalSubtitle = t('security.enterNewPinDesc', '4 haneli yeni bir PIN kodu girin');
+    } else {
+      modalTitle = t('security.confirmNewPinTitle', 'Yeni PIN\'i Onaylayın');
+      modalSubtitle = t('security.confirmNewPinDesc', 'Yeni PIN kodunuzu doğrulamak için tekrar girin');
+    }
   }
 
   return (
@@ -279,7 +342,15 @@ export default function PinAuthModal({
                 ]}
               >
                 <MaterialCommunityIcons
-                  name={mode === 'setup' ? 'shield-key' : mode === 'remove' ? 'lock-open-outline' : 'lock'}
+                  name={
+                    mode === 'setup'
+                      ? 'shield-key'
+                      : mode === 'remove'
+                      ? 'lock-open-outline'
+                      : mode === 'change'
+                      ? 'lock-reset'
+                      : 'lock'
+                  }
                   size={28}
                   color="#C2185B"
                 />
@@ -307,6 +378,38 @@ export default function PinAuthModal({
               >
                 {modalSubtitle}
               </Text>
+
+              {/* Adım Rozeti (Step Indicator) */}
+              {mode === 'change' && (
+                <View
+                  style={[
+                    styles.stepBadge,
+                    { backgroundColor: isDark ? '#381D45' : '#FCE4EC' },
+                  ]}
+                >
+                  <Text style={[styles.stepBadgeText, { color: colors.accent }]}>
+                    {changeStep === 1
+                      ? `1/3 • ${t('security.enterCurrentPinTitle', 'Mevcut Şifre')}`
+                      : changeStep === 2
+                      ? `2/3 • ${t('security.enterNewPinTitle', 'Yeni Şifre')}`
+                      : `3/3 • ${t('security.confirmNewPinTitle', 'Onay')}`}
+                  </Text>
+                </View>
+              )}
+              {mode === 'setup' && (
+                <View
+                  style={[
+                    styles.stepBadge,
+                    { backgroundColor: isDark ? '#381D45' : '#FCE4EC' },
+                  ]}
+                >
+                  <Text style={[styles.stepBadgeText, { color: colors.accent }]}>
+                    {setupStep === 1
+                      ? `1/2 • ${t('security.setPinTitle', 'PIN Belirle')}`
+                      : `2/2 • ${t('security.confirmPinTitle', 'Onayla')}`}
+                  </Text>
+                </View>
+              )}
 
               {/* 4 Haneli PIN Noktaları (Dots) */}
               <Animated.View
@@ -525,6 +628,18 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     paddingHorizontal: 12,
     marginBottom: 18,
+  },
+  stepBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: -8,
+    marginBottom: 14,
+  },
+  stepBadgeText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   dotsContainer: {
     flexDirection: 'row',
