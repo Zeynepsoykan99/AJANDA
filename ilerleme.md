@@ -4,6 +4,41 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-17] - Günlük Kilidi (PIN): Yetim Kilitlerin Temizlenmesi ve Kullanıcı Tanımlı 3 Aşamalı PIN Döngüsü
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Günlük kilidi akışında kullanıcının daha önce şifre belirlemediği halde "mevcut şifreyi gir" ekranıyla karşılaşması ve sistemin otomatik/varsayılan bir şifre atamış gibi görünmesi sorunu çözüldü. Şifrenin yalnızca kullanıcının kendisi tarafından belirlendiği 3 aşamalı döngü güvenceye alındı.
+- **Hedefler:**
+  1. **Yetim Kilitlerin (Orphan Locks) Otomatik Temizlenmesi:** Eğer yerel depolamada `notebook.isLocked: true` kalmış fakat `SecureStore`'da kullanıcıya ait hiçbir PIN kaydedilmemişse (`!hasPin`), kilit durumu otomatik olarak `isLocked: false` yapılarak sıfırlandı.
+  2. **İlk Kurulum (Set PIN):** Henüz kayıtlı PIN yokken kilit ikonuna basıldığında kesin olarak "Yeni PIN Belirle" (2 adımlı: gir + onayla) ekranının açılması sağlandı.
+  3. **Kilitli Giriş (Enter PIN):** Yalnızca kayıtlı bir PIN varsa kapak veya "Günlüğümü Aç" butonuna basıldığında şifre sorulması ve doğru şifre girilmeden sayfalara geçilmemesi sağlandı.
+  4. **Kilidi Kaldırma (Remove PIN):** Kilitli günlükte kilit butonuna tıklandığında kullanıcının mevcut şifresini doğrulatıp PIN'i `SecureStore`'dan tamamen silmesi sağlandı.
+  5. **Standardize Target ID:** `normalizeTargetId` ile `'my_diary'` ve `'diary'` kimlikleri tek bir standart anahtara bağlandı.
+
+### 🔧 Yapılan Geliştirmeler ve Düzenlemeler
+1. **`services/securityService.js`:**
+   - `normalizeTargetId(targetId)` fonksiyonu eklendi; `my_diary` ve `diary` anahtar uyuşmazlığı giderildi.
+   - `setPin`, `verifyPin`, `hasPin`, `removePin` ve oturum fonksiyonları normalizasyon ile bağlandı.
+   - `verifyPin` sadece ve sadece kayıtlı PIN ile eşleştiğinde `true` döner, hiçbir varsayılan PIN yoktur.
+2. **`components/notebook/NotebookCoverView.js`:**
+   - `useFocusEffect` içinde yetim kilit temizliği eklendi (`savedNotebook.isLocked && !hasPin -> isLocked: false`).
+   - `handleToggleLock`: Kayıtlı PIN yoksa her zaman ve istisnasız `mode: 'setup'` ("Yeni PIN Belirle") açılır; kayıtlı PIN varsa `mode: 'remove'` açılır.
+   - `handleOpenNotebook` & `handleDateSelect`: Yalnızca kayıtlı bir PIN varsa (`hasPin && isLocked`) doğrulama modalı açılır.
+3. **`components/security/PinAuthModal.js`:**
+   - Açılıştaki otomatik biyometri pop-up gecikmesi kaldırılarak doğrudan 4 haneli PIN tuş takımına odaklanıldı.
+4. **`components/notebook/NotebookPagesView.js` & `NotebookLockGate.js`:**
+   - Sayfa girişlerinde ve tam ekran kapısında kilit durumu `hasPin` varlığına bağlandı; kayıtlı PIN varsa doğrudan 4 haneli PIN tuş takımı sunuldu.
+
+### ✅ Doğrulama & Testler
+- `scratch/validate_user_pin_flow.js`:
+  - `normalizeTargetId` eşleşmeleri (`my_diary` -> `diary`) doğrulandı.
+  - İlk durumda varsayılan hiçbir şifrenin geçerli olmadığı (`1234`, `0000` -> `false`) doğrulandı.
+  - Yetim kilit temizliği simüle edilip doğrulandı.
+  - Kullanıcının kendi belirlediği PIN ile kayıt, doğrulama ve silme akışı test edildi.
+- `scratch/validate_mood_pin.js` ve `tests/zoomableCanvas.test.js` tam başarıyla geçti.
+
+---
+
 ## 📅 [2026-09-17] - Günlüğüm: Günlük Tek Duygu Kısıtlaması (1 Mood Per Day), 12 Genişletilmiş Duygu Yelpazesi ve PIN/Şifreli Kilit Entegrasyonu (Diary Lock)
 
 ### 🔍 Kapsam ve İhtiyaç

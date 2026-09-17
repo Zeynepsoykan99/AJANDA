@@ -180,11 +180,20 @@ export default function NotebookPagesView({
         setNotebook(savedNotebook);
 
         const targetId = savedNotebook?.id || 'diary';
-        if (savedNotebook?.isLocked) {
-          if (isSessionUnlocked(targetId)) {
+        const hasPin = await SecurityService.hasPin(targetId);
+
+        if (savedNotebook?.isLocked && hasPin) {
+          if (SecurityService.isSessionUnlocked(targetId)) {
             setIsUnlocked(true);
+          } else {
+            setIsUnlocked(false);
           }
         } else {
+          // PIN yoksa kilitli sayılamaz, yetim kilit bayrağını temizle
+          if (savedNotebook?.isLocked && !hasPin) {
+            savedNotebook.isLocked = false;
+            storageRef.current.updateMeta({ isLocked: false });
+          }
           setIsUnlocked(true);
         }
 

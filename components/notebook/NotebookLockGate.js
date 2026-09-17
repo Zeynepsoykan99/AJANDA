@@ -96,13 +96,29 @@ export default function NotebookLockGate({
     }
   }, [isAuthenticating, title, targetId, onUnlock, t]);
 
-  // Ekran ilk açıldığında otomatik olarak FaceID / PIN promptunu tetikle
+  // Ekran ilk açıldığında: Özel PIN varsa doğrudan PIN modalını aç, yoksa biyometriyi dene
   useEffect(() => {
-    const timer = setTimeout(() => {
-      handleAuthenticate();
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [handleAuthenticate]);
+    let isActive = true;
+    (async () => {
+      try {
+        const hasCustomPin = await SecurityService.hasPin(targetId);
+        if (!isActive) return;
+        if (hasCustomPin) {
+          setIsPinModalVisible(true);
+        } else {
+          const timer = setTimeout(() => {
+            handleAuthenticate();
+          }, 350);
+          return () => clearTimeout(timer);
+        }
+      } catch {
+        handleAuthenticate();
+      }
+    })();
+    return () => {
+      isActive = false;
+    };
+  }, [targetId, handleAuthenticate]);
 
   const handleBackPress = () => {
     if (onBack) {

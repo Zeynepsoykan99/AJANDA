@@ -124,7 +124,19 @@ export default function NotebookCoverView({
       (async () => {
         try {
           const savedNotebook = await storageRef.current.load();
-          if (isActive) setNotebook(savedNotebook || null);
+          if (isActive && savedNotebook) {
+            const targetId = savedNotebook?.id || 'diary';
+            const hasPin = await SecurityService.hasPin(targetId);
+            // Yetim kilit temizliği: isLocked true kalmış ama hiçbir PIN kaydedilmemişse,
+            // kullanıcının var olmayan şifreyle kilitlenmemesi için kilidi sıfırla
+            if (savedNotebook.isLocked && !hasPin) {
+              savedNotebook.isLocked = false;
+              await storageRef.current.updateMeta({ isLocked: false });
+            }
+            setNotebook(savedNotebook);
+          } else if (isActive) {
+            setNotebook(null);
+          }
         } catch (error) {
           console.warn('Defter yüklenirken hata:', error);
         } finally {
@@ -178,15 +190,14 @@ export default function NotebookCoverView({
     storageRef.current.updateMeta({ coverDrawings: updatedDrawings });
   }, [notebook?.coverDrawings]);
 
-  // Kilit durumunu değiştir (PIN / Biyometrik Kurulum ve Kaldırma)
+  // Kilit durumunu değiştir (PIN Kurulumu ve Kaldırma)
   const handleToggleLock = useCallback(async () => {
     if (!notebook) return;
     const targetId = notebook?.id || 'diary';
-    const isCurrentlyLocked = !!notebook?.isLocked;
     const hasExistingPin = await SecurityService.hasPin(targetId);
 
-    if (isCurrentlyLocked || hasExistingPin) {
-      // Kilidi kaldırma akışı
+    if (hasExistingPin) {
+      // 3. Aşama: Kilidi Kaldırma (Kullanıcının mevcut şifresi sorularak kaldırılır)
       setPinModalState({
         visible: true,
         mode: 'remove',
@@ -194,14 +205,13 @@ export default function NotebookCoverView({
           setNotebook((prev) => ({ ...prev, isLocked: false }));
           await storageRef.current.updateMeta({ isLocked: false });
           SecurityService.lockSession(targetId);
-          lockSession(targetId);
           try {
             await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           } catch (e) {}
         },
       });
     } else {
-      // Kilitleme / PIN oluşturma akışı
+      // 1. Aşama: İlk Kurulum (Kayıtlı PIN yoksa kesinlikle "Yeni PIN Belirle" açılır)
       setPinModalState({
         visible: true,
         mode: 'setup',
@@ -209,7 +219,6 @@ export default function NotebookCoverView({
           setNotebook((prev) => ({ ...prev, isLocked: true }));
           await storageRef.current.updateMeta({ isLocked: true });
           SecurityService.unlockSession(targetId);
-          unlockSession(targetId);
           try {
             await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           } catch (e) {}
@@ -218,14 +227,14 @@ export default function NotebookCoverView({
     }
   }, [notebook]);
 
-  // Defterin sayfalarını aç (kilitliyse önce PIN veya Biyometri ile doğrula)
+  // 2. Aşama: Defterin sayfalarını aç (Kilitliyse ve kayıtlı PIN varsa doğrula)
   const handleOpenNotebook = useCallback(async () => {
     if (!notebook) return;
     const targetId = notebook?.id || 'diary';
     const hasPin = await SecurityService.hasPin(targetId);
-    const isLocked = notebook?.isLocked || hasPin;
 
-    if (isLocked && !SecurityService.isSessionUnlocked(targetId)) {
+    // Sadece gerçekten kayıtlı bir PIN varsa ve oturum açık değilse şifre sor
+    if (hasPin && notebook?.isLocked && !SecurityService.isSessionUnlocked(targetId)) {
       setPinModalState({
         visible: true,
         mode: 'verify',
@@ -253,7 +262,6 @@ export default function NotebookCoverView({
       // Kilit kontrolü
       const targetId = notebook?.id || 'diary';
       const hasPin = await SecurityService.hasPin(targetId);
-      const isLocked = notebook?.isLocked || hasPin;
 
       const navigateToDatePage = () => {
         const matchPage = notebook?.pages?.find((p) => isSameDay(p.createdAt, selectedDate));
@@ -275,7 +283,7 @@ export default function NotebookCoverView({
         }
       };
 
-      if (isLocked && !SecurityService.isSessionUnlocked(targetId)) {
+      if (hasPin && notebook?.isLocked && !SecurityService.isSessionUnlocked(targetId)) {
         setPinModalState({
           visible: true,
           mode: 'verify',

@@ -75,14 +75,6 @@ export default function PinAuthModal({
       setFirstPin('');
       setSetupStep(1);
       setErrorMessage('');
-
-      // Verify modunda açılır açılmaz biyometri denensin mi?
-      if (mode === 'verify' && Platform.OS !== 'web') {
-        const timer = setTimeout(() => {
-          triggerBiometrics();
-        }, 350);
-        return () => clearTimeout(timer);
-      }
     }
   }, [visible, mode]);
 
