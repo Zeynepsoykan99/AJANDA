@@ -104,6 +104,12 @@ export default function PageViewScreen() {
   const saveTimeoutRef = useRef(null);
   const recognitionTimeoutRef = useRef(null);
 
+  // Canvas ref ve sayfa geçişinde zoom sıfırlama
+  const canvasRef = useRef(null);
+  useEffect(() => {
+    canvasRef.current?.resetZoomImmediate?.();
+  }, [pageId]);
+
   // Sayfa yükle
   useEffect(() => {
     (async () => {
@@ -1037,6 +1043,8 @@ export default function PageViewScreen() {
 
       {/* Sayfa İçeriği + NotebookContainer (normal şablonlar) / Tam Ekran Görsel (image_template) - Zoomable Canvas */}
       <ZoomableCanvas
+        key={pageId}
+        ref={canvasRef}
         isDrawingMode={activeMode === 'drawing'}
         isTextMode={activeMode === 'text'}
         minScale={1.0}

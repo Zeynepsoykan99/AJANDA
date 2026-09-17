@@ -95,6 +95,12 @@ export default function TodoViewScreen() {
   const [textColor, setTextColor] = useState('#4E342E');
   const [textFontSize, setTextFontSize] = useState(16);
 
+  // Canvas ref ve sayfa geçişinde zoom sıfırlama
+  const canvasRef = useRef(null);
+  useEffect(() => {
+    canvasRef.current?.resetZoomImmediate?.();
+  }, [pageId]);
+
   useEffect(() => {
     (async () => {
       try {
@@ -931,6 +937,8 @@ export default function TodoViewScreen() {
 
       {/* Liste İçeriği - Pinch-to-Zoom & Pan Destekli Tuval */}
       <ZoomableCanvas
+        key={pageId}
+        ref={canvasRef}
         isDrawingMode={activeMode === 'drawing'}
         isTextMode={activeMode === 'text'}
         minScale={1.0}

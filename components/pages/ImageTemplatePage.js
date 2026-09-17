@@ -18,7 +18,7 @@ export default function ImageTemplatePage({ template }) {
         source={imageSource}
         style={[styles.fullBleedImage, { backgroundColor: edgeColor }]}
         imageStyle={styles.imageStyle}
-        resizeMode="cover"
+        resizeMode="contain"
       />
     </View>
   );
@@ -33,6 +33,8 @@ const styles = StyleSheet.create({
     padding: 0,
     margin: 0,
     overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: 'transparent',
   },
   fullBleedImage: {
@@ -44,6 +46,6 @@ const styles = StyleSheet.create({
   imageStyle: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
+    resizeMode: 'contain',
   },
 });

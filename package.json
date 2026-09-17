@@ -39,10 +39,14 @@
     "tailwindcss": "3.3.2"
   },
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
+    "start": "node --max-old-space-size=4096 ./node_modules/expo/bin/cli start",
+    "start:clean": "node scripts/clean.js",
+    "clean": "node scripts/clean.js",
+    "clean:dry": "node scripts/clean.js --no-start",
+    "free-port": "node scripts/free-port.js",
+    "android": "node --max-old-space-size=4096 ./node_modules/expo/bin/cli start --android",
+    "ios": "node --max-old-space-size=4096 ./node_modules/expo/bin/cli start --ios",
+    "web": "node --max-old-space-size=4096 ./node_modules/expo/bin/cli start --web",
     "postinstall": "node -e \"const fs = require('fs'); const p = 'node_modules/i18next/package.json'; if (fs.existsSync(p)) { const pkg = JSON.parse(fs.readFileSync(p)); if (pkg.module !== './dist/cjs/i18next.js') { pkg.module = './dist/cjs/i18next.js'; fs.writeFileSync(p, JSON.stringify(pkg, null, 2)); } }\""
   },
   "private": true,

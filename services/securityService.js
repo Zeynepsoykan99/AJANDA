@@ -41,6 +41,8 @@ const isSecureStoreAvailable = async () => {
  * Kesinlikle hiçbir varsayılan/otomatik PIN barındırmaz.
  */
 export const SecurityService = {
+  normalizeTargetId,
+
   /**
    * 4 haneli kullanıcı PIN kodunu güvenli alana kaydeder
    * @param {string} pin

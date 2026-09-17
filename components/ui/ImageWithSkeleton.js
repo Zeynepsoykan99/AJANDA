@@ -11,7 +11,7 @@ export default function ImageWithSkeleton({
   source,
   style,
   imageStyle,
-  resizeMode = 'cover',
+  resizeMode = 'contain',
   isBackground = false,
   children,
 }) {
@@ -34,7 +34,7 @@ export default function ImageWithSkeleton({
       <ImageComponent
         source={source}
         style={[styles.image, style]}
-        imageStyle={[styles.image, imageStyle]}
+        imageStyle={[styles.image, imageStyle, { resizeMode }]}
         resizeMode={resizeMode}
         onLoad={handleLoad}
       >

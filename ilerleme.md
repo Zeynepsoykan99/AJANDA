@@ -4,6 +4,54 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-17] - Ajanda & Şablon Sayfaları: Fit-to-Screen `resizeMode="contain"` Düzeltmesi ve Sayfalar Arası Zoom Sıfırlama (Mount Reset)
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Ajanda (Aylık/Monthly) ve To-Do modülündeki sayfalarda şablonun ekrana sığmak yerine devasa, aşırı yakınlaştırılmış (zoomed-in) açılması ve takvim günlerinin ekran dışına taşması hatası giderildi. Sayfaların her cihazda ve her açılışta ekrana tam sığması (fit-to-screen) sağlandı.
+- **Kök Nedenler ve Çözümler:**
+  1. **Şablon Görseli Kırpılma ve Dev Boyut Hatasının Giderilmesi (`ImageTemplatePage.js` & `ImageWithSkeleton.js`):**
+     - Aylık (Monthly) ve To-Do görsel şablonları dikey formattadır (~0.70 en/boy oranı, 700x1000px).
+     - Daha önce uygulanan `resizeMode="cover"` geniş ekranlarda görseli enine göre %100 ölçekleyip yüksekliği 1500-2500 piksele fırlatıyor ve takvim günlerinin/tablosunun %50'sinden fazlasını ekran dışına taşırıp kırpıyordu. Bu durum kullanıcıya sayfanın devasa/yakınlaştırılmış açıldığı hissini veriyordu.
+     - `resizeMode="contain"` uygulanarak şablonun tamamının (takvim günleri, başlık, notlar) ekrana tam oturması (fit-to-screen) sağlandı. Boşta kalan kenarlar şablonun orijinal pastel `edgeColor` rengi ile zarifçe çerçevelendi (letterbox).
+     - `ImageWithSkeleton` bileşeninde varsayılan `resizeMode="contain"` yapıldı ve React Native Web platformu için `{ resizeMode }` doğrudan `imageStyle` dizisine enjekte edilerek CSS `object-fit: contain` güvence altına alındı.
+  2. **Sayfa Açılışında ve Sayfalar Arası Geçişte Zoom Sıfırlama (`ZoomableCanvas.js`, `app/ajandam/[pageId].js`, `app/todolist/[pageId].js`):**
+     - `ZoomableCanvas` bileşeni içine `useImperativeHandle` eklenerek `resetZoomImmediate()` dışa aktarıldı.
+     - Bileşenin kendi içine `useEffect` eklenerek ilk mount anında `scale = 1.0`, `translateX = 0`, `translateY = 0` olması garanti altına alındı.
+     - `app/ajandam/[pageId].js` ve `app/todolist/[pageId].js` sayfalarında `canvasRef` tanımlandı; sayfa ID'si değiştikçe (`useEffect [pageId]`) `canvasRef.current?.resetZoomImmediate?.()` çağrıldı.
+     - `ZoomableCanvas` öğesine `key={pageId}` verilerek her sayfa geçişinde React'in temiz bir canvas instance'ı render etmesi sağlandı; önceki sayfadan kalan zoom/pan artık yeni sayfaya sızamaz.
+  3. **SecurityService `normalizeTargetId` Dışa Aktarımı (`services/securityService.js`):**
+     - Kilit sisteminde `NotebookCoverView` tarafından çağrılan `SecurityService.normalizeTargetId` fonksiyonu `SecurityService` objesine eklenerek export edildi; kırmızı çökme ekranı (`normalizeTargetId is not a function`) kalıcı olarak giderildi.
+
+### 📁 Değiştirilen Dosyalar
+- [`components/pages/ImageTemplatePage.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/pages/ImageTemplatePage.js)
+- [`components/ui/ImageWithSkeleton.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/ui/ImageWithSkeleton.js)
+- [`components/drawing/ZoomableCanvas.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/drawing/ZoomableCanvas.js)
+- [`app/ajandam/[pageId].js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/ajandam/[pageId].js)
+- [`app/todolist/[pageId].js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/todolist/[pageId].js)
+- [`services/securityService.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/services/securityService.js)
+
+---
+
+## 📅 [2026-09-17] - Altyapı ve Sunucu İstikrarı: 4GB Node.js Bellek Limiti, Port 8081 Kurtarıcı ve Temizlik Betiği (Clean Script)
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Yerel geliştirme sunucusunun (Expo/Metro Bundler) çökmesi, bellek yetersizliği (OOM) ve port 8081'in asılı kalan zombi süreçler tarafından kilitlenmesi sorunları kökünden çözüldü.
+- **Kök Nedenler ve Çözümler:**
+  1. **Dairesel Bağımlılık Taraması:** 97 kaynak dosyasının tamamı AST tabanlı algoritmayla tarandı; projede 0 dairesel bağımlılık olduğu, kilitlenmenin döngüsel importlardan kaynaklanmadığı kesinleştirildi.
+  2. **4 GB Node.js Bellek Tahsisi (`package.json`):** 1.745 modüllük büyük derlemelerde V8 heap çökmesini önlemek için `start`, `web`, `android`, `ios` komutları `node --max-old-space-size=4096 ./node_modules/expo/bin/cli` ile 4 GB RAM kullanacak şekilde yapılandırıldı.
+  3. **Çapraz Platform Port Kurtarıcı (`scripts/free-port.js`):** Windows (`netstat` + `taskkill /F /PID`), macOS ve Linux (`lsof` + `kill -9`) üzerinde port 8081'i meşgul eden zombi süreçleri otomatik tespit edip sonlandıran bağımsız araç yazıldı.
+  4. **Tek Tuşla Temizlik ve Kurtarma Betiği (`scripts/clean.js` & `npm run clean`):** Port 8081'i temizleyen, `.expo`, `node_modules/.cache` ve işletim sistemi geçici klasöründeki (`metro-*`, `haste-map-*`) tüm bayat önbellekleri temizleyip projeyi 4GB bellek ve `-c` ile sıfırdan başlatan betik oluşturuldu.
+  5. **Kullanıcı Komutları:** `package.json` içine `npm run clean`, `npm run start:clean` ve `npm run free-port` komutları eklendi.
+
+### 📁 Değiştirilen ve Eklenen Dosyalar
+- [`scripts/free-port.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/scripts/free-port.js) [NEW]
+- [`scripts/clean.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/scripts/clean.js) [NEW]
+- [`package.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/package.json)
+- [`scratch/check_circular_dependencies.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/scratch/check_circular_dependencies.js) [TOOL]
+- [`scratch/check_use_effects.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/scratch/check_use_effects.js) [TOOL]
+
+---
+
 ## 📅 [2026-09-17] - Günlüğüm (My Diary): Çift Şifre (Double Auth) Giderme ve Kapak UI Temizliği
 
 ### 🔍 Kapsam ve İhtiyaç

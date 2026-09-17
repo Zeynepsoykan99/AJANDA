@@ -4,6 +4,7 @@ import React, {
   useRef,
   useCallback,
   useState,
+  useEffect,
   useImperativeHandle,
   forwardRef,
 } from 'react';
@@ -160,6 +161,11 @@ const ZoomableCanvas = forwardRef(function ZoomableCanvas(
     transformRef.current.translateX = 0;
     transformRef.current.translateY = 0;
   }, [scale, translateX, translateY]);
+
+  // Sayfa yüklendiğinde (mount) ölçeğin kesinlikle %100 fit-to-screen başlamasını garanti et
+  useEffect(() => {
+    resetZoomImmediate();
+  }, [resetZoomImmediate]);
 
   // Görünüm alanının pencere içindeki konumunu ölç (pageToCanvas bu ofseti kullanır).
   // Yatay kaydırılan kapsayıcılarda (ör. Günlüğüm sayfaları) kaydırma sonrası yeniden çağrılmalıdır.
@@ -359,6 +365,20 @@ const ZoomableCanvas = forwardRef(function ZoomableCanvas(
     };
   });
 
+  useImperativeHandle(
+    ref,
+    () => ({
+      resetZoom,
+      resetZoomImmediate,
+      getTransform: () => ({
+        scale: scale.value,
+        translateX: translateX.value,
+        translateY: translateY.value,
+      }),
+    }),
+    [resetZoom, resetZoomImmediate, scale, translateX, translateY]
+  );
+
   const contextValue = {
     scale,
     translateX,
@@ -368,6 +388,7 @@ const ZoomableCanvas = forwardRef(function ZoomableCanvas(
     canvasToScreen,
     pageToCanvas,
     resetZoom,
+    resetZoomImmediate,
   };
 
   return (
