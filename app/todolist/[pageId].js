@@ -32,6 +32,7 @@ import AudioNotesDeck from '../../components/audio/AudioNotesDeck';
 import { recognizeHandwriting, recognizeSelectedStrokes } from '../../services/handwritingService';
 import { NotificationService } from '../../services/notificationService';
 import { AudioService } from '../../services/audioService';
+import { transcribeAudioFile } from '../../services/transcriptionService';
 import LassoActionMenu from '../../components/drawing/LassoActionMenu';
 import RecognitionConfirmationModal from '../../components/drawing/RecognitionConfirmationModal';
 import { fitTextToBounds, clusterStrokesByColorAndProximity } from '../../utils/lassoGeometry';
@@ -797,6 +798,44 @@ export default function TodoViewScreen() {
     });
   }, []);
 
+  // Sesli Not Transkripsiyonunu Güncelle (Arka plan asenkron STT)
+  const handleTranscriptReady = useCallback((audioNoteId, transcript, status = 'completed') => {
+    setPage((prev) => {
+      if (!prev?.audioNotes) return prev;
+      const noteIndex = prev.audioNotes.findIndex((n) => n.id === audioNoteId);
+      if (noteIndex === -1) return prev;
+      const updatedNotes = [...prev.audioNotes];
+      updatedNotes[noteIndex] = {
+        ...updatedNotes[noteIndex],
+        transcript: transcript || updatedNotes[noteIndex].transcript,
+        transcriptStatus: status,
+      };
+      StorageService.updatePage(prev.id, { audioNotes: updatedNotes });
+      return { ...prev, audioNotes: updatedNotes };
+    });
+  }, []);
+
+  // Başarısız Transkripsiyonu Yeniden Dene
+  const handleRetryTranscription = useCallback(
+    async (audioNote) => {
+      if (!audioNote?.uri || !audioNote?.id) return;
+      handleTranscriptReady(audioNote.id, null, 'pending');
+      try {
+        const lang = i18n?.language || 'tr';
+        const res = await transcribeAudioFile(audioNote.uri, { language: lang });
+        if (res.success && res.transcript) {
+          handleTranscriptReady(audioNote.id, res.transcript, 'completed');
+        } else {
+          handleTranscriptReady(audioNote.id, null, 'failed');
+        }
+      } catch (err) {
+        console.warn('Yeniden transkripsiyon denemesi hatası:', err);
+        handleTranscriptReady(audioNote.id, null, 'failed');
+      }
+    },
+    [handleTranscriptReady, i18n?.language]
+  );
+
   if (isLoading) {
     return (
       <AnimatedSafeAreaView
@@ -1053,6 +1092,7 @@ export default function TodoViewScreen() {
         pageId={page?.id}
         onClose={() => setIsAudioModalVisible(false)}
         onSave={handleAddAudioNote}
+        onTranscriptReady={handleTranscriptReady}
       />
 
       {/* Sayfa Sesli Notlar Güvertesi */}
@@ -1060,6 +1100,7 @@ export default function TodoViewScreen() {
         audioNotes={page.audioNotes || []}
         onDelete={handleDeleteAudioNote}
         onOpenRecorder={() => setIsAudioModalVisible(true)}
+        onRetryTranscription={handleRetryTranscription}
       />
 
       {/* Geri Al (Undo) Bildirimi */}

@@ -440,6 +440,31 @@
       "generalDayTitle": "Favori Günün: {{day}} ✨",
       "generalDayDesc": "Bu ay {{mood}} hislerin en çok {{day}} günlerinde ({{count}} kez) parıldamış."
     }
+  },
+  "audio": {
+    "micPermissionTitle": "Mikrofon İzni Gerekli",
+    "micPermissionMessage": "Ses kaydı alabilmek için lütfen ayarlardan mikrofon erişimine izin verin.",
+    "recordTitle": "Sesli Not Kaydet",
+    "recordHint": "Kaydı başlatmak için mikrofona dokunun",
+    "recordingHint": "Kayıt yapılıyor... Durdurmak için tekrar dokunun",
+    "recordedHint": "Kaydı dinleyebilir, silebilir veya sayfaya ekleyebilirsiniz",
+    "resetRecord": "Baştan Kaydet",
+    "saveToPage": "Sayfaya Ekle",
+    "defaultTitle": "Sesli Not",
+    "discardConfirmTitle": "Kaydı Sil",
+    "discardConfirmMessage": "Bu ses kaydını silmek istediğinize emin misiniz?",
+    "notesDeckTitle": "Sesli Notlar ({{count}})",
+    "collapsedBadge": "{{count}} Sesli Not",
+    "deleteConfirmTitle": "Sesli Notu Sil",
+    "deleteConfirmMessage": "Bu ses kaydını silmek istediğinize emin misiniz? Bu işlem geri alınamaz."
+  },
+  "transcript": {
+    "pending": "Metne dönüştürülüyor...",
+    "completed": "Transkripsiyon",
+    "failed": "Metne dönüştürülemedi",
+    "retry": "Yeniden Dene",
+    "copied": "Metin kopyalandı",
+    "badge": "Sesli Not"
   }
 }
 

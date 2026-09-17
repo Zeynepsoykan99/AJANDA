@@ -440,6 +440,31 @@
       "generalDayTitle": "Dein Lieblingstag: {{day}} ✨",
       "generalDayDesc": "Deine {{mood}}en Momente strahlten am stärksten an {{day}}en ({{count}} Mal)."
     }
+  },
+  "audio": {
+    "micPermissionTitle": "Mikrofonberechtigung erforderlich",
+    "micPermissionMessage": "Bitte erteilen Sie in den Einstellungen Zugriff auf das Mikrofon, um Sprachnotizen aufzunehmen.",
+    "recordTitle": "Sprachnotiz aufnehmen",
+    "recordHint": "Tippen Sie auf das Mikrofon, um die Aufnahme zu starten",
+    "recordingHint": "Aufnahme läuft... Erneut tippen zum Stoppen",
+    "recordedHint": "Sie können die Aufnahme anhören, löschen oder zur Seite hinzufügen",
+    "resetRecord": "Neu aufnehmen",
+    "saveToPage": "Zur Seite hinzufügen",
+    "defaultTitle": "Sprachnotiz",
+    "discardConfirmTitle": "Aufnahme verwerfen",
+    "discardConfirmMessage": "Möchten Sie diese Aufnahme wirklich verwerfen?",
+    "notesDeckTitle": "Sprachnotizen ({{count}})",
+    "collapsedBadge": "{{count}} Sprachnotizen",
+    "deleteConfirmTitle": "Sprachnotiz löschen",
+    "deleteConfirmMessage": "Möchten Sie diese Sprachnotiz wirklich löschen? Dieser Vorgang kann nicht rückgängig gemacht werden."
+  },
+  "transcript": {
+    "pending": "Wird transkribiert...",
+    "completed": "Transkription",
+    "failed": "Transkription fehlgeschlagen",
+    "retry": "Wiederholen",
+    "copied": "Text kopiert",
+    "badge": "Sprachnotiz"
   }
 }
 

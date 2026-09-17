@@ -440,6 +440,31 @@
       "generalDayTitle": "Votre Jour Préféré : {{day}} ✨",
       "generalDayDesc": "Vos moments {{mood}}s ont brillé avec le plus d'éclat les {{day}}s ({{count}} fois)."
     }
+  },
+  "audio": {
+    "micPermissionTitle": "Autorisation du Microphone Requise",
+    "micPermissionMessage": "Veuillez autoriser l'accès au microphone dans les paramètres pour enregistrer des notes vocales.",
+    "recordTitle": "Enregistrer une Note Vocale",
+    "recordHint": "Appuyez sur le microphone pour commencer l'enregistrement",
+    "recordingHint": "Enregistrement en cours... Appuyez à nouveau pour arrêter",
+    "recordedHint": "Vous pouvez écouter, supprimer ou ajouter à la page",
+    "resetRecord": "Réenregistrer",
+    "saveToPage": "Ajouter à la Page",
+    "defaultTitle": "Note Vocale",
+    "discardConfirmTitle": "Supprimer l'Enregistrement",
+    "discardConfirmMessage": "Êtes-vous sûr de vouloir supprimer cet enregistrement ?",
+    "notesDeckTitle": "Notes Vocales ({{count}})",
+    "collapsedBadge": "{{count}} Notes Vocales",
+    "deleteConfirmTitle": "Supprimer la Note Vocale",
+    "deleteConfirmMessage": "Êtes-vous sûr de vouloir supprimer cette note vocale ? Cette action est irréversible."
+  },
+  "transcript": {
+    "pending": "Transcription en cours...",
+    "completed": "Transcription",
+    "failed": "Échec de la transcription",
+    "retry": "Réessayer",
+    "copied": "Texte copié",
+    "badge": "Note Vocale"
   }
 }
 

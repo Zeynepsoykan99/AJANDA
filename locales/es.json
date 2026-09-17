@@ -440,6 +440,31 @@
       "generalDayTitle": "Tu Día Favorito: {{day}} ✨",
       "generalDayDesc": "Tus momentos {{mood}} brillaron con mayor fuerza los {{day}} ({{count}} veces)."
     }
+  },
+  "audio": {
+    "micPermissionTitle": "Permiso de Micrófono Necesario",
+    "micPermissionMessage": "Por favor conceda acceso al micrófono en los ajustes para grabar notas de voz.",
+    "recordTitle": "Grabar Nota de Voz",
+    "recordHint": "Toque el micrófono para iniciar la grabación",
+    "recordingHint": "Grabando... Toque de nuevo para detener",
+    "recordedHint": "Puede escuchar, descartar o agregar a la página",
+    "resetRecord": "Grabar de Nuevo",
+    "saveToPage": "Agregar a la Página",
+    "defaultTitle": "Nota de Voz",
+    "discardConfirmTitle": "Descartar Grabación",
+    "discardConfirmMessage": "¿Está seguro de que desea descartar esta grabación?",
+    "notesDeckTitle": "Notas de Voz ({{count}})",
+    "collapsedBadge": "{{count}} Notas de Voz",
+    "deleteConfirmTitle": "Eliminar Nota de Voz",
+    "deleteConfirmMessage": "¿Está seguro de que desea eliminar esta nota de voz? Esta acción no se puede deshacer."
+  },
+  "transcript": {
+    "pending": "Transcribiendo...",
+    "completed": "Transcripción",
+    "failed": "Error en la transcripción",
+    "retry": "Reintentar",
+    "copied": "Texto copiado",
+    "badge": "Nota de Voz"
   }
 }
 

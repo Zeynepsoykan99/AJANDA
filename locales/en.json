@@ -440,6 +440,31 @@
       "generalDayTitle": "Favorite Day: {{day}} ✨",
       "generalDayDesc": "Your {{mood}} moments shone brightest on {{day}}s ({{count}} times)."
     }
+  },
+  "audio": {
+    "micPermissionTitle": "Microphone Permission Required",
+    "micPermissionMessage": "Please grant microphone access in settings to record voice notes.",
+    "recordTitle": "Record Voice Note",
+    "recordHint": "Tap the microphone to start recording",
+    "recordingHint": "Recording... Tap again to stop",
+    "recordedHint": "You can listen, discard, or add to page",
+    "resetRecord": "Record Again",
+    "saveToPage": "Add to Page",
+    "defaultTitle": "Voice Note",
+    "discardConfirmTitle": "Discard Recording",
+    "discardConfirmMessage": "Are you sure you want to discard this recording?",
+    "notesDeckTitle": "Voice Notes ({{count}})",
+    "collapsedBadge": "{{count}} Voice Notes",
+    "deleteConfirmTitle": "Delete Voice Note",
+    "deleteConfirmMessage": "Are you sure you want to delete this voice note? This action cannot be undone."
+  },
+  "transcript": {
+    "pending": "Transcribing...",
+    "completed": "Transcription",
+    "failed": "Transcription failed",
+    "retry": "Retry",
+    "copied": "Text copied",
+    "badge": "Voice Note"
   }
 }
 

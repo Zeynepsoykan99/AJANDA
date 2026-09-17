@@ -4,6 +4,35 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-17] - Akıllı Sesli Notlar (Audio Recording & Speech-to-Text Transcription) Tam Entegrasyonu
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Sunucu çökmesi ve yarım kalan geliştirme nedeniyle eksik kalan "Akıllı Sesli Notlar" özelliğinin tüm sayfa modüllerine (Günlüğüm, Defterlerim, Ajandam ve To-Do) tam olarak entegre edilmesi, Speech-to-Text (STT) transkripsiyonunun arka planda asenkron çalışması, arama motoruna bağlanması ve 5 dilde yerelleştirilmesi.
+- **Kök Nedenler ve Çözümler:**
+  1. **Asenkron Transkripsiyon ve Yeniden Deneme Entegrasyonu (`app/todolist/[pageId].js` & `app/ajandam/[pageId].js`):**
+     - `transcribeAudioFile` servisi içe aktarıldı.
+     - `handleTranscriptReady` işleyicisi eklenerek kayıt tamamlandığında sayfanın `audioNotes` listesindeki ilgili kaydın `transcript` ve `transcriptStatus` alanlarının optimistik ve kalıcı olarak güncellenmesi sağlandı.
+     - `handleRetryTranscription` işleyicisi eklenerek başarısız olan dönüşümlerin tek tuşla tekrar denenmesi sağlandı.
+     - `AudioRecorderModal` bileşenine `onTranscriptReady` prop'u, `AudioNotesDeck` bileşenine `onRetryTranscription` prop'u bağlandı.
+  2. **Global Arama Entegrasyonu (`services/searchService.js` & `components/ui/GlobalSearchModal.js`):**
+     - Sesli notların transkript metinleri Türkçe harf duyarlılığıyla (`normalizeTurkish`) tam metin arama dizinine bağlandı. Arama sonuçlarında 🎙️ rozeti ile anında listelenmesi doğrulandı.
+  3. **Dosya Yaşam Döngüsü ve Zombi Dosya Koruması (`services/audioService.js` & `services/storageService.js`):**
+     - Ses kayıtları kalıcı `documentDirectory/audio_notes/` altında izole edildi. Sayfa veya defter silindiğinde diskteki `.m4a` dosyalarının temizlendiği doğrulandı.
+  4. **Çoklu Dil Desteği (`locales/{tr,en,de,es,fr}.json`):**
+     - `audio` ve `transcript` anahtarları 5 dile eksiksiz eklendi (TR, EN, DE, ES, FR).
+
+### 📁 Değiştirilen Dosyalar
+- [`app/todolist/[pageId].js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/todolist/[pageId].js)
+- [`app/ajandam/[pageId].js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/ajandam/[pageId].js)
+- [`locales/tr.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/tr.json)
+- [`locales/en.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/en.json)
+- [`locales/de.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/de.json)
+- [`locales/es.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/es.json)
+- [`locales/fr.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/fr.json)
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+---
+
 ## 📅 [2026-09-17] - Ajanda & Şablon Sayfaları: Fit-to-Screen `resizeMode="contain"` Düzeltmesi ve Sayfalar Arası Zoom Sıfırlama (Mount Reset)
 
 ### 🔍 Kapsam ve İhtiyaç
