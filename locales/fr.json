@@ -339,6 +339,68 @@
     "tired": "Fatigué",
     "stressed": "Stressé",
     "sad": "Triste"
+  },
+  "analytics": {
+    "badgeTitle": "Rétrospective de l'Humeur",
+    "daysUnit": "jours",
+    "trackedDays": "Jours Suivis",
+    "consistency": "Régularité",
+    "positivity": "Positivité",
+    "chartTitle": "Répartition de l'Humeur",
+    "correlationDefaultTitle": "Constat du Mois 🔍",
+    "startJourney": "Commencer l'Aventure 🌱",
+    "startJourneyDesc": "Enregistrez votre humeur chaque jour ; à la fin du mois, nous créerons votre carte émotionnelle personnalisée !",
+    "noDataTitle": "Pas encore assez de données",
+    "noDataDesc": "Vous venez de commencer votre journal ce mois-ci 🌱 N'oubliez pas de noter ce que vous ressentez sur les prochaines pages !",
+    "noDataLetter": "Suivre vos émotions est le premier pas pour mieux vous connaître. Que diriez-vous de colorer votre journal le mois prochain ?",
+    "letterTitle": "Un Mot Pour Vous 💌",
+    "shareBadge": "Partager mon Bilan",
+    "correlationFallback": "Vous avez maintenu un flux émotionnel équilibré tout au long du mois.",
+    "letterHighPositivity": "Quel mois resplendissant ! Vous avez passé %{{percent}} de vos journées avec beaucoup d'énergie et de sérénité. Prolongez cette belle énergie le mois prochain ! ✨",
+    "letterSadNotice": "Vous vous êtes senti triste pendant {{count}} jours ce mois-ci. Accueillir vos émotions et les écrire est précieux. En vous souhaitant des ciels plus lumineux à venir... 🌸",
+    "letterStressedNotice": "Vous avez traversé des moments exigeants et stressants. N'oubliez pas que même les tempêtes les plus intenses finissent par s'apaiser. Offrez-vous davantage de repos et de bienveillance 🌿",
+    "letterBalanced": "Vous avez suivi vos émotions avec attention pendant {{count}} jours ce mois-ci. Ce fut un riche voyage émotionnel, avec le sentiment {{dominant}} comme état le plus fréquent.",
+    "weekdays": {
+      "monday": "Lundi",
+      "tuesday": "Mardi",
+      "wednesday": "Mercredi",
+      "thursday": "Jeudi",
+      "friday": "Vendredi",
+      "saturday": "Samedi",
+      "sunday": "Dimanche"
+    },
+    "heroTitles": {
+      "happy": "Rayonnant comme le Soleil ! ☀️",
+      "focused": "Concentration Maximale ! 🎯",
+      "excited": "Énergie au Sommet ! 🥳",
+      "calm": "Sérénité Absolue 🌿",
+      "grateful": "Débordant de Gratitude 🙏",
+      "tired": "Un Peu Épuisant ☕",
+      "stressed": "Un Mois Exigeant 🌊",
+      "sad": "Jours Mélancoliques Surmontés 🌸"
+    },
+    "heroDescriptions": {
+      "happy": "Vous avez souri la majeure partie du temps ce mois-ci. Une énergie formidable !",
+      "focused": "Record de productivité ! %{{percent}} de votre temps a été consacré à vous rapprocher de vos objectifs.",
+      "excited": "Un mois plein de nouveaux départs, d'enthousiasme et de moments vibrants.",
+      "calm": "La paix intérieure et le calme ont été à l'honneur ce mois-ci.",
+      "grateful": "Les instants de gratitude envers les petites joies de la vie ont été nombreux.",
+      "tired": "Vous étiez assez fatigué, mais vous avez répondu présent chaque jour.",
+      "stressed": "Beaucoup de poids sur vos épaules, et pourtant vous avez fait preuve d'une grande force.",
+      "sad": "Certains jours ont pu être nuageux ; souvenez-vous qu'après la pluie vient toujours l'arc-en-ciel."
+    },
+    "correlations": {
+      "mondayHappyTitle": "Pas de Blues du Lundi ! 🚀",
+      "mondayHappyDesc": "Vous vous êtes senti heureux le plus souvent les {{day}}s ; le blues du lundi n'a eu aucune prise sur vous 😎",
+      "weekendVibesTitle": "Joie du Week-end 🎉",
+      "weekendVibesDesc": "Vous avez fêté l'arrivée du week-end comme personne ! Votre moral était au plus haut les {{day}}s.",
+      "midweekTitle": "Pause de Mi-Semaine ☕",
+      "midweekDesc": "Les {{day}}s ont apporté un peu de fatigue, mais vous avez persévéré et conclu la semaine avec succès.",
+      "sundayZenTitle": "Sérénité du Dimanche 🌿",
+      "sundayZenDesc": "Les {{day}}s sont devenus votre rituel personnel de déconnexion et de ressourcement profond.",
+      "generalDayTitle": "Votre Jour Préféré : {{day}} ✨",
+      "generalDayDesc": "Vos moments {{mood}}s ont brillé avec le plus d'éclat les {{day}}s ({{count}} fois)."
+    }
   }
 }
 

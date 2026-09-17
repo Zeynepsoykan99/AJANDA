@@ -339,6 +339,68 @@
     "tired": "Tired",
     "stressed": "Stressed",
     "sad": "Sad"
+  },
+  "analytics": {
+    "badgeTitle": "Monthly Mood Wrapped",
+    "daysUnit": "days",
+    "trackedDays": "Tracked Days",
+    "consistency": "Consistency",
+    "positivity": "Positivity",
+    "chartTitle": "Mood Breakdown",
+    "correlationDefaultTitle": "Insight of the Month 🔍",
+    "startJourney": "Start Your Journey 🌱",
+    "startJourneyDesc": "Log your mood on each diary page; at the end of the month, we'll craft your personalized mood map!",
+    "noDataTitle": "Not Enough Data Yet",
+    "noDataDesc": "You just started your diary journey this month 🌱 Don't forget to record how you feel on your upcoming pages!",
+    "noDataLetter": "Tracking your emotions is the first step towards understanding yourself. How about coloring your diary this coming month?",
+    "letterTitle": "A Note For You 💌",
+    "shareBadge": "Share My Wrapped",
+    "correlationFallback": "You maintained a balanced emotional flow across your days.",
+    "letterHighPositivity": "What a radiant month! You spent %{{percent}} of your days with high energy and serenity. Keep this wonderful vibe going into the new month! ✨",
+    "letterSadNotice": "You felt blue on {{count}} days this month. Acknowledging your feelings and writing them down is truly precious. Wishing you brighter skies ahead... 🌸",
+    "letterStressedNotice": "You navigated through challenging and stressful moments. Remember, even the wildest storms eventually clear up. Give yourself extra grace and rest 🌿",
+    "letterBalanced": "You thoughtfully tracked your feelings for {{count}} days this month. It was a rich emotional journey, with {{dominant}} being your most frequent state.",
+    "weekdays": {
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday",
+      "sunday": "Sunday"
+    },
+    "heroTitles": {
+      "happy": "Radiant Like Sunshine! ☀️",
+      "focused": "Laser Focused! 🎯",
+      "excited": "Energy Through the Roof! 🥳",
+      "calm": "Pure Zen & Peace 🌿",
+      "grateful": "Overflowing with Gratitude 🙏",
+      "tired": "A Bit Exhausting ☕",
+      "stressed": "A Tough Month 🌊",
+      "sad": "Melancholy Days Passed 🌸"
+    },
+    "heroDescriptions": {
+      "happy": "You spent most of your time smiling this month. Amazing energy!",
+      "focused": "Productivity record! %{{percent}} of your time was dedicated to getting closer to your goals.",
+      "excited": "A month full of fresh starts, excitement, and joyful adventures.",
+      "calm": "Inner tranquility and calmness took center stage this month.",
+      "grateful": "Moments of appreciating life's small gifts were in the spotlight.",
+      "tired": "You were quite worn out, but still showed up and completed each day.",
+      "stressed": "A lot weighed on your shoulders, yet you showed immense resilience.",
+      "sad": "Some days may have been cloudy; remember rainbows follow every rain."
+    },
+    "correlations": {
+      "mondayHappyTitle": "No Monday Blues! 🚀",
+      "mondayHappyDesc": "You felt happy most frequently on {{day}}s; looks like Monday blues had zero power over you 😎",
+      "weekendVibesTitle": "Weekend Joy 🎉",
+      "weekendVibesDesc": "You celebrated the weekend better than anyone! Your spirits peaked most on {{day}}s.",
+      "midweekTitle": "Midweek Recharge ☕",
+      "midweekDesc": "{{day}}s carried a bit of fatigue, but you persevered and wrapped up the week successfully.",
+      "sundayZenTitle": "Sunday Serenity 🌿",
+      "sundayZenDesc": "{{day}}s turned into your personal ritual of unwinding and deep rejuvenation.",
+      "generalDayTitle": "Favorite Day: {{day}} ✨",
+      "generalDayDesc": "Your {{mood}} moments shone brightest on {{day}}s ({{count}} times)."
+    }
   }
 }
 

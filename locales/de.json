@@ -339,6 +339,68 @@
     "tired": "Müde",
     "stressed": "Gestresst",
     "sad": "Traurig"
+  },
+  "analytics": {
+    "badgeTitle": "Monatlicher Stimmungsrückblick",
+    "daysUnit": "Tage",
+    "trackedDays": "Erfasste Tage",
+    "consistency": "Regelmäßigkeit",
+    "positivity": "Positivität",
+    "chartTitle": "Stimmungsverteilung",
+    "correlationDefaultTitle": "Erkenntnis des Monats 🔍",
+    "startJourney": "Reise beginnen 🌱",
+    "startJourneyDesc": "Erfasse deine Stimmung auf jeder Seite; am Monatsende erstellen wir deine persönliche Stimmungskarte!",
+    "noDataTitle": "Noch nicht genügend Daten",
+    "noDataDesc": "Du hast deine Tagebuchreise erst diesen Monat begonnen 🌱 Vergiss nicht, deine Stimmung auf den kommenden Seiten einzutragen!",
+    "noDataLetter": "Das Erfassen deiner Gefühle ist der erste Schritt zur Selbstreflexion. Wie wäre es, dein Tagebuch im nächsten Monat bunter zu gestalten?",
+    "letterTitle": "Eine Notiz für dich 💌",
+    "shareBadge": "Meinen Rückblick teilen",
+    "correlationFallback": "Du hast einen ausgewogenen emotionalen Verlauf über den Monat gezeigt.",
+    "letterHighPositivity": "Was für ein strahlender Monat! Du hast %{{percent}} deiner Tage mit hoher Energie und Gelassenheit verbracht. Nimm diese wunderbare Energie mit in den neuen Monat! ✨",
+    "letterSadNotice": "Du hast dich diesen Monat an {{count}} Tagen traurig gefühlt. Deine Gefühle anzunehmen und aufzuschreiben ist sehr wertvoll. Für den nächsten Monat wünschen wir dir viel Sonnenschein... 🌸",
+    "letterStressedNotice": "Du hast herausfordernde und stressige Momente gemeistert. Denk daran, dass auch die stürmischste See sich wieder beruhigt. Schenke dir selbst mehr Ruhe und Erholung 🌿",
+    "letterBalanced": "Du hast deine Gefühle an {{count}} Tagen aufmerksam verfolgt. Es war ein facettenreicher Monat, in dem du dich am häufigsten {{dominant}} gefühlt hast.",
+    "weekdays": {
+      "monday": "Montag",
+      "tuesday": "Dienstag",
+      "wednesday": "Mittwoch",
+      "thursday": "Donnerstag",
+      "friday": "Freitag",
+      "saturday": "Samstag",
+      "sunday": "Sonntag"
+    },
+    "heroTitles": {
+      "happy": "Gestrahlt wie Sonnenschein! ☀️",
+      "focused": "Voller Fokus! 🎯",
+      "excited": "Energie auf Höchststand! 🥳",
+      "calm": "Pure Gelassenheit 🌿",
+      "grateful": "Voller Dankbarkeit 🙏",
+      "tired": "Ein wenig erschöpft ☕",
+      "stressed": "Ein fordernder Monat 🌊",
+      "sad": "Nachdenkliche Tage überstanden 🌸"
+    },
+    "heroDescriptions": {
+      "happy": "Diesen Monat hast du die meiste Zeit gelächelt. Fantastische Energie!",
+      "focused": "Produktivitätsrekord! Zu %{{percent}} warst du voll auf deine Ziele ausgerichtet.",
+      "excited": "Ein Monat voller Neuanfänge, Vorfreude und aufregender Momente.",
+      "calm": "Innere Ruhe und Gelassenheit standen diesen Monat im Mittelpunkt.",
+      "grateful": "Momente der Dankbarkeit für die kleinen Freuden des Lebens überwogen.",
+      "tired": "Du warst recht müde, hast aber trotzdem jeden Tag durchgehalten.",
+      "stressed": "Es lastete viel auf deinen Schultern, doch du hast Stärke bewiesen.",
+      "sad": "Einige Tage waren vielleicht trüb; vergiss nicht, nach jedem Regen folgt ein Regenbogen."
+    },
+    "correlations": {
+      "mondayHappyTitle": "Kein Montagsblues! 🚀",
+      "mondayHappyDesc": "Am häufigsten hast du dich an {{day}}en glücklich gefühlt; der Montagsblues hatte keine Chance bei dir 😎",
+      "weekendVibesTitle": "Wochenendfreude 🎉",
+      "weekendVibesDesc": "Du hast das Wochenende in vollen Zügen genossen! Besonders an {{day}}en war deine Stimmung auf dem Höhepunkt.",
+      "midweekTitle": "Wochenmitte-Pause ☕",
+      "midweekDesc": "{{day}}s brachten etwas Erschöpfung, aber du hast die Woche erfolgreich zu Ende gebracht.",
+      "sundayZenTitle": "Sonntagsruhe 🌿",
+      "sundayZenDesc": "{{day}}s wurden zu deinem persönlichen Ritual der Entspannung und Erholung.",
+      "generalDayTitle": "Dein Lieblingstag: {{day}} ✨",
+      "generalDayDesc": "Deine {{mood}}en Momente strahlten am stärksten an {{day}}en ({{count}} Mal)."
+    }
   }
 }
 

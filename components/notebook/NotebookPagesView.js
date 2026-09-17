@@ -52,6 +52,7 @@ import ExportLoadingModal from '../ui/ExportLoadingModal';
 import { PdfExportService } from '../../services/pdfExportService';
 import DiaryDateMoodBadge from '../diary/DiaryDateMoodBadge';
 import MoodPickerModal from '../diary/MoodPickerModal';
+import MonthlyMoodAnalyticsModal from '../diary/MonthlyMoodAnalyticsModal';
 
 import { recognizeSelectedStrokes } from '../../services/handwritingService';
 import { fitTextToBounds, clusterStrokesByColorAndProximity } from '../../utils/lassoGeometry';
@@ -124,9 +125,10 @@ export default function NotebookPagesView({
   const [isExportLoading, setIsExportLoading] = useState(false);
   const [undoToast, setUndoToast] = useState({ visible: false, message: '' });
 
-  // Günlüğüm: Duygu Durumu (Mood) Seçici Durumu
+  // Günlüğüm: Duygu Durumu (Mood) Seçici ve Aylık Analiz Durumu
   const [isMoodPickerVisible, setIsMoodPickerVisible] = useState(false);
   const [moodPickerPageIndex, setMoodPickerPageIndex] = useState(null);
+  const [isMoodAnalyticsVisible, setIsMoodAnalyticsVisible] = useState(false);
 
 
   // Kement (Lasso) Seçim Durumu
@@ -1275,6 +1277,22 @@ export default function NotebookPagesView({
               <MaterialCommunityIcons name="calendar-search" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
+
+          {/* Günlüğüm: Aylık Duygu Özeti (Spotify Wrapped) Butonu */}
+          {isDiary && (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setIsMoodAnalyticsVisible(true)}
+              style={[
+                styles.headerButton,
+                compactHeader && styles.headerButtonCompact,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
+              accessibilityLabel={t('analytics.badgeTitle', 'Aylık Duygu Özeti')}
+            >
+              <MaterialCommunityIcons name="sparkles" size={compactHeader ? 16 : 19} color="#C2185B" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -1558,6 +1576,15 @@ export default function NotebookPagesView({
             (moodPickerPageIndex !== null ? pages[moodPickerPageIndex] : activePage)?.date ||
             new Date()
           }
+        />
+      )}
+
+      {/* Günlük Modu: Aylık Duygu Özeti (Spotify Wrapped) Modalı */}
+      {isDiary && (
+        <MonthlyMoodAnalyticsModal
+          visible={isMoodAnalyticsVisible}
+          onClose={() => setIsMoodAnalyticsVisible(false)}
+          pages={pages}
         />
       )}
 

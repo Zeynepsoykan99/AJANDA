@@ -38,6 +38,7 @@ export default function GunlugumCoverScreen() {
       onOpen={handleOpen}
       showSearch={true}
       showDatePicker={true}
+      showMoodAnalytics={true}
       searchCategory="gunlugum"
     />
   );

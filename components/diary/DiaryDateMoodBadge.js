@@ -4,22 +4,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 
-export const MOODS = [
-  { key: 'happy', emoji: '😊', labelKey: 'mood.happy', defaultLabel: 'Mutlu' },
-  { key: 'focused', emoji: '🎯', labelKey: 'mood.focused', defaultLabel: 'Odaklanmış' },
-  { key: 'excited', emoji: '🥳', labelKey: 'mood.excited', defaultLabel: 'Heyecanlı' },
-  { key: 'calm', emoji: '😌', labelKey: 'mood.calm', defaultLabel: 'Huzurlu' },
-  { key: 'grateful', emoji: '🙏', labelKey: 'mood.grateful', defaultLabel: 'Minnettar' },
-  { key: 'tired', emoji: '😫', labelKey: 'mood.tired', defaultLabel: 'Yorgun' },
-  { key: 'stressed', emoji: '😰', labelKey: 'mood.stressed', defaultLabel: 'Stresli' },
-  { key: 'sad', emoji: '😔', labelKey: 'mood.sad', defaultLabel: 'Üzgün' },
-];
-
-export const getMoodEmoji = (moodKey) => {
-  if (!moodKey) return null;
-  const found = MOODS.find((m) => m.key === moodKey);
-  return found ? found.emoji : moodKey;
-};
+import { MOODS, getMoodEmoji } from '../../constants/moods';
+export { MOODS, getMoodEmoji };
 
 const LOCALE_MAP = {
   tr: 'tr-TR',

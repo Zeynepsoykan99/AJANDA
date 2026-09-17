@@ -339,6 +339,68 @@
     "tired": "Cansado",
     "stressed": "Estresado",
     "sad": "Triste"
+  },
+  "analytics": {
+    "badgeTitle": "Resumen Mensual de Ánimo",
+    "daysUnit": "días",
+    "trackedDays": "Días Registrados",
+    "consistency": "Constancia",
+    "positivity": "Positividad",
+    "chartTitle": "Distribución del Ánimo",
+    "correlationDefaultTitle": "Dato del Mes 🔍",
+    "startJourney": "Inicia tu Viaje 🌱",
+    "startJourneyDesc": "Registra tu estado de ánimo cada día; a fin de mes, ¡crearemos tu mapa emocional personalizado!",
+    "noDataTitle": "Aún no hay suficientes datos",
+    "noDataDesc": "Acabas de empezar tu diario este mes 🌱 ¡No olvides anotar cómo te sientes en las próximas páginas!",
+    "noDataLetter": "Registrar tus emociones es el primer paso para conocerte. ¿Qué te parece llenar de color tu diario el próximo mes?",
+    "letterTitle": "Una Nota Para Ti 💌",
+    "shareBadge": "Compartir mi Resumen",
+    "correlationFallback": "Mantuviste un flujo emocional equilibrado durante todo el mes.",
+    "letterHighPositivity": "¡Qué mes tan radiante! Pasaste el %{{percent}} de tus días con gran energía y serenidad. ¡Lleva esta maravillosa vibra al nuevo mes! ✨",
+    "letterSadNotice": "Te sentiste triste en {{count}} días de este mes. Reconocer tus sentimientos y escribirlos es muy valioso. Deseándote días más luminosos... 🌸",
+    "letterStressedNotice": "Superaste momentos desafiantes y estresantes. Recuerda que incluso las tormentas más fuertes pasan. Regálate más descanso y cariño 🌿",
+    "letterBalanced": "Seguiste con atención tus emociones durante {{count}} días este mes. Fue un viaje emocional enriquecedor, sintiéndote mayormente {{dominant}}.",
+    "weekdays": {
+      "monday": "Lunes",
+      "tuesday": "Martes",
+      "wednesday": "Miércoles",
+      "thursday": "Jueves",
+      "friday": "Viernes",
+      "saturday": "Sábado",
+      "sunday": "Domingo"
+    },
+    "heroTitles": {
+      "happy": "¡Brillaste como el Sol! ☀️",
+      "focused": "¡Enfoque Total! 🎯",
+      "excited": "¡Energía por las Nubes! 🥳",
+      "calm": "Paz y Serenidad Pura 🌿",
+      "grateful": "Rebosante de Gratitud 🙏",
+      "tired": "Un Poco Agotador ☕",
+      "stressed": "Un Mes Exigente 🌊",
+      "sad": "Días Melancólicos Superados 🌸"
+    },
+    "heroDescriptions": {
+      "happy": "Pasaste la mayor parte del tiempo sonriendo este mes. ¡Energía increíble!",
+      "focused": "¡Récord de productividad! El %{{percent}} de tu tiempo lo dedicaste a acercarte a tus metas.",
+      "excited": "Un mes lleno de nuevos comienzos, entusiasmo y momentos vibrantes.",
+      "calm": "La tranquilidad interior y la calma fueron las protagonistas este mes.",
+      "grateful": "Los momentos de agradecer los pequeños regalos de la vida fueron mayoría.",
+      "tired": "Terminaste con bastante cansancio, pero cumpliste con cada día.",
+      "stressed": "Mucho peso en tus hombros, y aun así demostraste una gran fortaleza.",
+      "sad": "Algunos días estuvieron nublados; recuerda que tras la lluvia siempre sale el arcoíris."
+    },
+    "correlations": {
+      "mondayHappyTitle": "¡Sin Síndrome de Lunes! 🚀",
+      "mondayHappyDesc": "Te sentiste feliz con mayor frecuencia los {{day}}; parece que la pesadez de los lunes no te afectó en nada 😎",
+      "weekendVibesTitle": "Alegría de Fin de Semana 🎉",
+      "weekendVibesDesc": "¡Celebramaste la llegada del fin de semana como nadie! Tu ánimo estuvo al máximo los {{day}}.",
+      "midweekTitle": "Pausa de Mitad de Semana ☕",
+      "midweekDesc": "Los {{day}} se sintieron con algo de cansancio, pero perseveraste y cerraste la semana con éxito.",
+      "sundayZenTitle": "Domingo de Paz 🌿",
+      "sundayZenDesc": "Los {{day}} se convirtieron en tu ritual personal de desconexión y renovación profunda.",
+      "generalDayTitle": "Tu Día Favorito: {{day}} ✨",
+      "generalDayDesc": "Tus momentos {{mood}} brillaron con mayor fuerza los {{day}} ({{count}} veces)."
+    }
   }
 }
 

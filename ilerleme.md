@@ -4,6 +4,41 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-17] - Günlüğüm: Spotify Wrapped Tarzı Aylık Duygu Analizi ve Özet (Monthly Mood Analytics)
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Günlüğüm modülünde kaydedilen duygu durumu verilerinin (Mood Tracker), kullanıcılara her ayın sonunda (veya geçmiş aylarda) "Spotify Wrapped" estetiğinde görselleştirilerek sunulması; interaktif Daire Grafik (Pie/Donut Chart), haftanın günleri ile duygular arasındaki korelasyonlar ve kişiselleştirilmiş esprili/motive edici dinamik özet metinleri ile duygusal farkındalık sağlanması.
+- **Hedefler:**
+  1. **Veri Analizi ve Gruplama Motoru (`services/moodAnalyticsService.js`):** Günlük sayfaları üzerinden tek geçişli ($O(N)$) yüksek performanslı hesaplama; her duygunun ay içindeki frekansı ve yüzdesel oranı, ayın şampiyon baskın duygusu (`dominantMood`), haftanın günleri ile duygu korelasyonu (örn: En çok Pazartesi günleri mutlu hissedilmiş), genel pozitiflik skoru ve kayıtlı geçmiş aylar listesi (`getAvailableMonths`).
+  2. **Hafif ve Doğal Görselleştirme (`components/diary/MoodPieChart.js`):** Harici ağır kütüphaneler yerine Expo'da halihazırda kurulu olan `react-native-svg: 15.12.1` kullanılarak sıfır ek paket, sıfır çökme riski ve tam Expo Go uyumluluğuyla hazırlanan interaktif Donut Grafik. Merkezde ayın baskın duygu emojisi, dilimler arası şık boşluklar ve tıklanabilir lejant kartları.
+  3. **Dinamik Samimi Metin Motoru (Spotify Wrapped Copywriting):** Kullanıcının verilerine göre kişiselleştirilen esprili ve motive edici dinamik metinler (örn: *"Pazartesi Sendromu Yok! 🚀"*, *"Hafta Sonu Neşesi 🎉"*, *"Işıl ışıl bir ayı geride bıraktın! Günlerinin %86'sını yüksek enerjiyle geçirdin ✨"*).
+  4. **Kusursuz UI/UX ve Spotify Wrapped Kartı (`components/diary/MonthlyMoodAnalyticsModal.js`):** Koyu mor/gece gökyüzü estetiğinde cam efektli kart tasarımı; ay değiştirici (`< Eylül 2026 >`), Ayın Yıldızı kartı, Donut grafik, Günün Tespiti korelasyon kartı, Ayın Mektubu ve paylaşım butonu (`Share.share`).
+  5. **Çoklu Erişim Noktası Entegrasyonu:** Günlüğüm kapağında ([`NotebookCoverView.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/notebook/NotebookCoverView.js)) ve sayfalar görünümünde ([`NotebookPagesView.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/notebook/NotebookPagesView.js)) sağ üst barda ışıltılı `✨` butonuyla doğrudan erişim.
+  6. **Çoklu Dil Desteği:** 5 dilde (`locales/{tr,en,de,es,fr}.json`) eksiksiz dinamik değişkenli `analytics` sözlük anahtarları.
+
+### 🔧 Yapılan Geliştirmeler ve Düzenlemeler
+1. **`constants/moods.js` [NEW]:** Merkezi duygu tanımları (`MOODS`), renk paleti (`MOOD_COLORS`), pozitif duygu kümesi (`POSITIVE_MOODS`) ve `getMoodEmoji` fonksiyonu React/DOM bağımlılığı olmaksızın tüm servis ve bileşenlerin ortak kullanımına sunuldu.
+2. **`services/moodAnalyticsService.js` [NEW]:**
+   - `getMonthlyMoodAnalytics`: Sayfaları hedef aya göre filtreleyip frekans, yüzde, baskın duygu, gün korelasyonu ve pozitiflik skoru hesaplar.
+   - `getAvailableMonths`: Günlük sayfalarındaki geçmiş ayları kronolojik olarak tespit eder.
+   - `generateDynamicMoodCopy`: Çıkan verilere göre kişiselleştirilmiş başlık, tespit, açıklama ve mektup metinleri üretir.
+3. **`components/diary/MoodPieChart.js` [NEW]:** `react-native-svg` ile matematiksel yay formülü (`Path` arc) kullanan, merkez rozetli, tıklanabilir dilim vurgulu ve lejantlı Donut Grafik bileşeni geliştirildi.
+4. **`components/diary/MonthlyMoodAnalyticsModal.js` [NEW]:** Spotify Wrapped tasarım dilinde ay gezintisi, istatistik rozetleri, korelasyon kartı, mektup ve paylaşım sunan tam ekran modal inşa edildi.
+5. **`components/notebook/NotebookCoverView.js`:** `showMoodAnalytics` prop'u, sağ üst barda `✨` butonu ve `MonthlyMoodAnalyticsModal` entegrasyonu eklendi.
+6. **`app/gunlugum/index.js`:** Günlük kapağına `showMoodAnalytics={true}` bağlandı.
+7. **`components/notebook/NotebookPagesView.js`:** `isDiary={true}` durumunda sağ üst araç çubuğuna `✨` analiz butonu ve `MonthlyMoodAnalyticsModal` yerleştirildi.
+8. **Çok Dilli Sözlükler (`locales/*.json`):** TR, EN, DE, ES ve FR dosyalarına `analytics` bölümü eklendi.
+
+### ✅ Doğrulama & Testler
+- `scratch/validate_mood_analytics.js`:
+  - 5 dil dosyasındaki tüm `analytics` anahtarları ve şablon değişkenleri doğrulandı.
+  - Boş aylar ve çoklu aylara dağılmış sahte sayfalarla analitik hesaplama, baskın duygu, gün korelasyonu ve pozitiflik skorları test edildi.
+  - Dinamik metin üretimi Türkçe sözlük ile simüle edilerek doğrulandı.
+  - SVG kutupsal-kartezyen matematik formülleri test edildi.
+- `tests/zoomableCanvas.test.js`: 6/6 matematiksel koordinat testi başarıyla geçti.
+
+---
+
 ## 📅 [2026-09-17] - Günlüğüm: Duygu Durumu Takibi (Mood Tracker) ve Sayfa Tarihi (Date & Mood Stamp)
 
 ### 🔍 Kapsam ve İhtiyaç

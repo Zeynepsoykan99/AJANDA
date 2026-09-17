@@ -38,6 +38,7 @@ import DrawingToolbar from '../../components/drawing/DrawingToolbar';
 import TextCanvas from '../../components/text/TextCanvas';
 import DatePickerModal from '../../components/ui/DatePickerModal';
 import GlobalSearchModal from '../../components/ui/GlobalSearchModal';
+import MonthlyMoodAnalyticsModal from '../diary/MonthlyMoodAnalyticsModal';
 import { isSameDay, formatFilterDate } from '../../components/ui/GlobalFilterHeader';
 
 const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
@@ -65,6 +66,7 @@ export default function NotebookCoverView({
   onOpen,
   showSearch = false,
   showDatePicker = false,
+  showMoodAnalytics = false,
   searchCategory = 'gunlugum',
   onSelectDate,
 }) {
@@ -79,6 +81,7 @@ export default function NotebookCoverView({
   const [isTemplateModalVisible, setIsTemplateModalVisible] = useState(false);
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
   const [isSearchModalVisible, setIsSearchModalVisible] = useState(false);
+  const [isMoodAnalyticsVisible, setIsMoodAnalyticsVisible] = useState(false);
   const [filterDate, setFilterDate] = useState(null);
 
 
@@ -414,6 +417,21 @@ export default function NotebookCoverView({
               />
             </TouchableOpacity>
           )}
+
+          {/* Aylık Duygu Özeti (Spotify Wrapped) Butonu */}
+          {showMoodAnalytics && (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setIsMoodAnalyticsVisible(true)}
+              style={[
+                styles.headerButton,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
+              accessibilityLabel={t('analytics.badgeTitle', 'Aylık Duygu Özeti')}
+            >
+              <MaterialCommunityIcons name="sparkles" size={20} color="#C2185B" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -535,6 +553,15 @@ export default function NotebookCoverView({
           visible={isSearchModalVisible}
           onClose={() => setIsSearchModalVisible(false)}
           initialCategory={searchCategory}
+        />
+      )}
+
+      {/* Aylık Duygu Özeti (Spotify Wrapped) Modalı */}
+      {showMoodAnalytics && (
+        <MonthlyMoodAnalyticsModal
+          visible={isMoodAnalyticsVisible}
+          onClose={() => setIsMoodAnalyticsVisible(false)}
+          pages={notebook?.pages || []}
         />
       )}
     </AnimatedSafeAreaView>

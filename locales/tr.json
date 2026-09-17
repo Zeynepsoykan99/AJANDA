@@ -339,6 +339,68 @@
     "tired": "Yorgun",
     "stressed": "Stresli",
     "sad": "Üzgün"
+  },
+  "analytics": {
+    "badgeTitle": "Aylık Duygu Özeti",
+    "daysUnit": "gün",
+    "trackedDays": "Kayıtlı Gün",
+    "consistency": "İstikrar",
+    "positivity": "Pozitiflik",
+    "chartTitle": "Duygu Dağılımı",
+    "correlationDefaultTitle": "Günün Tespiti 🔍",
+    "startJourney": "Yolculuğa Başla 🌱",
+    "startJourneyDesc": "Her gün bir sayfa açarak ruh halini kaydet; ay sonunda senin için harika bir duygu haritası çıkaralım!",
+    "noDataTitle": "Henüz Yeterli Veri Yok",
+    "noDataDesc": "Bu ay günlüğünle yeni tanışmışsın 🌱 Gelecek günlerde sayfalarına duygu durumunu eklemeyi unutma!",
+    "noDataLetter": "Duygularını kaydetmek kendini anlamanın ilk adımıdır. Önümüzdeki ay günlüğünü renklendirmeye ne dersin?",
+    "letterTitle": "Ayın Sana Notu 💌",
+    "shareBadge": "Özetimi Paylaş",
+    "correlationFallback": "Her güne yayılan dengeli bir duygu akışı yakalamışsın.",
+    "letterHighPositivity": "Işıl ışıl bir ayı geride bıraktın! Günlerinin %{{percent}}'ini yüksek enerji ve huzurla geçirdin. Bu güzel enerjiyi yeni aya da taşımayı unutma! ✨",
+    "letterSadNotice": "Bu ay {{count}} gün hüzünlü hissetmişsin. Duygularını kabul edip günlüğüne dökmüş olman çok kıymetli. Bir dahaki ay üzüntünün sana hiç uğramaması dileğiyle... 🌸",
+    "letterStressedNotice": "Zorlu ve stresli dönemeçlerden geçmişsin. Unutma, en fırtınalı denizler bile sonunda durulur. Kendine biraz daha şefkat ve mola hediye et 🌿",
+    "letterBalanced": "Bu ay {{count}} gün boyunca duygularını özenle takip ettin. En çok {{dominant}} hissettiğin, zengin bir duygu yelpazesine sahip bir ay oldu.",
+    "weekdays": {
+      "monday": "Pazartesi",
+      "tuesday": "Salı",
+      "wednesday": "Çarşamba",
+      "thursday": "Perşembe",
+      "friday": "Cuma",
+      "saturday": "Cumartesi",
+      "sunday": "Pazar"
+    },
+    "heroTitles": {
+      "happy": "Güneş Gibi Parladın! ☀️",
+      "focused": "Hedefe Kilitlendin! 🎯",
+      "excited": "Enerjin Tavan Yaptı! 🥳",
+      "calm": "Dinginlik Zirvedeydi 🌿",
+      "grateful": "Minnetle Dolup Taştın 🙏",
+      "tired": "Biraz Yoruldun ☕",
+      "stressed": "Zorlu Bir Aydı 🌊",
+      "sad": "Hüzünlü Günler Geçti 🌸"
+    },
+    "heroDescriptions": {
+      "happy": "Bu ay zamanının büyük kısmında gülümsüyordun. Harika bir enerji!",
+      "focused": "Verimlilikte rekor kırdın! %{{percent}} oranında hedeflerine adım adım yaklaştın.",
+      "excited": "Yeni başlangıçlar ve coşku dolu anlarla dolu bir ay yaşadın.",
+      "calm": "İç huzurun ve dinginliğin ön planda olduğu bir ay geride kaldı.",
+      "grateful": "Hayatın güzelliklerini fark ettiğin ve teşekkür ettiğin anlar çoğunluktaydı.",
+      "tired": "Bayağı yorulmuşsun, ama yine de her günü tamamlamayı bildin.",
+      "stressed": "Omuzlarında çok yük vardı, yine de güçlü bir şekilde üstesinden geldin.",
+      "sad": "Bazı günler bulutlu geçmiş olabilir; unutma her yağmurdan sonra gökkuşağı çıkar."
+    },
+    "correlations": {
+      "mondayHappyTitle": "Pazartesi Sendromu Yok! 🚀",
+      "mondayHappyDesc": "Bu ay en çok {{day}} günleri mutlu hissetmişsin; sanırım Pazartesi sendromu senin yanından bile geçememiş 😎",
+      "weekendVibesTitle": "Hafta Sonu Neşesi 🎉",
+      "weekendVibesDesc": "Hafta sonunun gelişini herkesten iyi kutlamışsın! En çok {{day}} günleri enerjin tavan yapmış.",
+      "midweekTitle": "Hafta Ortası Molası ☕",
+      "midweekDesc": "{{day}} günleri biraz yorgunluk hissetmişsin ama pes etmeden haftayı tamamlamayı bilmişsin.",
+      "sundayZenTitle": "Pazar Dinginliği 🌿",
+      "sundayZenDesc": "{{day}} günleri tam bir kafa dinleme ve yenilenme ritüeline dönüşmüş.",
+      "generalDayTitle": "Favori Günün: {{day}} ✨",
+      "generalDayDesc": "Bu ay {{mood}} hislerin en çok {{day}} günlerinde ({{count}} kez) parıldamış."
+    }
   }
 }
 
