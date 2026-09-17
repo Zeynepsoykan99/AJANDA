@@ -239,16 +239,22 @@ export default function NotebookPagesView({
       const targetPage = pages[targetIdx];
       if (!targetPage) return;
 
-      // Optimistik yerel state güncellemesi
+      const targetDatePrefix = (targetPage.createdAt || targetPage.date || new Date().toISOString()).slice(0, 10);
+
+      // Optimistik yerel state güncellemesi: Aynı güne ait tüm sayfaları güncelle (1 gün = 1 duygu)
       setNotebook((prev) => {
         if (!prev || !prev.pages) return prev;
-        const updatedPages = prev.pages.map((p, i) =>
-          i === targetIdx ? { ...p, mood: selectedMood } : p
-        );
+        const updatedPages = prev.pages.map((p, i) => {
+          const pDate = (p.createdAt || p.date || '').slice(0, 10);
+          if (pDate === targetDatePrefix || i === targetIdx) {
+            return { ...p, mood: selectedMood };
+          }
+          return p;
+        });
         return { ...prev, pages: updatedPages };
       });
 
-      // Storage'a kaydet
+      // Storage'a kaydet (storageService de aynı güne ait tüm sayfaları günceller)
       try {
         await storageRef.current.updatePage(targetPage.pageId, { mood: selectedMood });
       } catch (err) {

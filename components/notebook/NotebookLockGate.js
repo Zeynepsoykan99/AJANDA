@@ -17,6 +17,8 @@ import {
   getBiometricTypeInfo,
   unlockSession,
 } from '../../services/biometricService';
+import { SecurityService } from '../../services/securityService';
+import PinAuthModal from '../security/PinAuthModal';
 
 /**
  * NotebookLockGate - Kilitli Günlük ve Defterler için Tam Ekran Güvenlik Duvarı
@@ -42,6 +44,7 @@ export default function NotebookLockGate({
 
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [authError, setAuthError] = useState(null);
+  const [isPinModalVisible, setIsPinModalVisible] = useState(false);
   const [biometricInfo, setBiometricInfo] = useState({
     type: 'passcode',
     label: 'Cihaz Parolası',
@@ -192,6 +195,18 @@ export default function NotebookLockGate({
             )}
           </TouchableOpacity>
 
+          {/* PIN ile Kilidi Aç Butonu */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => setIsPinModalVisible(true)}
+            style={[styles.pinButton, { borderColor: colors.border }]}
+          >
+            <MaterialCommunityIcons name="dialpad" size={18} color={colors.textPrimary} style={{ marginRight: 8 }} />
+            <Text style={[styles.pinButtonText, { color: colors.textPrimary }]}>
+              {t('security.unlockWithPin', 'PIN ile Kilidi Aç')}
+            </Text>
+          </TouchableOpacity>
+
           {/* Vazgeç / Geri Dön */}
           <TouchableOpacity
             activeOpacity={0.7}
@@ -204,6 +219,23 @@ export default function NotebookLockGate({
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* 4 Haneli PIN Doğrulama Modalı */}
+      <PinAuthModal
+        visible={isPinModalVisible}
+        mode="verify"
+        targetId={targetId || 'diary'}
+        itemTitle={title}
+        onSuccess={() => {
+          setIsPinModalVisible(false);
+          if (targetId) {
+            SecurityService.unlockSession(targetId);
+            unlockSession(targetId);
+          }
+          if (onUnlock) onUnlock();
+        }}
+        onClose={() => setIsPinModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -299,6 +331,21 @@ const styles = StyleSheet.create({
   unlockButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  pinButton: {
+    width: '100%',
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  pinButtonText: {
+    fontSize: 15,
     fontWeight: '600',
   },
   cancelLink: {

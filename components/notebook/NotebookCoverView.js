@@ -14,12 +14,14 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
+import { SecurityService } from '../../services/securityService';
 import {
   authenticateWithBiometrics,
   isSessionUnlocked,
   unlockSession,
   lockSession,
 } from '../../services/biometricService';
+import PinAuthModal from '../security/PinAuthModal';
 import {
   DEFAULT_COVER_TEMPLATE_ID,
   getCoverTemplateById,
@@ -83,6 +85,11 @@ export default function NotebookCoverView({
   const [isSearchModalVisible, setIsSearchModalVisible] = useState(false);
   const [isMoodAnalyticsVisible, setIsMoodAnalyticsVisible] = useState(false);
   const [filterDate, setFilterDate] = useState(null);
+  const [pinModalState, setPinModalState] = useState({
+    visible: false,
+    mode: 'verify', // 'setup' | 'verify' | 'remove'
+    onSuccessCallback: null,
+  });
 
 
   // Kapak Şablonu ve Dinamik Kenar Rengi
@@ -171,64 +178,66 @@ export default function NotebookCoverView({
     storageRef.current.updateMeta({ coverDrawings: updatedDrawings });
   }, [notebook?.coverDrawings]);
 
-  // Kilit durumunu değiştir (biyometrik onay gerektirir)
+  // Kilit durumunu değiştir (PIN / Biyometrik Kurulum ve Kaldırma)
   const handleToggleLock = useCallback(async () => {
     if (!notebook) return;
     const targetId = notebook?.id || 'diary';
     const isCurrentlyLocked = !!notebook?.isLocked;
+    const hasExistingPin = await SecurityService.hasPin(targetId);
 
-    const promptMessage = isCurrentlyLocked
-      ? t('security.unlockToRemoveLock', 'Kilidi kaldırmak için kimliğinizi doğrulayın')
-      : t('security.lockConfirm', 'Bu defteri kilitlemek için kimliğinizi doğrulayın');
-
-    const result = await authenticateWithBiometrics({
-      promptMessage,
-      fallbackLabel: t('security.fallbackPasscode', 'Cihaz Parolasını Kullan'),
-      cancelLabel: t('common.cancel', 'Vazgeç'),
-    });
-
-    if (result.success) {
-      const nextLocked = !isCurrentlyLocked;
-      setNotebook((prev) => ({ ...prev, isLocked: nextLocked }));
-      await storageRef.current.updateMeta({ isLocked: nextLocked });
-      if (nextLocked) {
-        unlockSession(targetId);
-      } else {
-        lockSession(targetId);
-      }
-      try {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } catch (e) {}
-    } else if (result.error && result.error !== 'user_cancel' && result.error !== 'system_cancel') {
-      Alert.alert(
-        t('common.error', 'Hata'),
-        t('security.authFailed', 'Kimlik doğrulanamadı. Lütfen tekrar deneyin.')
-      );
+    if (isCurrentlyLocked || hasExistingPin) {
+      // Kilidi kaldırma akışı
+      setPinModalState({
+        visible: true,
+        mode: 'remove',
+        onSuccessCallback: async () => {
+          setNotebook((prev) => ({ ...prev, isLocked: false }));
+          await storageRef.current.updateMeta({ isLocked: false });
+          SecurityService.lockSession(targetId);
+          lockSession(targetId);
+          try {
+            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          } catch (e) {}
+        },
+      });
+    } else {
+      // Kilitleme / PIN oluşturma akışı
+      setPinModalState({
+        visible: true,
+        mode: 'setup',
+        onSuccessCallback: async () => {
+          setNotebook((prev) => ({ ...prev, isLocked: true }));
+          await storageRef.current.updateMeta({ isLocked: true });
+          SecurityService.unlockSession(targetId);
+          unlockSession(targetId);
+          try {
+            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          } catch (e) {}
+        },
+      });
     }
-  }, [notebook, t]);
+  }, [notebook]);
 
-  // Defterin sayfalarını aç (kilitliyse önce doğrula)
+  // Defterin sayfalarını aç (kilitliyse önce PIN veya Biyometri ile doğrula)
   const handleOpenNotebook = useCallback(async () => {
     if (!notebook) return;
     const targetId = notebook?.id || 'diary';
-    if (notebook?.isLocked && !isSessionUnlocked(targetId)) {
-      const result = await authenticateWithBiometrics({
-        promptMessage: t('security.unlockToOpen', {
-          title: notebook?.title || '',
-          defaultValue: 'Defteri açmak için kimliğinizi doğrulayın',
-        }),
-        fallbackLabel: t('security.fallbackPasscode', 'Cihaz Parolasını Kullan'),
-        cancelLabel: t('common.cancel', 'Vazgeç'),
-      });
+    const hasPin = await SecurityService.hasPin(targetId);
+    const isLocked = notebook?.isLocked || hasPin;
 
-      if (!result.success) {
-        return;
-      }
-      unlockSession(targetId);
+    if (isLocked && !SecurityService.isSessionUnlocked(targetId)) {
+      setPinModalState({
+        visible: true,
+        mode: 'verify',
+        onSuccessCallback: () => {
+          if (onOpen) onOpen();
+        },
+      });
+      return;
     }
 
     if (onOpen) onOpen();
-  }, [notebook, onOpen, t]);
+  }, [notebook, onOpen]);
 
   // Tarih seçildiğinde ilgili sayfayı bul ve yönlendir
   const handleDateSelect = useCallback(
@@ -243,36 +252,39 @@ export default function NotebookCoverView({
 
       // Kilit kontrolü
       const targetId = notebook?.id || 'diary';
-      if (notebook?.isLocked && !isSessionUnlocked(targetId)) {
-        const result = await authenticateWithBiometrics({
-          promptMessage: t('security.unlockToOpen', {
-            title: notebook?.title || '',
-            defaultValue: 'Defteri açmak için kimliğinizi doğrulayın',
-          }),
-          fallbackLabel: t('security.fallbackPasscode', 'Cihaz Parolasını Kullan'),
-          cancelLabel: t('common.cancel', 'Vazgeç'),
+      const hasPin = await SecurityService.hasPin(targetId);
+      const isLocked = notebook?.isLocked || hasPin;
+
+      const navigateToDatePage = () => {
+        const matchPage = notebook?.pages?.find((p) => isSameDay(p.createdAt, selectedDate));
+        if (matchPage) {
+          if (onOpen) {
+            onOpen(matchPage);
+          } else {
+            router.push(`/gunlugum/pages?pageId=${matchPage.pageId}`);
+          }
+        } else {
+          const dateStr = formatFilterDate(selectedDate, i18n.language);
+          Alert.alert(
+            t('diary.noEntryTitle', 'Kayıt Bulunamadı'),
+            t('diary.noEntryForDate', {
+              date: dateStr,
+              defaultValue: `${dateStr} tarihine ait bir sayfa bulunamadı.`,
+            })
+          );
+        }
+      };
+
+      if (isLocked && !SecurityService.isSessionUnlocked(targetId)) {
+        setPinModalState({
+          visible: true,
+          mode: 'verify',
+          onSuccessCallback: navigateToDatePage,
         });
-        if (!result.success) return;
-        unlockSession(targetId);
+        return;
       }
 
-      const matchPage = notebook?.pages?.find((p) => isSameDay(p.createdAt, selectedDate));
-      if (matchPage) {
-        if (onOpen) {
-          onOpen(matchPage);
-        } else {
-          router.push(`/gunlugum/pages?pageId=${matchPage.pageId}`);
-        }
-      } else {
-        const dateStr = formatFilterDate(selectedDate, i18n.language);
-        Alert.alert(
-          t('diary.noEntryTitle', 'Kayıt Bulunamadı'),
-          t('diary.noEntryForDate', {
-            date: dateStr,
-            defaultValue: `${dateStr} tarihine ait bir sayfa bulunamadı.`,
-          })
-        );
-      }
+      navigateToDatePage();
     },
     [notebook, onOpen, onSelectDate, router, i18n.language, t]
   );
@@ -493,6 +505,23 @@ export default function NotebookCoverView({
           ) : null}
         </InteractiveCover3D>
 
+        {/* Günlüğü Aç Butonu */}
+        {openButtonLabel ? (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={handleOpenNotebook}
+            style={[styles.openNotebookButton, { backgroundColor: colors.accent }]}
+            accessibilityLabel={openButtonLabel}
+          >
+            <MaterialCommunityIcons
+              name={notebook?.isLocked ? 'lock-outline' : 'book-open-page-variant'}
+              size={18}
+              color="#FFFFFF"
+              style={{ marginRight: 8 }}
+            />
+            <Text style={styles.openNotebookButtonText}>{openButtonLabel}</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       {/* Kapak Seçim Modalı */}
@@ -564,6 +593,21 @@ export default function NotebookCoverView({
           pages={notebook?.pages || []}
         />
       )}
+
+      {/* 4 Haneli PIN Güvenlik Modalı */}
+      <PinAuthModal
+        visible={pinModalState.visible}
+        mode={pinModalState.mode}
+        targetId={notebook?.id || 'diary'}
+        itemTitle={typeof getTitle === 'function' ? getTitle(notebook) : (notebook?.title || t('diary.title', 'Günlüğüm'))}
+        onSuccess={(param) => {
+          if (pinModalState.onSuccessCallback) {
+            pinModalState.onSuccessCallback(param);
+          }
+          setPinModalState((prev) => ({ ...prev, visible: false }));
+        }}
+        onClose={() => setPinModalState((prev) => ({ ...prev, visible: false }))}
+      />
     </AnimatedSafeAreaView>
   );
 }
@@ -667,5 +711,25 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 990,
     elevation: 15,
+  },
+  openNotebookButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  openNotebookButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.4,
   },
 });

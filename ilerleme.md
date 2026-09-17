@@ -4,6 +4,53 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-17] - Günlüğüm: Günlük Tek Duygu Kısıtlaması (1 Mood Per Day), 12 Genişletilmiş Duygu Yelpazesi ve PIN/Şifreli Kilit Entegrasyonu (Diary Lock)
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:**
+  1. **Günlük Tek Duygu Kısıtlaması (Overwrite):** Günlüğüm modülünde kullanıcının aynı gün içinde birden fazla duygu kaydetmesi mantıksal olarak kısıtlandı. Takvim günü (`YYYY-MM-DD`) bazında tek bir duygu kaydedilebilmeli; aynı günün herhangi bir sayfasında duygu seçilirse o günün tüm sayfalarındaki duygu verisi güncellenmeli (overwrite) ve aynı günde yeni açılan sayfalar o günün mevcut duygusunu devralmalıdır.
+  2. **Duygu Çeşitliliğinin Artırılması (12 Moods):** Mevcut 8'li duygu paleti; daha nüanslı ve derinlikli 12 duyguya genişletildi (😊 Mutlu, ⚡ Enerjik, 🥳 Heyecanlı, 💡 İlham Dolu, 🎯 Odaklanmış, 😌 Huzurlu, 🙏 Minnettar, ☕ Sakin, 😫 Yorgun, 😰 Endişeli, 🌧️ Melankolik, 😔 Üzgün). 5 dilde (`locales/{tr,en,de,es,fr}.json`) tüm yeni duygular ve analitik metinleri eklendi.
+  3. **PIN/Şifreli Kilit Entegrasyonu (Diary Lock):** Günlük kapağındaki kilit özelliği tam işlevsel hale getirildi:
+     - Kilit ikonuna tıklandığında 4 haneli PIN belirleme (setup) veya mevcut PIN'i kaldırma (remove) akışı.
+     - Günlük kilitlendiğinde kapakta kilitli olduğu görsel rozetle belirtilir.
+     - Kapağa veya "Günlüğümü Aç" butonuna tıklandığında 4 haneli PIN doğrulanmadan sayfalar açılmaz.
+     - `expo-secure-store` ile donanımsal güvenli depolama ve web için güvenli fallback sağlandı.
+
+### 🔧 Yapılan Geliştirmeler ve Düzenlemeler
+1. **Paket Kurulumu:** `expo-secure-store` (~15.0.8) Expo SDK 54 uyumlu olarak kuruldu.
+2. **`services/securityService.js` [NEW]:**
+   - SHA-256 tuzlu (salted) hash ile 4 haneli PIN saklama (`setPin`, `verifyPin`, `hasPin`, `removePin`).
+   - `SecureStore` öncelikli, web platformunda güvenli fallback desteği.
+   - Sayfa geçişlerinde oturum açık kaldığı sürece tekrar şifre sormayan `unlockSession` / `isSessionUnlocked` / `lockSession` hafıza mekanizması.
+3. **`components/security/PinAuthModal.js` [NEW]:**
+   - 4 haneli numpad (sayı tuş takımı), PIN noktaları (dot indicator), hatalı girişte dokunsal geri bildirim ve sağa-sola sallantı (shake) animasyonu.
+   - 3 mod desteği: `'setup'` (PIN belirleme + doğrulama adımları), `'verify'` (kilidi açma) ve `'remove'` (mevcut şifreyi onaylayıp kilidi kaldırma).
+   - Biyometrik donanım kısayolu (Touch ID / Face ID) ile doğrudan entegrasyon.
+4. **`constants/moods.js`:** 8'den 12 duyguya genişletildi (`MOODS`, `MOOD_COLORS`, `POSITIVE_MOODS`, `getMoodEmoji`).
+5. **`components/diary/MoodPickerModal.js`:** 12 duygu için 4x3 kaydırılabilir zarif ızgara düzeni (`maxHeight: 370`) ve yeni renkler entegre edildi.
+6. **`services/storageService.js`:**
+   - `notebookWithUpdatedPage`: Bir sayfada `mood` güncellendiğinde, aynı günün (`slice(0, 10)`) tüm sayfalarındaki duygu durumu otomatik güncellenir.
+   - `notebookWithAddedPage`: Yeni sayfa eklenirken duygu belirtilmemişse, aynı güne ait mevcut bir sayfanın duygusu devralınır.
+7. **`components/notebook/NotebookPagesView.js`:** `handleSelectMood` fonksiyonu, yerel state'teki tüm aynı gün sayfalarını eşzamanlı günceller.
+8. **`components/notebook/NotebookCoverView.js`:**
+   - Kilit ikonuna `handleToggleLock` ile `PinAuthModal` (setup/remove) bağlandı.
+   - Kapak ve "🌸 Günlüğümü Aç" butonuna `handleOpenNotebook` ile kilit kontrolü bağlandı; doğru PIN girilmeden geçiş engellendi.
+   - Tarih seçici (`handleDateSelect`) kilit koruması altına alındı.
+   - Kapağın hemen altına şık bir "Günlüğümü Aç" butonu eklendi.
+9. **`components/notebook/NotebookLockGate.js`:** Tam ekran güvenlik duvarına "PIN ile Kilidi Aç" butonu ve `PinAuthModal` eklendi.
+10. **Çok Dilli Sözlükler (`locales/{tr,en,de,es,fr}.json`):**
+    - TR, EN, DE, ES, FR dosyalarına 4 yeni duygu (`energetic`, `inspired`, `relaxed`, `anxious`, `melancholic`), `security.*` PIN başlık/açıklama anahtarları ve Spotify Wrapped analitik başlıkları eklendi.
+
+### ✅ Doğrulama & Testler
+- `scratch/validate_mood_pin.js`:
+  - 12 duygu tanımı ve emojileri doğrulandı.
+  - 5 dil dosyasındaki tüm duygu ve PIN güvenlik anahtarları doğrulandı.
+  - Aynı gün duygu ezme (overwrite) ve aynı günde duygu devralma (inherit) mantığı test edildi.
+  - PIN hash ve doğrulama mantığı test edildi.
+- `tests/zoomableCanvas.test.js`: 6/6 matematiksel koordinat testi başarıyla geçti.
+
+---
+
 ## 📅 [2026-09-17] - Günlüğüm: Spotify Wrapped Tarzı Aylık Duygu Analizi ve Özet (Monthly Mood Analytics)
 
 ### 🔍 Kapsam ve İhtiyaç

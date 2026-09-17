@@ -33,7 +33,8 @@
       "expo-router",
       "expo-localization",
       "expo-local-authentication",
-      "expo-speech-recognition"
+      "expo-speech-recognition",
+      "expo-secure-store"
     ]
   }
 }

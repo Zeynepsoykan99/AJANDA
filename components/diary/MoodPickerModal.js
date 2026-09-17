@@ -133,8 +133,12 @@ export default function MoodPickerModal({
                 </TouchableOpacity>
               </View>
 
-              {/* 8'li Duygu Izgarası */}
-              <View style={styles.moodsGrid}>
+              {/* 12'li Duygu Izgarası */}
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                style={{ maxHeight: 370 }}
+                contentContainerStyle={styles.moodsGrid}
+              >
                 {MOODS.map((item) => {
                   const isSelected = currentMood === item.key;
                   return (
@@ -195,7 +199,7 @@ export default function MoodPickerModal({
                     </TouchableOpacity>
                   );
                 })}
-              </View>
+              </ScrollView>
 
               {/* Alt Butonlar: Duyguyu Kaldır */}
               {currentMood ? (

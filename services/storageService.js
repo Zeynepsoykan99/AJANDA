@@ -117,6 +117,20 @@ const renumberPages = (pages) => pages.map((p, idx) => ({ ...p, pageNumber: idx 
 
 // ─── Saf sayfa işlemleri (defter nesnesi alır, yeni defter nesnesi döndürür) ───
 const notebookWithAddedPage = (notebook, pageData = {}) => {
+  const pageCreatedAt = pageData.createdAt || new Date().toISOString();
+  const datePrefix = pageCreatedAt.slice(0, 10);
+
+  let pageMood = pageData.mood !== undefined ? pageData.mood : null;
+  // Eğer yeni sayfa için duygu belirtilmemişse, aynı güne ait mevcut bir sayfanın duygusunu devral
+  if (pageMood === null && Array.isArray(notebook.pages) && notebook.pages.length > 0) {
+    const sameDayPage = notebook.pages.find(
+      (p) => (p.createdAt || p.date || '').slice(0, 10) === datePrefix && p.mood !== undefined && p.mood !== null
+    );
+    if (sameDayPage) {
+      pageMood = sameDayPage.mood;
+    }
+  }
+
   const newPage = {
     pageId: pageData.pageId || `page_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     pageNumber: (notebook.pages?.length || 0) + 1,
@@ -125,8 +139,8 @@ const notebookWithAddedPage = (notebook, pageData = {}) => {
       (notebook.pages?.length ? notebook.pages[notebook.pages.length - 1]?.paperTemplateId : null) ||
       notebook.paperTemplateId ||
       DEFAULT_PAPER_TEMPLATE_ID,
-    createdAt: pageData.createdAt || new Date().toISOString(),
-    mood: pageData.mood !== undefined ? pageData.mood : null,
+    createdAt: pageCreatedAt,
+    mood: pageMood,
     drawings: pageData.drawings || [],
     textBlocks: pageData.textBlocks || [],
     stickers: pageData.stickers || [],
@@ -137,10 +151,30 @@ const notebookWithAddedPage = (notebook, pageData = {}) => {
   return { notebook: { ...notebook, pages: [...(notebook.pages || []), newPage] }, newPage };
 };
 
-const notebookWithUpdatedPage = (notebook, pageId, pageUpdates) => ({
-  ...notebook,
-  pages: (notebook.pages || []).map((p) => (p.pageId === pageId ? { ...p, ...pageUpdates } : p)),
-});
+const notebookWithUpdatedPage = (notebook, pageId, pageUpdates) => {
+  const targetPage = (notebook.pages || []).find((p) => p.pageId === pageId);
+  const targetDatePrefix =
+    pageUpdates.mood !== undefined && targetPage
+      ? (pageUpdates.createdAt || targetPage.createdAt || targetPage.date || '').slice(0, 10)
+      : null;
+
+  return {
+    ...notebook,
+    pages: (notebook.pages || []).map((p) => {
+      if (p.pageId === pageId) {
+        return { ...p, ...pageUpdates };
+      }
+      // Aynı güne ait diğer tüm sayfaların da duygu durumunu güncelle (1 gün = 1 duygu)
+      if (targetDatePrefix && pageUpdates.mood !== undefined) {
+        const pDate = (p.createdAt || p.date || '').slice(0, 10);
+        if (pDate === targetDatePrefix) {
+          return { ...p, mood: pageUpdates.mood };
+        }
+      }
+      return p;
+    }),
+  };
+};
 
 const notebookWithDeletedPage = (notebook, pageId) => {
   const filtered = (notebook.pages || []).filter((p) => p.pageId !== pageId);
