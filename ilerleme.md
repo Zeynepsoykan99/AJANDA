@@ -4,6 +4,14 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-17] - Hata Düzeltmesi: MoodPickerModal ScrollView İçe Aktarımı (Bugfix)
+
+### 🔍 Kapsam ve İhtiyaç
+- **Hata:** Şifre girilip günlüğe erişildiğinde veya duygu seçici açıldığında `Uncaught Error: ScrollView is not defined` çökmesi meydana geliyordu.
+- **Çözüm:** [`components/diary/MoodPickerModal.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/diary/MoodPickerModal.js) dosyasına `react-native` paketinden eksik olan `ScrollView` bileşeni eklendi. Diğer kilit ve güvenlik bileşenleri taranarak eksik import bulunmadığı doğrulandı.
+
+---
+
 ## 📅 [2026-09-17] - Günlük Kilidi (PIN): Yetim Kilitlerin Temizlenmesi ve Kullanıcı Tanımlı 3 Aşamalı PIN Döngüsü
 
 ### 🔍 Kapsam ve İhtiyaç
