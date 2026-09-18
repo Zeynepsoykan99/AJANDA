@@ -430,11 +430,13 @@ export default function DrawingCanvas({
       const state = stateRef.current;
       let coordX = locX;
       let coordY = locY;
-      if (absX !== undefined && absY !== undefined && state.pageToCanvas) {
-        const pt = state.pageToCanvas(absX, absY);
-        coordX = pt.x;
-        coordY = pt.y;
-      } else if (state.screenToCanvas) {
+
+      // 1:1 Doğrudan Tuval Yerel Koordinat Eşlemesi:
+      // Yalnızca tuval yakınlaştırılmışsa (zoom > 1.05x) yerel koordinatı ölçek dönüştürücüye gönderir
+      const isZoomed =
+        state.zoomScale &&
+        (typeof state.zoomScale.value === 'number' ? state.zoomScale.value > 1.05 : false);
+      if (isZoomed && state.screenToCanvas) {
         const pt = state.screenToCanvas(locX, locY);
         coordX = pt.x;
         coordY = pt.y;
@@ -478,11 +480,11 @@ export default function DrawingCanvas({
       const state = stateRef.current;
       let coordX = locX;
       let coordY = locY;
-      if (absX !== undefined && absY !== undefined && state.pageToCanvas) {
-        const pt = state.pageToCanvas(absX, absY);
-        coordX = pt.x;
-        coordY = pt.y;
-      } else if (state.screenToCanvas) {
+
+      const isZoomed =
+        state.zoomScale &&
+        (typeof state.zoomScale.value === 'number' ? state.zoomScale.value > 1.05 : false);
+      if (isZoomed && state.screenToCanvas) {
         const pt = state.screenToCanvas(locX, locY);
         coordX = pt.x;
         coordY = pt.y;
@@ -612,11 +614,58 @@ export default function DrawingCanvas({
 
   // Çizim Gesture'ı (react-native-gesture-handler Pan):
   // KESİNLİKLE sadece tek parmak (minPointers(1).maxPointers(1)) ile tetiklenir.
-  // Çizim başladığı anda UI-thread seviyesinde isDrawingActive = true yapılarak
-  // avuç içi teması (palm rejection) nedeniyle Pinch ve Pan tetiklenmesi %100 engellenir.
+  // Tek dokunuşla nokta / hare koyma (Tap to dot)
+  const handleDotTap = useCallback((locX, locY) => {
+    const state = stateRef.current;
+    if (!state.isDrawingMode || state.tool === 'lasso' || state.tool === 'eraser') return;
+
+    let coordX = locX;
+    let coordY = locY;
+    const isZoomed =
+      state.zoomScale &&
+      (typeof state.zoomScale.value === 'number' ? state.zoomScale.value > 1.05 : false);
+    if (isZoomed && state.screenToCanvas) {
+      const pt = state.screenToCanvas(locX, locY);
+      coordX = pt.x;
+      coordY = pt.y;
+    }
+
+    const dotPath = `M ${coordX} ${coordY} L ${coordX + 0.1} ${coordY + 0.1}`;
+    const resolvedOpacity = state.tool === 'highlighter' ? 0.4 : 0.95;
+    const resolvedWidth =
+      state.tool === 'highlighter' ? state.strokeWidth * 3.5 : state.strokeWidth;
+
+    const newStroke = {
+      id: `stroke_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      d: dotPath,
+      color: state.color,
+      strokeWidth: resolvedWidth,
+      strokeOpacity: resolvedOpacity,
+      points: [
+        { x: coordX, y: coordY, timestamp: 0 },
+        { x: coordX + 0.1, y: coordY + 0.1, timestamp: 10 },
+      ],
+    };
+
+    strokeBoundsCacheRef.current.set(newStroke.id, {
+      minX: coordX - resolvedWidth,
+      minY: coordY - resolvedWidth,
+      maxX: coordX + resolvedWidth,
+      maxY: coordY + resolvedWidth,
+    });
+
+    if (state.onDrawingsChange) {
+      state.onDrawingsChange([...state.drawings, newStroke]);
+    }
+  }, []);
+
+  // Çizim Gesture'ı (react-native-gesture-handler Pan):
+  // 1px aktifleşme eşiği (.activeOffset) ile gecikmesiz başlar
   const drawingGesture = Gesture.Pan()
     .minPointers(1)
     .maxPointers(1)
+    .activeOffsetX([-1, 1])
+    .activeOffsetY([-1, 1])
     .shouldCancelWhenOutside(false)
     .averageTouches(false)
     .enabled(isDrawingMode)
@@ -649,6 +698,16 @@ export default function DrawingCanvas({
       runOnJS(handleTouchCancel)();
     });
 
+  const dotTapGesture = Gesture.Tap()
+    .maxDuration(250)
+    .enabled(isDrawingMode && tool !== 'lasso')
+    .onEnd((event) => {
+      'worklet';
+      runOnJS(handleDotTap)(event.x, event.y);
+    });
+
+  const composedDrawingGesture = Gesture.Race(drawingGesture, dotTapGesture);
+
   // Fosforlu Kalem için anlık saydamlık
   const currentOpacity = tool === 'highlighter' ? 0.4 : 0.95;
   const currentDrawWidth = tool === 'highlighter' ? strokeWidth * 3.5 : strokeWidth;
@@ -664,7 +723,7 @@ export default function DrawingCanvas({
       ]}
       pointerEvents={isDrawingMode ? 'auto' : 'none'}
     >
-      <GestureDetector gesture={drawingGesture}>
+      <GestureDetector gesture={composedDrawingGesture}>
         <View style={StyleSheet.absoluteFill}>
           <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
             {/* Tamamlanmış Kalıcı Çizgiler (Memoized Layer - 0 Gereksiz Re-render) */}

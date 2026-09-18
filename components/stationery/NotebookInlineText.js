@@ -38,6 +38,7 @@ export default function NotebookInlineText({
   isTextMode = false,
   isDrawingMode = false,
   isExporting = false,
+  hasDrawings = false,
   onActivateTextMode,
   textColor = '#4E342E',
   textFontSize = null,
@@ -115,6 +116,20 @@ export default function NotebookInlineText({
 
   const isEditable = isActive && !isDrawingMode && !isExporting;
 
+  // Placeholder Mantığı: Kullanıcı kalem/silgi/çizim aracındaysa, sayfada çizimler varsa,
+  // dışa aktarım yapılıyorsa veya metin girilmişse placeholder tamamen GİZLENMELİDİR.
+  const shouldHidePlaceholder =
+    isExporting ||
+    isDrawingMode ||
+    hasDrawings ||
+    Boolean(localText && localText.trim().length > 0);
+
+  const resolvedPlaceholder = shouldHidePlaceholder
+    ? ''
+    : placeholder !== undefined
+    ? placeholder
+    : t('notebooks.inlinePlaceholder', 'Buraya yazmaya başlayın...');
+
   return (
     <Pressable
       style={styles.container}
@@ -129,13 +144,7 @@ export default function NotebookInlineText({
         multiline={true}
         scrollEnabled={false}
         textAlignVertical="top"
-        placeholder={
-          isExporting
-            ? ''
-            : placeholder !== undefined
-            ? placeholder
-            : t('notebooks.inlinePlaceholder', 'Buraya yazmaya başlayın...')
-        }
+        placeholder={resolvedPlaceholder}
         placeholderTextColor="#BDBDBD88"
         selectionColor={textColor + '99'}
         cursorColor={textColor}

@@ -1388,7 +1388,10 @@ export default function NotebookPagesView({
         // Çizim/metin modunda, sayfa büyütülmüşken veya iki parmak ekrandayken yatay swipe kilitlenir
         scrollEnabled={activeMode === 'none' && !isActivePageZoomed && !isMultiTouch}
         onLayout={handlePagesViewportLayout}
-        style={styles.horizontalScrollView}
+        style={[
+          styles.horizontalScrollView,
+          activeMode === 'drawing' && Platform.select({ web: { touchAction: 'none' } }),
+        ]}
       >
         {pages.map((p, index) => {
           const isActive = index === currentPageIndex;
@@ -1452,6 +1455,7 @@ export default function NotebookPagesView({
                         isActive={isActive}
                         isTextMode={isActive && activeMode === 'text'}
                         isDrawingMode={isActive && activeMode === 'drawing'}
+                        hasDrawings={(p.drawings || []).length > 0}
                         isExporting={isActive && isExporting}
                         onActivateTextMode={() => setActiveMode('text')}
                         textColor={textColor}
@@ -1541,7 +1545,7 @@ export default function NotebookPagesView({
                     onStickerDelete={isActive ? handleStickerDelete : () => {}}
                     isDrawingMode={isActive && activeMode === 'drawing'}
                     isExporting={isActive && isExporting}
-                    pointerEvents={!isActive ? 'none' : 'box-none'}
+                    pointerEvents={!isActive || activeMode === 'drawing' ? 'none' : 'box-none'}
                   />
                 </View>
               </ZoomableCanvas>
@@ -1684,7 +1688,10 @@ export default function NotebookPagesView({
             setActiveMode((prev) => (prev === 'text' ? 'none' : 'text'))
           }
           currentTool={drawingTool}
-          onChangeTool={setDrawingTool}
+          onChangeTool={(tool) => {
+            setDrawingTool(tool);
+            setActiveMode('drawing');
+          }}
           currentColor={drawingColor}
           onChangeColor={setDrawingColor}
           currentWidth={drawingWidth}
