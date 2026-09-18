@@ -18,6 +18,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 import { useZoomableCanvas } from '../drawing/ZoomableCanvas';
+import { useSmartSnapping } from '../canvas/SmartSnappingContext';
 
 const triggerHaptic = () => {
   try {
@@ -30,17 +31,24 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
   activeColor,
   activeFontSize,
   isEditing,
+  isSelected,
+  onSelect,
   onEdit,
   onChange,
   onBlur,
   onDelete,
   onMoveEnd,
+  onGroupMoveEnd,
   onResizeEnd,
   canvasWidth = 0,
   canvasHeight = 0,
   onSnapChange,
   isEraserActive = false,
   isDrawingMode = false,
+  groupDragDeltaX,
+  groupDragDeltaY,
+  activeLeaderId,
+  selectedBlockIds = [],
 }) {
   const { t } = useTranslation();
   const { scale: zoomScale } = useZoomableCanvas();
@@ -55,7 +63,29 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
   const isSnappedV = useSharedValue(false);
   const isSnappedH = useSharedValue(false);
 
+  const isSelectedShared = useSharedValue(isSelected);
+  useEffect(() => {
+    isSelectedShared.value = isSelected;
+  }, [isSelected]);
+
+  const smartSnapping = useSmartSnapping();
+  const snapTargetsX = useSharedValue([]);
+  const snapTargetsY = useSharedValue([]);
+
+  const prepareSnapTargets = useCallback(() => {
+    if (smartSnapping?.getSnapTargets) {
+      const { targetsX, targetsY } = smartSnapping.getSnapTargets(block.id);
+      snapTargetsX.value = targetsX;
+      snapTargetsY.value = targetsY;
+    }
+  }, [smartSnapping, block.id]);
+
   const [boxWidth, setBoxWidth] = useState(block.width || 120);
+
+  const fontSize = block.fontSize || activeFontSize || 16;
+  // Tipografik Baseline: Fontun taban çizgisinin kutu tepesine uzaklığı
+  const baselineOffset = Math.round(fontSize * 0.82);
+  const itemH = Math.round(fontSize * 1.25);
 
   // Parent'tan gelen x veya y değiştiğinde SharedValue'ları senkronize et
   useEffect(() => {
@@ -69,7 +99,7 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
     if (block.width) setBoxWidth(block.width);
   }, [block.width]);
 
-  // Sürükleme (Pan) Gesture'ı: Zoom ölçeğine göre dengeli ve akıllı snap destekli
+  // Sürükleme (Pan) Gesture'ı: Zoom ölçeğine göre dengeli, grup taşıma ve baseline snap destekli
   const panGesture = Gesture.Pan()
     .maxPointers(1)
     .activeOffsetX([-4, 4])
@@ -80,9 +110,18 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
       savedTranslateX.value = translateX.value;
       savedTranslateY.value = translateY.value;
       isDragging.value = true;
+      if (activeLeaderId) activeLeaderId.value = block.id;
+      if (groupDragDeltaX) groupDragDeltaX.value = 0;
+      if (groupDragDeltaY) groupDragDeltaY.value = 0;
       runOnJS(setIsDraggingState)(true);
       isSnappedV.value = false;
       isSnappedH.value = false;
+      runOnJS(prepareSnapTargets)();
+
+      // Eğer taşınan öğe seçili grupta değilse tekli seçime geçir
+      if (!isSelectedShared.value && onSelect) {
+        runOnJS(onSelect)(block.id, false);
+      }
     })
     .onUpdate((event) => {
       'worklet';
@@ -90,40 +129,50 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
       let rawX = savedTranslateX.value + event.translationX / s;
       let rawY = savedTranslateY.value + event.translationY / s;
 
-      // Akıllı Hizalama (Snapping)
-      if (canvasWidth > 0 && canvasHeight > 0) {
-        const itemW = boxWidth;
-        const itemH = 40;
-        const centerX = rawX + itemW / 2;
-        const centerY = rawY + itemH / 2;
-        const midX = canvasWidth / 2;
-        const midY = canvasHeight / 2;
-        const threshold = 14;
+      const itemW = boxWidth;
 
-        // Dikey eksen (yatay merkez) snap
-        if (Math.abs(centerX - midX) < threshold) {
-          rawX = midX - itemW / 2;
+      // Akıllı Manyetik Taban Çizgisi ve Merkez Hizalaması (Baseline & Center Snapping)
+      if (smartSnapping?.calculateSnapping && (snapTargetsX.value.length > 0 || snapTargetsY.value.length > 0)) {
+        const res = smartSnapping.calculateSnapping(
+          rawX,
+          rawY,
+          itemW,
+          itemH,
+          snapTargetsX.value,
+          snapTargetsY.value,
+          6,
+          baselineOffset // <--- Yazının alt çizgisi defter çizgisine yapışır!
+        );
+
+        rawX = res.snappedX;
+        rawY = res.snappedY;
+
+        if (res.hasSnapX) {
+          smartSnapping.guideLineX.value = res.guideX;
+          smartSnapping.guideLineXVisible.value = 1;
           if (!isSnappedV.value) {
             isSnappedV.value = true;
             runOnJS(triggerHaptic)();
             if (onSnapChange) runOnJS(onSnapChange)({ v: true });
           }
         } else {
+          smartSnapping.guideLineXVisible.value = 0;
           if (isSnappedV.value) {
             isSnappedV.value = false;
             if (onSnapChange) runOnJS(onSnapChange)({ v: false });
           }
         }
 
-        // Yatay eksen (dikey merkez) snap
-        if (Math.abs(centerY - midY) < threshold) {
-          rawY = midY - itemH / 2;
+        if (res.hasSnapY) {
+          smartSnapping.guideLineY.value = res.guideY;
+          smartSnapping.guideLineYVisible.value = 1;
           if (!isSnappedH.value) {
             isSnappedH.value = true;
             runOnJS(triggerHaptic)();
             if (onSnapChange) runOnJS(onSnapChange)({ h: true });
           }
         } else {
+          smartSnapping.guideLineYVisible.value = 0;
           if (isSnappedH.value) {
             isSnappedH.value = false;
             if (onSnapChange) runOnJS(onSnapChange)({ h: false });
@@ -133,23 +182,46 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
 
       translateX.value = rawX;
       translateY.value = rawY;
+
+      // Grup Taşıma: Lider bloğun anlık deplasmanı tüm seçili bloklara 120 FPS UI Thread'de yansıtılır
+      if (groupDragDeltaX) groupDragDeltaX.value = rawX - savedTranslateX.value;
+      if (groupDragDeltaY) groupDragDeltaY.value = rawY - savedTranslateY.value;
     })
     .onEnd(() => {
       'worklet';
       isDragging.value = false;
       runOnJS(setIsDraggingState)(false);
-      if (isSnappedV.value || isSnappedH.value) {
-        isSnappedV.value = false;
-        isSnappedH.value = false;
+      isSnappedV.value = false;
+      isSnappedH.value = false;
+      if (smartSnapping) {
+        smartSnapping.guideLineXVisible.value = 0;
+        smartSnapping.guideLineYVisible.value = 0;
       }
       if (onSnapChange) {
         runOnJS(onSnapChange)({ v: false, h: false });
       }
+
+      const deltaX = Math.round(groupDragDeltaX ? groupDragDeltaX.value : 0);
+      const deltaY = Math.round(groupDragDeltaY ? groupDragDeltaY.value : 0);
       const finalX = Math.round(translateX.value);
       const finalY = Math.round(translateY.value);
+
       savedTranslateX.value = finalX;
       savedTranslateY.value = finalY;
-      if (onMoveEnd) {
+
+      if (activeLeaderId) activeLeaderId.value = null;
+      if (groupDragDeltaX) groupDragDeltaX.value = 0;
+      if (groupDragDeltaY) groupDragDeltaY.value = 0;
+
+      // Çoklu Seçim Grubu Varsa Hepsini Senkronize Kaydet
+      if (
+        onGroupMoveEnd &&
+        selectedBlockIds &&
+        selectedBlockIds.length > 1 &&
+        isSelectedShared.value
+      ) {
+        runOnJS(onGroupMoveEnd)(selectedBlockIds, deltaX, deltaY);
+      } else if (onMoveEnd) {
         runOnJS(onMoveEnd)(block.id, finalX, finalY);
       }
     })
@@ -157,23 +229,34 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
       'worklet';
       isDragging.value = false;
       runOnJS(setIsDraggingState)(false);
-      if (isSnappedV.value || isSnappedH.value) {
-        isSnappedV.value = false;
-        isSnappedH.value = false;
+      isSnappedV.value = false;
+      isSnappedH.value = false;
+      if (smartSnapping) {
+        smartSnapping.guideLineXVisible.value = 0;
+        smartSnapping.guideLineYVisible.value = 0;
       }
       if (onSnapChange) {
         runOnJS(onSnapChange)({ v: false, h: false });
       }
+      if (activeLeaderId && activeLeaderId.value === block.id) {
+        activeLeaderId.value = null;
+        if (groupDragDeltaX) groupDragDeltaX.value = 0;
+        if (groupDragDeltaY) groupDragDeltaY.value = 0;
+      }
     });
 
-  // Tıklama (Tap) Gesture'ı: Düzenleme moduna girme
+  // Tıklama (Tap) Gesture'ı: Seçme veya Düzenleme Moduna Girme
   const tapGesture = Gesture.Tap()
     .maxDuration(250)
     .enabled(!isEditing && !isEraserActive && !isDrawingMode)
     .onEnd(() => {
       'worklet';
-      if (onEdit) {
-        runOnJS(onEdit)(block.id);
+      if (isSelectedShared.value) {
+        // Zaten seçiliyse düzenleme moduna gir
+        if (onEdit) runOnJS(onEdit)(block.id);
+      } else {
+        // Seçili değilse seç
+        if (onSelect) runOnJS(onSelect)(block.id, false);
       }
     });
 
@@ -193,7 +276,7 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
     .onUpdate((event) => {
       'worklet';
       const s = (zoomScale && zoomScale.value) || 1.0;
-      const newWidth = Math.max(60, initialWidth.value + event.translationX / s);
+      const newWidth = Math.max(50, initialWidth.value + event.translationX / s);
       currentResizeWidth.value = newWidth;
       runOnJS(setBoxWidth)(newWidth);
     })
@@ -204,14 +287,25 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
       }
     });
 
+  // GPU-Hızlandırmalı Transform ve Çoklu Taşıma Senkronizasyonu
   const animatedStyle = useAnimatedStyle(() => {
+    const isLeader = activeLeaderId ? activeLeaderId.value === block.id : false;
+    let curX = translateX.value;
+    let curY = translateY.value;
+
+    // Eğer bu blok gruptaki takipçi ise, liderin delta hareketini UI thread'de eşzamanlı takip et
+    if (!isLeader && isSelectedShared.value && activeLeaderId && activeLeaderId.value !== null) {
+      curX = savedTranslateX.value + (groupDragDeltaX ? groupDragDeltaX.value : 0);
+      curY = savedTranslateY.value + (groupDragDeltaY ? groupDragDeltaY.value : 0);
+    }
+
     return {
       transform: [
-        { translateX: translateX.value },
-        { translateY: translateY.value },
+        { translateX: curX },
+        { translateY: curY },
       ],
-      zIndex: isDragging.value ? 100 : isEditing ? 50 : 10,
-      opacity: isDragging.value ? 0.94 : 1.0,
+      zIndex: isDragging.value ? 100 : isSelectedShared.value ? 80 : isEditing ? 50 : 10,
+      opacity: isDragging.value ? 0.95 : 1.0,
     };
   });
 
@@ -223,6 +317,7 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
           animatedStyle,
           { width: boxWidth },
           Platform.OS === 'web' && { cursor: isEditing ? 'text' : 'grab', userSelect: 'none' },
+          isSelected && !isEditing && styles.blockSelected,
           isEditing && styles.blockEditing,
           isDraggingState && styles.blockDragging,
         ]}
@@ -241,7 +336,8 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
                 styles.textInput,
                 {
                   color: block.color || activeColor,
-                  fontSize: block.fontSize || activeFontSize,
+                  fontSize: fontSize,
+                  lineHeight: itemH,
                   fontFamily: block.fontFamily || undefined,
                 },
               ]}
@@ -250,7 +346,7 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
             {/* Sağ Taraftaki Boyutlandırma Tutamacı (Resize Handle) */}
             <GestureDetector gesture={resizePanGesture}>
               <View style={styles.resizeHandleContainer}>
-                <MaterialCommunityIcons name="drag-vertical" size={20} color="#E91E63" />
+                <MaterialCommunityIcons name="drag-vertical" size={18} color="#007AFF" />
               </View>
             </GestureDetector>
 
@@ -260,7 +356,7 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
               style={styles.deleteBtn}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <MaterialCommunityIcons name="close-circle" size={20} color="#E91E63" />
+              <MaterialCommunityIcons name="close-circle" size={18} color="#E53935" />
             </TouchableOpacity>
           </View>
         ) : (
@@ -270,7 +366,8 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
                 styles.savedText,
                 {
                   color: block.color || activeColor,
-                  fontSize: block.fontSize || activeFontSize,
+                  fontSize: fontSize,
+                  lineHeight: itemH,
                   fontFamily: block.fontFamily || undefined,
                 },
               ]}
@@ -294,22 +391,43 @@ export default function TextCanvas({
   activeFontFamily,
   isEraserActive = false,
   pointerEvents,
+  selectedBlockIds: externalSelectedBlockIds,
+  onSelectedBlockIdsChange,
 }) {
   const { pageToCanvas, screenToCanvas } = useZoomableCanvas();
   const [editingId, setEditingId] = useState(null);
   const [canvasLayout, setCanvasLayout] = useState({ width: 0, height: 0 });
-  const [guideLines, setGuideLines] = useState({ v: false, h: false });
 
-  const handleSnapChange = useCallback((snap) => {
-    setGuideLines((prev) => ({ ...prev, ...snap }));
-  }, []);
+  // Çoklu Seçim State'i (Harici prop varsa onu kullan, yoksa yerel state)
+  const [internalSelectedIds, setInternalSelectedIds] = useState([]);
+  const selectedBlockIds = externalSelectedBlockIds !== undefined ? externalSelectedBlockIds : internalSelectedIds;
+  const setSelectedBlockIds = onSelectedBlockIdsChange || setInternalSelectedIds;
+
+  // Reanimated UI-Thread Çoklu Grup Taşıma Shared Value'ları
+  const groupDragDeltaX = useSharedValue(0);
+  const groupDragDeltaY = useSharedValue(0);
+  const activeLeaderId = useSharedValue(null);
+
+  const handleSelectBlock = useCallback((id, isMulti = false) => {
+    if (isMulti) {
+      setSelectedBlockIds((prev) =>
+        prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+      );
+    } else {
+      setSelectedBlockIds([id]);
+    }
+  }, [setSelectedBlockIds]);
 
   const handleCanvasPress = (evt) => {
-    if (!isTextMode) return;
     if (editingId) {
       setEditingId(null);
       return;
     }
+    if (selectedBlockIds.length > 0) {
+      setSelectedBlockIds([]);
+      return;
+    }
+    if (!isTextMode) return;
 
     const { locationX, locationY, pageX, pageY } = evt.nativeEvent;
     let coordX = locationX;
@@ -328,7 +446,7 @@ export default function TextCanvas({
     const newBlock = {
       id: newId,
       x: Math.max(10, Math.round(coordX)),
-      y: Math.max(10, Math.round(coordY - 15)),
+      y: Math.max(10, Math.round(coordY - 10)),
       text: '',
       color: activeColor,
       fontSize: activeFontSize,
@@ -338,6 +456,7 @@ export default function TextCanvas({
 
     onTextBlocksChange([...textBlocks, newBlock]);
     setEditingId(newId);
+    setSelectedBlockIds([newId]);
   };
 
   const handleTextChange = (id, newText) => {
@@ -351,6 +470,24 @@ export default function TextCanvas({
       textBlocks.map((b) => (b.id === id ? { ...b, x: newX, y: newY } : b))
     );
   };
+
+  // Grup Halinde Toplu Konum Güncelleme
+  const handleGroupMoveEnd = useCallback((blockIds, deltaX, deltaY) => {
+    if (!deltaX && !deltaY) return;
+    const updated = textBlocks.map((b) => {
+      if (blockIds.includes(b.id)) {
+        return {
+          ...b,
+          x: Math.round((b.x || 0) + deltaX),
+          y: Math.round((b.y || 0) + deltaY),
+        };
+      }
+      return b;
+    });
+    if (onTextBlocksChange) {
+      onTextBlocksChange(updated);
+    }
+  }, [textBlocks, onTextBlocksChange]);
 
   const handleResizeEnd = (id, newWidth) => {
     onTextBlocksChange(
@@ -369,7 +506,20 @@ export default function TextCanvas({
   const handleDeleteBlock = (id) => {
     onTextBlocksChange(textBlocks.filter((b) => b.id !== id));
     if (editingId === id) setEditingId(null);
+    setSelectedBlockIds((prev) => prev.filter((item) => item !== id));
   };
+
+  // Boş alana dokunulduğunda seçimi kaldırma jesti (Deselect Tap)
+  const backdropTapGesture = Gesture.Tap()
+    .maxDuration(250)
+    .maxDistance(8)
+    .onEnd(() => {
+      'worklet';
+      if (editingId) {
+        runOnJS(setEditingId)(null);
+      }
+      runOnJS(setSelectedBlockIds)([]);
+    });
 
   const resolvedPointerEvents =
     pointerEvents !== undefined
@@ -387,18 +537,11 @@ export default function TextCanvas({
         setCanvasLayout({ width, height });
       }}
     >
-      {/* Akıllı Hizalama Kılavuz Çizgileri */}
-      {guideLines.v && canvasLayout.width > 0 && (
-        <View
-          style={[styles.guideLineVertical, { left: canvasLayout.width / 2 }]}
-          pointerEvents="none"
-        />
-      )}
-      {guideLines.h && canvasLayout.height > 0 && (
-        <View
-          style={[styles.guideLineHorizontal, { top: canvasLayout.height / 2 }]}
-          pointerEvents="none"
-        />
+      {/* Tuvale dokunarak seçimi ve düzenlemeyi kaldırma katmanı */}
+      {(selectedBlockIds.length > 0 || editingId) && (
+        <GestureDetector gesture={backdropTapGesture}>
+          <View style={StyleSheet.absoluteFill} />
+        </GestureDetector>
       )}
 
       {isTextMode && (
@@ -415,17 +558,23 @@ export default function TextCanvas({
           activeColor={activeColor}
           activeFontSize={activeFontSize}
           isEditing={editingId === block.id}
+          isSelected={selectedBlockIds.includes(block.id)}
+          onSelect={handleSelectBlock}
           onEdit={setEditingId}
           onChange={handleTextChange}
           onBlur={handleBlur}
           onDelete={handleDeleteBlock}
           onMoveEnd={handleMoveEnd}
+          onGroupMoveEnd={handleGroupMoveEnd}
           onResizeEnd={handleResizeEnd}
           canvasWidth={canvasLayout.width}
           canvasHeight={canvasLayout.height}
-          onSnapChange={handleSnapChange}
           isEraserActive={isEraserActive}
           isDrawingMode={isDrawingMode}
+          groupDragDeltaX={groupDragDeltaX}
+          groupDragDeltaY={groupDragDeltaY}
+          activeLeaderId={activeLeaderId}
+          selectedBlockIds={selectedBlockIds}
         />
       ))}
     </View>
@@ -437,17 +586,26 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     top: 0,
-    minWidth: 60,
+    minWidth: 40,
+    padding: 0,
+    margin: 0,
     zIndex: 10,
+  },
+  blockSelected: {
+    borderWidth: 1.2,
+    borderColor: '#007AFF',
+    borderStyle: 'dashed',
+    borderRadius: 3,
+    backgroundColor: '#007AFF0D',
   },
   blockEditing: {
     zIndex: 50,
-    borderWidth: 1.5,
+    borderWidth: 1.2,
     borderStyle: 'dashed',
-    borderColor: '#E91E6388',
+    borderColor: '#007AFF',
     backgroundColor: '#FFFFFFEE',
-    borderRadius: 8,
-    padding: 0,
+    borderRadius: 4,
+    padding: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -456,41 +614,39 @@ const styles = StyleSheet.create({
   },
   blockDragging: {
     zIndex: 100,
-    opacity: 0.94,
-    borderWidth: 1.5,
+    opacity: 0.95,
+    borderWidth: 1.2,
     borderStyle: 'dashed',
-    borderColor: '#E91E63AA',
-    backgroundColor: '#FFFFFF99',
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    elevation: 6,
+    borderColor: '#007AFF',
+    borderRadius: 3,
   },
   inputWrapper: {
     flexDirection: 'row',
-    alignItems: 'stretch',
-    minHeight: 40,
+    alignItems: 'center',
     position: 'relative',
+    padding: 0,
+    margin: 0,
   },
   textInput: {
     flex: 1,
-    padding: 8,
+    padding: 0,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
     margin: 0,
     fontWeight: '500',
     fontFamily: Platform.OS === 'ios' ? 'Avenir' : 'normal',
-    textAlignVertical: 'top',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   resizeHandleContainer: {
-    width: 24,
+    width: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#E91E6315',
-    borderTopRightRadius: 6,
-    borderBottomRightRadius: 6,
+    backgroundColor: '#007AFF15',
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
     borderLeftWidth: 1,
-    borderLeftColor: '#E91E6330',
+    borderLeftColor: '#007AFF30',
   },
   deleteBtn: {
     position: 'absolute',
@@ -501,30 +657,20 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   viewBlock: {
-    padding: 8,
+    padding: 0,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+    margin: 0,
     backgroundColor: 'transparent',
   },
   savedText: {
     fontWeight: '600',
     fontFamily: Platform.OS === 'ios' ? 'Avenir' : 'normal',
+    includeFontPadding: false,
+    padding: 0,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+    margin: 0,
     ...(Platform.OS === 'web' ? { userSelect: 'none' } : {}),
-  },
-  guideLineVertical: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    width: 1.5,
-    backgroundColor: '#E91E63',
-    zIndex: 20,
-    opacity: 0.6,
-  },
-  guideLineHorizontal: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 1.5,
-    backgroundColor: '#E91E63',
-    zIndex: 20,
-    opacity: 0.6,
   },
 });

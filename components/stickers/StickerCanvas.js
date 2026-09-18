@@ -28,7 +28,6 @@ export default function StickerCanvas({
 }) {
   const [selectedStickerId, setSelectedStickerId] = useState(null);
   const [canvasLayout, setCanvasLayout] = useState({ width: 0, height: 0 });
-  const [guideLines, setGuideLines] = useState({ v: false, h: false });
   const { isDrawingActive } = useZoomableCanvas();
 
   // Çizim başladığında aktif sticker seçimini anında kaldır (0ms gecikme, akıcı UX)
@@ -57,10 +56,6 @@ export default function StickerCanvas({
       runOnJS(setSelectedStickerId)(null);
     });
 
-  const handleSnapChange = useCallback((snap) => {
-    setGuideLines((prev) => ({ ...prev, ...snap }));
-  }, []);
-
   return (
     <View
       style={[styles.canvas, style]}
@@ -70,20 +65,6 @@ export default function StickerCanvas({
         setCanvasLayout({ width, height });
       }}
     >
-      {/* Akıllı Hizalama Kılavuz Çizgileri */}
-      {!isExporting && guideLines.v && canvasLayout.width > 0 && (
-        <View
-          style={[styles.guideLineVertical, { left: canvasLayout.width / 2 }]}
-          pointerEvents="none"
-        />
-      )}
-      {!isExporting && guideLines.h && canvasLayout.height > 0 && (
-        <View
-          style={[styles.guideLineHorizontal, { top: canvasLayout.height / 2 }]}
-          pointerEvents="none"
-        />
-      )}
-
       {/* Tuvale dokunarak seçimi kaldırma katmanı (yalnızca bir sticker seçiliyken aktiftir) */}
       {selectedStickerId && (
         <GestureDetector gesture={backdropTapGesture}>
@@ -106,7 +87,6 @@ export default function StickerCanvas({
           }}
           canvasWidth={canvasLayout.width}
           canvasHeight={canvasLayout.height}
-          onSnapChange={handleSnapChange}
         />
       ))}
     </View>
@@ -117,23 +97,5 @@ const styles = StyleSheet.create({
   canvas: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 60,
-  },
-  guideLineVertical: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    width: 1.5,
-    backgroundColor: '#E91E63',
-    zIndex: 5,
-    opacity: 0.6,
-  },
-  guideLineHorizontal: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 1.5,
-    backgroundColor: '#E91E63',
-    zIndex: 5,
-    opacity: 0.6,
   },
 });

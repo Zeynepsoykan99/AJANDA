@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
@@ -24,6 +25,8 @@ import WeeklyPage from '../../components/pages/WeeklyPage';
 import BlankPage from '../../components/pages/BlankPage';
 import ImageTemplatePage from '../../components/pages/ImageTemplatePage';
 import StickerCanvas from '../../components/stickers/StickerCanvas';
+import { SmartSnappingProvider } from '../../components/canvas/SmartSnappingContext';
+import AlignmentGuidesOverlay from '../../components/canvas/AlignmentGuidesOverlay';
 import StickerMenu from '../../components/stickers/StickerMenu';
 import NotebookContainer from '../../components/stationery/NotebookContainer';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
@@ -57,6 +60,7 @@ export default function PageViewScreen() {
   const { pageId } = useLocalSearchParams();
   const { colors } = useTheme();
   const { isTablet, isTwoPage, maxContentWidth } = useResponsiveLayout();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
   const [page, setPage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -86,6 +90,9 @@ export default function PageViewScreen() {
   const selectedStrokeIds = lassoSelection.ids;
   const selectionBounds = lassoSelection.bounds;
   const selectedStrokes = lassoSelection.strokes;
+
+  // Metin kutusu çoklu seçim ve grup halinde taşıma state'i
+  const [selectedBlockIds, setSelectedBlockIds] = useState([]);
 
   // Atomik El Yazısı Dönüşüm Geçmişi (Undo/Redo)
   const conversionHistoryRef = useRef([]);
@@ -498,6 +505,10 @@ export default function PageViewScreen() {
               })
             : t('drawing.handwritingConverted', 'El yazısı metne dönüştürüldü'),
       });
+
+      if (createdTextIds.length > 0) {
+        setSelectedBlockIds(createdTextIds);
+      }
 
       setIsRecognitionModalVisible(false);
       handleCloseLassoSelection();
@@ -1112,105 +1123,118 @@ export default function PageViewScreen() {
       </View>
 
       {/* Sayfa İçeriği + NotebookContainer (normal şablonlar) / Tam Ekran Görsel (image_template) - Zoomable Canvas */}
-      <ZoomableCanvas
-        key={pageId}
-        ref={canvasRef}
-        isDrawingMode={activeMode === 'drawing'}
-        isTextMode={activeMode === 'text'}
-        minScale={1.0}
-        maxScale={4.0}
-        style={[
-          styles.contentArea,
-          isTablet && template?.type !== 'image_template' && {
-            maxWidth: maxContentWidth,
-            alignSelf: 'center',
-            width: '100%',
-            paddingVertical: 10,
-          },
-          template?.type === 'image_template' && styles.fullBleedContentArea,
-        ]}
+      <SmartSnappingProvider
+        stickers={page.stickers || []}
+        textBlocks={page.textBlocks || []}
+        canvasWidth={windowWidth}
+        canvasHeight={windowHeight}
+        ruling={template?.ruling || 'lined'}
       >
-        {template?.type === 'image_template' ? (
-          renderPageContent()
-        ) : (
-          <NotebookContainer
-            coverColor={template?.colors?.border || colors.border}
-            showSpiral={!isTwoPage}
-          >
-            {renderPageContent()}
-          </NotebookContainer>
-        )}
-
-        {/* Serbest Klavye / Metin Katmanı */}
-        <TextCanvas
+        <ZoomableCanvas
+          key={pageId}
+          ref={canvasRef}
+          isDrawingMode={activeMode === 'drawing'}
           isTextMode={activeMode === 'text'}
-          isDrawingMode={activeMode === 'drawing'}
-          textBlocks={page.textBlocks || []}
-          onTextBlocksChange={handleTextBlocksChange}
-          activeColor={textColor}
-          activeFontSize={textFontSize}
-          isEraserActive={activeMode === 'drawing' && drawingTool === 'eraser'}
-          pointerEvents={
-            activeMode === 'drawing'
-              ? 'none'
-              : activeMode === 'text'
-              ? 'auto'
-              : 'box-none'
-          }
-        />
-
-        {/* Apple Pencil & Çizim Katmanı - Uçtan uca tam hizalı */}
-        <DrawingCanvas
-          isDrawingMode={activeMode === 'drawing'}
-          tool={drawingTool}
-          color={drawingColor}
-          strokeWidth={drawingWidth}
-          drawings={page.drawings || []}
-          onDrawingsChange={handleDrawingsChange}
-          textBlocks={page.textBlocks || []}
-          onTextBlocksChange={handleTextBlocksChange}
-          onTextBlockDeleted={handleTextBlockDeleted}
-          onTextBlockEdited={handleTextBlockEdited}
-          selectedStrokeIds={selectedStrokeIds}
-          selectionBounds={selectionBounds}
-          onSelectionChange={handleSelectionChange}
+          minScale={1.0}
+          maxScale={4.0}
           style={[
-            styles.fullBleedCanvas,
-            { zIndex: activeMode === 'drawing' ? 50 : 20 },
+            styles.contentArea,
+            isTablet && template?.type !== 'image_template' && {
+              maxWidth: maxContentWidth,
+              alignSelf: 'center',
+              width: '100%',
+              paddingVertical: 10,
+            },
+            template?.type === 'image_template' && styles.fullBleedContentArea,
           ]}
-        />
+        >
+          {template?.type === 'image_template' ? (
+            renderPageContent()
+          ) : (
+            <NotebookContainer
+              coverColor={template?.colors?.border || colors.border}
+              showSpiral={!isTwoPage}
+            >
+              {renderPageContent()}
+            </NotebookContainer>
+          )}
 
-        {/* Kement (Lasso) Bağlamsal Eylem Menüsü */}
-        <LassoActionMenu
-          visible={
-            activeMode === 'drawing' &&
-            drawingTool === 'lasso' &&
-            selectedStrokeIds.length > 0 &&
-            !!selectionBounds
-          }
-          bounds={selectionBounds}
-          onConvertToText={handleLassoConvertToText}
-          onDelete={handleLassoDelete}
-          onClose={handleCloseLassoSelection}
-          isLoading={isRecognizingSelected}
-        />
+          {/* Serbest Klavye / Metin Katmanı */}
+          <TextCanvas
+            isTextMode={activeMode === 'text'}
+            isDrawingMode={activeMode === 'drawing'}
+            textBlocks={page.textBlocks || []}
+            onTextBlocksChange={handleTextBlocksChange}
+            activeColor={textColor}
+            activeFontSize={textFontSize}
+            isEraserActive={activeMode === 'drawing' && drawingTool === 'eraser'}
+            pointerEvents={
+              activeMode === 'drawing'
+                ? 'none'
+                : activeMode === 'text'
+                ? 'auto'
+                : 'box-none'
+            }
+            selectedBlockIds={selectedBlockIds}
+            onSelectedBlockIdsChange={setSelectedBlockIds}
+          />
 
-        {/* Sticker Katmanı */}
-        <StickerCanvas
-          stickers={page.stickers || []}
-          onStickerMove={handleStickerMove}
-          onStickerResize={handleStickerResize}
-          onStickerDelete={handleStickerDelete}
-          isDrawingMode={activeMode === 'drawing'}
-        />
+          {/* Apple Pencil & Çizim Katmanı - Uçtan uca tam hizalı */}
+          <DrawingCanvas
+            isDrawingMode={activeMode === 'drawing'}
+            tool={drawingTool}
+            color={drawingColor}
+            strokeWidth={drawingWidth}
+            drawings={page.drawings || []}
+            onDrawingsChange={handleDrawingsChange}
+            textBlocks={page.textBlocks || []}
+            onTextBlocksChange={handleTextBlocksChange}
+            onTextBlockDeleted={handleTextBlockDeleted}
+            onTextBlockEdited={handleTextBlockEdited}
+            selectedStrokeIds={selectedStrokeIds}
+            selectionBounds={selectionBounds}
+            onSelectionChange={handleSelectionChange}
+            style={[
+              styles.fullBleedCanvas,
+              { zIndex: activeMode === 'drawing' ? 50 : 20 },
+            ]}
+          />
 
-        {/* Post-it Sayfa İşaretleyicileri Rayı */}
-        <IndexFlagsRail
-          flags={page.indexFlags || []}
-          onSaveFlag={handleSaveIndexFlag}
-          onDeleteFlag={handleDeleteIndexFlag}
-        />
-      </ZoomableCanvas>
+          {/* Kement (Lasso) Bağlamsal Eylem Menüsü */}
+          <LassoActionMenu
+            visible={
+              activeMode === 'drawing' &&
+              drawingTool === 'lasso' &&
+              selectedStrokeIds.length > 0 &&
+              !!selectionBounds
+            }
+            bounds={selectionBounds}
+            onConvertToText={handleLassoConvertToText}
+            onDelete={handleLassoDelete}
+            onClose={handleCloseLassoSelection}
+            isLoading={isRecognizingSelected}
+          />
+
+          {/* Sticker Katmanı */}
+          <StickerCanvas
+            stickers={page.stickers || []}
+            onStickerMove={handleStickerMove}
+            onStickerResize={handleStickerResize}
+            onStickerDelete={handleStickerDelete}
+            isDrawingMode={activeMode === 'drawing'}
+          />
+
+          {/* Akıllı Manyetik Hizalama Kılavuz Çizgileri */}
+          <AlignmentGuidesOverlay />
+
+          {/* Post-it Sayfa İşaretleyicileri Rayı */}
+          <IndexFlagsRail
+            flags={page.indexFlags || []}
+            onSaveFlag={handleSaveIndexFlag}
+            onDeleteFlag={handleDeleteIndexFlag}
+          />
+        </ZoomableCanvas>
+      </SmartSnappingProvider>
 
       {/* Sticker Menüsü */}
       <StickerMenu

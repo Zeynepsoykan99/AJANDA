@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import ImageWithSkeleton from '../ui/ImageWithSkeleton';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useZoomableCanvas } from '../drawing/ZoomableCanvas';
+import { useSmartSnapping } from '../canvas/SmartSnappingContext';
 
 const triggerHaptic = () => {
   try {
@@ -43,57 +44,82 @@ export default function DraggableSticker({
   const isSnappedV = useSharedValue(false);
   const isSnappedH = useSharedValue(false);
 
+  const smartSnapping = useSmartSnapping();
+  const snapTargetsX = useSharedValue([]);
+  const snapTargetsY = useSharedValue([]);
+
+  const prepareSnapTargets = useCallback(() => {
+    if (smartSnapping?.getSnapTargets) {
+      const { targetsX, targetsY } = smartSnapping.getSnapTargets(sticker.id);
+      snapTargetsX.value = targetsX;
+      snapTargetsY.value = targetsY;
+    }
+  }, [smartSnapping, sticker.id]);
+
   // Sürükleme gesture'ı + Akıllı Hizalama (Snapping)
   const panGesture = Gesture.Pan()
     .maxPointers(1)
     .activeOffsetX([-5, 5])
     .activeOffsetY([-5, 5])
     .onStart(() => {
+      'worklet';
       savedTranslateX.value = translateX.value;
       savedTranslateY.value = translateY.value;
       isActive.value = true;
       isSnappedV.value = false;
       isSnappedH.value = false;
+      runOnJS(prepareSnapTargets)();
     })
     .onUpdate((event) => {
+      'worklet';
       const s = (canvasScale && canvasScale.value) || 1.0;
       let nextX = savedTranslateX.value + event.translationX / s;
       let nextY = savedTranslateY.value + event.translationY / s;
 
-      // Akıllı Hizalama (Smart Snapping & Haptics)
-      if (canvasWidth > 0 && canvasHeight > 0) {
-        const itemW = 80 * scale.value;
-        const itemH = 80 * scale.value;
-        const centerX = nextX + itemW / 2;
-        const centerY = nextY + itemH / 2;
-        const midX = canvasWidth / 2;
-        const midY = canvasHeight / 2;
-        const threshold = 14;
+      const itemW = 80 * scale.value;
+      const itemH = 80 * scale.value;
 
-        // Dikey eksen (yatay merkez) snap
-        if (Math.abs(centerX - midX) < threshold) {
-          nextX = midX - itemW / 2;
+      // Akıllı Hizalama (Smart Snapping & Guides)
+      if (smartSnapping?.calculateSnapping && (snapTargetsX.value.length > 0 || snapTargetsY.value.length > 0)) {
+        const res = smartSnapping.calculateSnapping(
+          nextX,
+          nextY,
+          itemW,
+          itemH,
+          snapTargetsX.value,
+          snapTargetsY.value,
+          6
+        );
+
+        nextX = res.snappedX;
+        nextY = res.snappedY;
+
+        if (res.hasSnapX) {
+          smartSnapping.guideLineX.value = res.guideX;
+          smartSnapping.guideLineXVisible.value = 1;
           if (!isSnappedV.value) {
             isSnappedV.value = true;
             runOnJS(triggerHaptic)();
             if (onSnapChange) runOnJS(onSnapChange)({ v: true });
           }
         } else {
+          smartSnapping.guideLineXVisible.value = 0;
           if (isSnappedV.value) {
             isSnappedV.value = false;
             if (onSnapChange) runOnJS(onSnapChange)({ v: false });
           }
         }
 
-        // Yatay eksen (dikey merkez) snap
-        if (Math.abs(centerY - midY) < threshold) {
-          nextY = midY - itemH / 2;
+        if (res.hasSnapY) {
+          smartSnapping.guideLineY.value = res.guideY;
+          smartSnapping.guideLineYVisible.value = 1;
           if (!isSnappedH.value) {
             isSnappedH.value = true;
             runOnJS(triggerHaptic)();
             if (onSnapChange) runOnJS(onSnapChange)({ h: true });
           }
         } else {
+          smartSnapping.guideLineYVisible.value = 0;
           if (isSnappedH.value) {
             isSnappedH.value = false;
             if (onSnapChange) runOnJS(onSnapChange)({ h: false });
@@ -105,10 +131,13 @@ export default function DraggableSticker({
       translateY.value = nextY;
     })
     .onEnd(() => {
+      'worklet';
       isActive.value = false;
-      if (isSnappedV.value || isSnappedH.value) {
-        isSnappedV.value = false;
-        isSnappedH.value = false;
+      isSnappedV.value = false;
+      isSnappedH.value = false;
+      if (smartSnapping) {
+        smartSnapping.guideLineXVisible.value = 0;
+        smartSnapping.guideLineYVisible.value = 0;
       }
       if (onSnapChange) {
         runOnJS(onSnapChange)({ v: false, h: false });
@@ -122,10 +151,13 @@ export default function DraggableSticker({
       }
     })
     .onFinalize(() => {
+      'worklet';
       isActive.value = false;
-      if (isSnappedV.value || isSnappedH.value) {
-        isSnappedV.value = false;
-        isSnappedH.value = false;
+      isSnappedV.value = false;
+      isSnappedH.value = false;
+      if (smartSnapping) {
+        smartSnapping.guideLineXVisible.value = 0;
+        smartSnapping.guideLineYVisible.value = 0;
       }
       if (onSnapChange) {
         runOnJS(onSnapChange)({ v: false, h: false });

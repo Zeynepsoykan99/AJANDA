@@ -34,6 +34,8 @@ import DrawingToolbar from '../../components/drawing/DrawingToolbar';
 import ZoomableCanvas from '../../components/drawing/ZoomableCanvas';
 import TextCanvas from '../../components/text/TextCanvas';
 import StickerCanvas from '../../components/stickers/StickerCanvas';
+import { SmartSnappingProvider } from '../../components/canvas/SmartSnappingContext';
+import AlignmentGuidesOverlay from '../../components/canvas/AlignmentGuidesOverlay';
 import StickerMenu from '../../components/stickers/StickerMenu';
 import UndoToast from '../../components/ui/UndoToast';
 import LassoActionMenu from '../../components/drawing/LassoActionMenu';
@@ -165,6 +167,8 @@ export default function NotebookPagesView({
   // yatay swipe kapanır; böylece iki parmakla pinch/pan sayfa değiştirmeyle çakışmaz
   const [isActivePageZoomed, setIsActivePageZoomed] = useState(false);
   const [isMultiTouch, setIsMultiTouch] = useState(false);
+  // Metin kutusu çoklu seçim ve grup halinde taşıma state'i
+  const [selectedBlockIds, setSelectedBlockIds] = useState([]);
 
   // Yatay kaydırma alanının ölçülen yüksekliği: her sayfaya açık height olarak verilir.
   // Satır yönlü içerik kapsayıcısında flex: 1 yalnızca genişliği etkilediği için sayfalar
@@ -1087,6 +1091,10 @@ export default function NotebookPagesView({
         return { ...prev, pages: currentPages };
       });
 
+      if (newBlocks.length > 0) {
+        setSelectedBlockIds(newBlocks.map((b) => b.id));
+      }
+
       setIsRecognitionModalVisible(false);
       handleCloseLassoSelection();
       setActiveMode('none');
@@ -1413,149 +1421,164 @@ export default function NotebookPagesView({
                 pagesViewportHeight > 0 && { height: pagesViewportHeight },
               ]}
             >
-              <ZoomableCanvas
-                ref={(r) => {
-                  if (r) canvasRefs.current[p.pageId] = r;
-                  else delete canvasRefs.current[p.pageId];
-                }}
-                onTransformChange={isActive ? handleActiveTransformChange : undefined}
-                onDoubleTap={isActive ? () => setActiveMode('text') : undefined}
-                isDrawingMode={isActive && activeMode === 'drawing'}
-                isTextMode={isActive && activeMode === 'text'}
-                minScale={1.0}
-                maxScale={4.0}
-                style={[
-                  styles.canvasContainer,
-                  isTablet && {
-                    maxWidth: maxContentWidth,
-                    alignSelf: 'center',
-                    width: '100%',
-                    paddingVertical: 4,
-                  },
-                ]}
+              <SmartSnappingProvider
+                stickers={p.stickers || []}
+                textBlocks={p.textBlocks || []}
+                canvasWidth={windowWidth}
+                canvasHeight={pagesViewportHeight}
+                ruling={paper.ruling}
               >
-                <View
+                <ZoomableCanvas
                   ref={(r) => {
-                    if (r) pageShotRefs.current[p.pageId] = r;
-                    else delete pageShotRefs.current[p.pageId];
+                    if (r) canvasRefs.current[p.pageId] = r;
+                    else delete canvasRefs.current[p.pageId];
                   }}
-                  collapsable={false}
-                  style={styles.pageCaptureContainer}
+                  onTransformChange={isActive ? handleActiveTransformChange : undefined}
+                  onDoubleTap={isActive ? () => setActiveMode('text') : undefined}
+                  isDrawingMode={isActive && activeMode === 'drawing'}
+                  isTextMode={isActive && activeMode === 'text'}
+                  minScale={1.0}
+                  maxScale={4.0}
+                  style={[
+                    styles.canvasContainer,
+                    isTablet && {
+                      maxWidth: maxContentWidth,
+                      alignSelf: 'center',
+                      width: '100%',
+                      paddingVertical: 4,
+                    },
+                  ]}
                 >
-                  <NotebookContainer
-                    coverColor="#FCE4EC"
-                    showSpiral={!isTwoPage}
+                  <View
+                    ref={(r) => {
+                      if (r) pageShotRefs.current[p.pageId] = r;
+                      else delete pageShotRefs.current[p.pageId];
+                    }}
+                    collapsable={false}
+                    style={styles.pageCaptureContainer}
                   >
-                    <PaperSheet
-                      ruling={paper.ruling}
-                      paperColor={paper.paperColor}
-                      lineColor={paper.lineColor}
-                      showMargin={paper.ruling === 'lined'}
-                      style={styles.paperSheet}
+                    <NotebookContainer
+                      coverColor="#FCE4EC"
+                      showSpiral={!isTwoPage}
                     >
-                      {/* Doğrudan Kağıt Üzerine Satır Hizalı Metin Girişi */}
-                      <NotebookInlineText
-                        content={p.data?.content || p.content || ''}
-                        onChangeContent={(text) => handlePageContentChange(index, text)}
+                      <PaperSheet
                         ruling={paper.ruling}
+                        paperColor={paper.paperColor}
+                        lineColor={paper.lineColor}
                         showMargin={paper.ruling === 'lined'}
-                        isActive={isActive}
-                        isTextMode={isActive && activeMode === 'text'}
-                        isDrawingMode={isActive && activeMode === 'drawing'}
-                        hasDrawings={(p.drawings || []).length > 0}
-                        isExporting={isActive && isExporting}
-                        onActivateTextMode={() => setActiveMode('text')}
-                        textColor={textColor}
-                        textFontSize={textFontSize}
-                      />
-
-                      {/* Günlük Modunda: Sağ Üst Tarih ve Duygu Durumu Rozeti */}
-                      {isDiary && (
-                        <DiaryDateMoodBadge
-                          createdAt={p.createdAt || p.date}
-                          mood={p.mood}
-                          onPress={() => handleOpenMoodPicker(index)}
-                          disabled={activeMode === 'drawing'}
+                        style={styles.paperSheet}
+                      >
+                        {/* Doğrudan Kağıt Üzerine Satır Hizalı Metin Girişi */}
+                        <NotebookInlineText
+                          content={p.data?.content || p.content || ''}
+                          onChangeContent={(text) => handlePageContentChange(index, text)}
+                          ruling={paper.ruling}
+                          showMargin={paper.ruling === 'lined'}
+                          isActive={isActive}
+                          isTextMode={isActive && activeMode === 'text'}
+                          isDrawingMode={isActive && activeMode === 'drawing'}
+                          hasDrawings={(p.drawings || []).length > 0}
+                          isExporting={isActive && isExporting}
+                          onActivateTextMode={() => setActiveMode('text')}
+                          textColor={textColor}
+                          textFontSize={textFontSize}
                         />
-                      )}
 
-                      {/* Post-it Sayfa İşaretleyicileri Rayı */}
-                      <IndexFlagsRail
-                        flags={p.indexFlags || []}
-                        onSaveFlag={(flagData) => handleSaveIndexFlag(index, flagData)}
-                        onDeleteFlag={(flagId) => handleDeleteIndexFlag(index, flagId)}
-                        readOnly={!isActive}
-                      />
-                    </PaperSheet>
-                  </NotebookContainer>
+                        {/* Günlük Modunda: Sağ Üst Tarih ve Duygu Durumu Rozeti */}
+                        {isDiary && (
+                          <DiaryDateMoodBadge
+                            createdAt={p.createdAt || p.date}
+                            mood={p.mood}
+                            onPress={() => handleOpenMoodPicker(index)}
+                            disabled={activeMode === 'drawing'}
+                          />
+                        )}
 
-                  {/* Serbest Metin Katmanı (Lasso ile el yazısından dönüştürülen bloklar) */}
-                  <TextCanvas
-                    isTextMode={false}
-                    isDrawingMode={isActive && activeMode === 'drawing'}
-                    textBlocks={p.textBlocks || []}
-                    onTextBlocksChange={(blocks) => handleTextBlocksChange(index, blocks)}
-                    activeColor={textColor}
-                    activeFontSize={textFontSize}
-                    isEraserActive={activeMode === 'drawing' && drawingTool === 'eraser'}
-                    pointerEvents={
-                      !isActive
-                        ? 'none'
-                        : activeMode === 'drawing'
-                        ? 'none'
-                        : 'box-none'
-                    }
-                  />
+                        {/* Post-it Sayfa İşaretleyicileri Rayı */}
+                        <IndexFlagsRail
+                          flags={p.indexFlags || []}
+                          onSaveFlag={(flagData) => handleSaveIndexFlag(index, flagData)}
+                          onDeleteFlag={(flagId) => handleDeleteIndexFlag(index, flagId)}
+                          readOnly={!isActive}
+                        />
+                      </PaperSheet>
+                    </NotebookContainer>
 
-                  {/* Çizim Katmanı */}
-                  <DrawingCanvas
-                    isDrawingMode={isActive && activeMode === 'drawing'}
-                    tool={drawingTool}
-                    color={drawingColor}
-                    strokeWidth={drawingWidth}
-                    drawings={p.drawings || []}
-                    onDrawingsChange={(drawings) => handleDrawingsChange(index, drawings)}
-                    textBlocks={p.textBlocks || []}
-                    onTextBlocksChange={(blocks) => handleTextBlocksChange(index, blocks)}
-                    selectedStrokeIds={isActive ? selectedStrokeIds : []}
-                    selectionBounds={isActive ? selectionBounds : null}
-                    onSelectionChange={isActive ? handleSelectionChange : undefined}
-                    pointerEvents={!isActive ? 'none' : undefined}
-                    style={[
-                      styles.fullBleedCanvas,
-                      { zIndex: isActive && activeMode === 'drawing' ? 50 : 20 },
-                    ]}
-                  />
-
-                  {/* Kement Menüsü (Sadece aktif sayfada ve dışa aktarım yapılmıyorken) */}
-                  {isActive && !isExporting && (
-                    <LassoActionMenu
-                      visible={
-                        activeMode === 'drawing' &&
-                        drawingTool === 'lasso' &&
-                        selectedStrokeIds.length > 0 &&
-                        !!selectionBounds
+                    {/* Serbest Metin Katmanı (Lasso ile el yazısından dönüştürülen bloklar) */}
+                    <TextCanvas
+                      isTextMode={false}
+                      isDrawingMode={isActive && activeMode === 'drawing'}
+                      textBlocks={p.textBlocks || []}
+                      onTextBlocksChange={(blocks) => handleTextBlocksChange(index, blocks)}
+                      activeColor={textColor}
+                      activeFontSize={textFontSize}
+                      isEraserActive={activeMode === 'drawing' && drawingTool === 'eraser'}
+                      pointerEvents={
+                        !isActive
+                          ? 'none'
+                          : activeMode === 'drawing'
+                          ? 'none'
+                          : 'box-none'
                       }
-                      bounds={selectionBounds}
-                      onConvertToText={handleLassoConvertToText}
-                      onDelete={handleLassoDelete}
-                      onClose={handleCloseLassoSelection}
-                      isLoading={isRecognizingSelected}
+                      selectedBlockIds={isActive ? selectedBlockIds : []}
+                      onSelectedBlockIdsChange={isActive ? setSelectedBlockIds : undefined}
                     />
-                  )}
 
-                  {/* Sticker Katmanı */}
-                  <StickerCanvas
-                    stickers={p.stickers || []}
-                    onStickerMove={isActive ? handleStickerMove : () => {}}
-                    onStickerResize={isActive ? handleStickerResize : () => {}}
-                    onStickerDelete={isActive ? handleStickerDelete : () => {}}
-                    isDrawingMode={isActive && activeMode === 'drawing'}
-                    isExporting={isActive && isExporting}
-                    pointerEvents={!isActive || activeMode === 'drawing' ? 'none' : 'box-none'}
-                  />
-                </View>
-              </ZoomableCanvas>
+                    {/* Çizim Katmanı */}
+                    <DrawingCanvas
+                      isDrawingMode={isActive && activeMode === 'drawing'}
+                      tool={drawingTool}
+                      color={drawingColor}
+                      strokeWidth={drawingWidth}
+                      drawings={p.drawings || []}
+                      onDrawingsChange={(drawings) => handleDrawingsChange(index, drawings)}
+                      textBlocks={p.textBlocks || []}
+                      onTextBlocksChange={(blocks) => handleTextBlocksChange(index, blocks)}
+                      selectedStrokeIds={isActive ? selectedStrokeIds : []}
+                      selectionBounds={selectionBounds}
+                      onSelectionChange={isActive ? handleSelectionChange : undefined}
+                      pointerEvents={!isActive ? 'none' : undefined}
+                      style={[
+                        styles.fullBleedCanvas,
+                        { zIndex: isActive && activeMode === 'drawing' ? 50 : 20 },
+                      ]}
+                    />
+
+                    {/* Kement Menüsü (Sadece aktif sayfada ve dışa aktarım yapılmıyorken) */}
+                    {isActive && !isExporting && (
+                      <LassoActionMenu
+                        visible={
+                          activeMode === 'drawing' &&
+                          drawingTool === 'lasso' &&
+                          selectedStrokeIds.length > 0 &&
+                          !!selectionBounds
+                        }
+                        bounds={selectionBounds}
+                        onConvertToText={handleLassoConvertToText}
+                        onDelete={handleLassoDelete}
+                        onClose={handleCloseLassoSelection}
+                        isLoading={isRecognizingSelected}
+                      />
+                    )}
+
+                    {/* Sticker Katmanı */}
+                    <StickerCanvas
+                      stickers={p.stickers || []}
+                      onStickerMove={isActive ? handleStickerMove : () => {}}
+                      onStickerResize={isActive ? handleStickerResize : () => {}}
+                      onStickerDelete={isActive ? handleStickerDelete : () => {}}
+                      isDrawingMode={isActive && activeMode === 'drawing'}
+                      isExporting={isActive && isExporting}
+                      pointerEvents={!isActive || activeMode === 'drawing' ? 'none' : 'box-none'}
+                    />
+
+                    {/* Akıllı Manyetik Hizalama Kılavuz Çizgileri */}
+                    {isActive && !isExporting && (
+                      <AlignmentGuidesOverlay />
+                    )}
+                  </View>
+                </ZoomableCanvas>
+              </SmartSnappingProvider>
             </View>
           );
         })}
