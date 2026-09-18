@@ -29,7 +29,7 @@ import { SmartSnappingProvider } from '../../components/canvas/SmartSnappingCont
 import AlignmentGuidesOverlay from '../../components/canvas/AlignmentGuidesOverlay';
 import StickerMenu from '../../components/stickers/StickerMenu';
 import NotebookContainer from '../../components/stationery/NotebookContainer';
-import useResponsiveLayout from '../../hooks/useResponsiveLayout';
+import useResponsiveLayout, { computeContainedPageDimensions } from '../../hooks/useResponsiveLayout';
 import DrawingCanvas from '../../components/drawing/DrawingCanvas';
 import DrawingToolbar from '../../components/drawing/DrawingToolbar';
 import ZoomableCanvas from '../../components/drawing/ZoomableCanvas';
@@ -65,6 +65,16 @@ export default function PageViewScreen() {
   const { colors } = useTheme();
   const { isTablet, isTwoPage, maxContentWidth } = useResponsiveLayout();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+
+  const [contentLayout, setContentLayout] = useState({ width: 0, height: 0 });
+  const handleContentLayout = useCallback((e) => {
+    const { width, height } = e.nativeEvent.layout;
+    setContentLayout((prev) =>
+      prev.width === Math.round(width) && prev.height === Math.round(height)
+        ? prev
+        : { width: Math.round(width), height: Math.round(height) }
+    );
+  }, []);
 
   const [page, setPage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -1021,6 +1031,21 @@ export default function PageViewScreen() {
     }
   };
 
+  const availW =
+    contentLayout.width > 0
+      ? contentLayout.width
+      : isTablet
+      ? Math.min(windowWidth * 0.98, maxContentWidth)
+      : windowWidth;
+  const availH =
+    contentLayout.height > 0 ? contentLayout.height : Math.max(200, windowHeight - 80);
+  const { pageWidth, pageHeight } = computeContainedPageDimensions(
+    availW,
+    availH,
+    template?.aspectRatio,
+    isTwoPage
+  );
+
   return (
     <AnimatedSafeAreaView
       style={[styles.safeArea, { backgroundColor: targetEdgeColor }, animatedBgStyle]}
@@ -1130,31 +1155,28 @@ export default function PageViewScreen() {
       </View>
 
       {/* Sayfa İçeriği + NotebookContainer (normal şablonlar) / Tam Ekran Görsel (image_template) - Zoomable Canvas */}
-      <SmartSnappingProvider
-        stickers={page.stickers || []}
-        textBlocks={page.textBlocks || []}
-        canvasWidth={windowWidth}
-        canvasHeight={windowHeight}
-        ruling={template?.ruling || 'lined'}
-      >
-        <ZoomableCanvas
-          key={pageId}
-          ref={canvasRef}
-          isDrawingMode={activeMode === 'drawing'}
-          isTextMode={activeMode === 'text'}
-          minScale={1.0}
-          maxScale={4.0}
-          style={[
-            styles.contentArea,
-            isTablet && template?.type !== 'image_template' && {
-              maxWidth: maxContentWidth,
-              alignSelf: 'center',
-              width: '100%',
-              paddingVertical: 10,
-            },
-            template?.type === 'image_template' && styles.fullBleedContentArea,
-          ]}
-        >
+      <View style={styles.viewportCenterContainer} onLayout={handleContentLayout}>
+        <View style={{ width: pageWidth, height: pageHeight, justifyContent: 'center', alignItems: 'center' }}>
+          <SmartSnappingProvider
+            stickers={page.stickers || []}
+            textBlocks={page.textBlocks || []}
+            canvasWidth={pageWidth}
+            canvasHeight={pageHeight}
+            ruling={template?.ruling || 'lined'}
+          >
+            <ZoomableCanvas
+              key={pageId}
+              ref={canvasRef}
+              isDrawingMode={activeMode === 'drawing'}
+              isTextMode={activeMode === 'text'}
+              minScale={1.0}
+              maxScale={4.0}
+              style={[
+                styles.contentArea,
+                styles.fullBleedContentArea,
+                { width: pageWidth, height: pageHeight },
+              ]}
+            >
           {template?.type === 'image_template' ? (
             renderPageContent()
           ) : (
@@ -1242,6 +1264,8 @@ export default function PageViewScreen() {
           />
         </ZoomableCanvas>
       </SmartSnappingProvider>
+        </View>
+      </View>
 
       {/* Sticker Menüsü */}
       <StickerMenu
@@ -1392,6 +1416,14 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '500',
     marginTop: 1,
+  },
+  viewportCenterContainer: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
   },
   contentArea: {
     flex: 1,

@@ -1,16 +1,20 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, PixelRatio } from 'react-native';
 import { PAPER_RULING_CONFIG } from '../../constants/paperRulings';
 
-// Doku ölçüleri (PAPER_RULING_CONFIG ile birebir senkronize)
-const RULING_TOP = PAPER_RULING_CONFIG.lined.rulingTop; // 36
-const RULING_SIDE = 12; // rulingContainer paddingHorizontal
-const LINE_PITCH = PAPER_RULING_CONFIG.lined.linePitch; // 32
-const GRID_PITCH = PAPER_RULING_CONFIG.grid.linePitch; // 24
-const DOT_SIZE = 2.5;
-const DOT_PITCH = PAPER_RULING_CONFIG.dotted.linePitch; // 28
-const DOT_ROW_SIDE = 8; // dottedRow paddingHorizontal
-const MARGIN_LEFT = PAPER_RULING_CONFIG.lined.marginLineLeft || 40;
+// Donanımsal Retina/HDPI 1-fiziksel piksel inceliği
+const HAIRLINE = StyleSheet.hairlineWidth;
+
+// Doku ölçüleri (Retina/HDPI donanım ızgarasıyla eşleşmesi için yuvarlanır)
+const RULING_TOP = PixelRatio.roundToNearestPixel(PAPER_RULING_CONFIG.lined.rulingTop); // 36
+const RULING_SIDE = PixelRatio.roundToNearestPixel(12); // rulingContainer paddingHorizontal
+const LINE_PITCH = PixelRatio.roundToNearestPixel(PAPER_RULING_CONFIG.lined.linePitch); // 32
+const GRID_PITCH = PixelRatio.roundToNearestPixel(PAPER_RULING_CONFIG.grid.linePitch); // 24
+const DOT_SIZE = PixelRatio.roundToNearestPixel(2.5);
+const DOT_PITCH = PixelRatio.roundToNearestPixel(PAPER_RULING_CONFIG.dotted.linePitch); // 28
+const DOT_ROW_SIDE = PixelRatio.roundToNearestPixel(8); // dottedRow paddingHorizontal
+const MARGIN_LEFT = PixelRatio.roundToNearestPixel(PAPER_RULING_CONFIG.lined.marginLineLeft || 40);
+
 
 // Ölçüm gelmeden önceki ilk render için eski sabit değerler (Tabletler için de yeterli tavan)
 const FALLBACK_COUNTS = { lines: 50, gridRows: 60, gridCols: 40, dotRows: 40, dotCols: 30 };
@@ -157,42 +161,43 @@ const styles = StyleSheet.create({
     paddingHorizontal: RULING_SIDE,
   },
   horizontalLine: {
-    height: 1,
+    height: HAIRLINE,
     width: '100%',
-    marginBottom: LINE_PITCH - 1,
+    marginBottom: Math.max(0, LINE_PITCH - HAIRLINE),
   },
   gridHorizontalLine: {
-    height: 1,
+    height: HAIRLINE,
     width: '100%',
-    marginBottom: GRID_PITCH - 1,
+    marginBottom: Math.max(0, GRID_PITCH - HAIRLINE),
   },
   gridVerticalLine: {
-    width: 1,
+    width: HAIRLINE,
     height: '100%',
-    marginRight: GRID_PITCH - 1,
+    marginRight: Math.max(0, GRID_PITCH - HAIRLINE),
   },
   dottedRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: DOT_PITCH - DOT_SIZE,
+    marginBottom: Math.max(0, DOT_PITCH - DOT_SIZE),
     paddingHorizontal: DOT_ROW_SIDE,
   },
   dot: {
     width: DOT_SIZE,
     height: DOT_SIZE,
-    borderRadius: 1.5,
+    borderRadius: DOT_SIZE / 2,
   },
   dotSpacing: {
-    marginLeft: DOT_PITCH - DOT_SIZE,
+    marginLeft: Math.max(0, DOT_PITCH - DOT_SIZE),
   },
   marginLine: {
     position: 'absolute',
     top: 0,
     bottom: 0,
     left: MARGIN_LEFT,
-    width: 1.5,
+    width: Math.max(HAIRLINE * 2, 1),
     zIndex: 1,
   },
+
   content: {
     flex: 1,
     height: '100%',

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ImageBackground, Image } from 'react-native';
+import { View, StyleSheet, ImageBackground, Image, Platform } from 'react-native';
+
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -61,6 +62,11 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     flex: 1,
+    ...Platform.select({
+      web: {
+        imageRendering: '-webkit-optimize-contrast',
+      },
+    }),
   },
   skeletonOverlay: {
     ...StyleSheet.absoluteFillObject,

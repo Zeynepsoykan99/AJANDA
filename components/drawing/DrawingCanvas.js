@@ -725,7 +725,21 @@ export default function DrawingCanvas({
     >
       <GestureDetector gesture={composedDrawingGesture}>
         <View style={StyleSheet.absoluteFill}>
-          <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
+          <Svg
+            width="100%"
+            height="100%"
+            shapeRendering="geometricPrecision"
+            textRendering="geometricPrecision"
+            style={[
+              StyleSheet.absoluteFill,
+              Platform.select({
+                web: {
+                  shapeRendering: 'geometricPrecision',
+                  textRendering: 'geometricPrecision',
+                },
+              }),
+            ]}
+          >
             {/* Tamamlanmış Kalıcı Çizgiler (Memoized Layer - 0 Gereksiz Re-render) */}
             <StaticDrawingsLayer
               drawings={drawings}

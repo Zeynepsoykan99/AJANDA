@@ -17,7 +17,7 @@ import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
-import useResponsiveLayout from '../../hooks/useResponsiveLayout';
+import useResponsiveLayout, { computeContainedPageDimensions } from '../../hooks/useResponsiveLayout';
 import useDynamicEdgeColor from '../../hooks/useDynamicEdgeColor';
 import {
   getPaperTemplate,
@@ -101,7 +101,7 @@ export default function NotebookPagesView({
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const { colors } = useTheme();
-  const { width: windowWidth } = useWindowDimensions();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const { isTablet, isTwoPage, maxContentWidth } = useResponsiveLayout();
   const compactHeader = windowWidth < 500;
 
@@ -1417,7 +1417,23 @@ export default function NotebookPagesView({
       >
         {pages.map((p, index) => {
           const isActive = index === currentPageIndex;
-          const { paper } = getPaperTemplate(resolvePagePaperTemplateId(p, notebook));
+          const { paper, template } = getPaperTemplate(resolvePagePaperTemplateId(p, notebook));
+          const pageRatio = template?.aspectRatio || paper?.aspectRatio;
+
+          // Dinamik Responsive Contain Hesabı: Ekranın güvenli alanına kusursuz oturtma
+          const availW = isTablet ? Math.min(windowWidth * 0.98, maxContentWidth) : windowWidth;
+          const effectiveViewportH =
+            pagesViewportHeight > 0
+              ? pagesViewportHeight
+              : Math.max(200, windowHeight - (compactHeader ? 56 : 64) - 30);
+          const availH = Math.max(100, effectiveViewportH - (isTablet ? 12 : 6));
+
+          const { pageWidth, pageHeight } = computeContainedPageDimensions(
+            availW,
+            availH,
+            pageRatio,
+            isTwoPage
+          );
 
           return (
             <View
@@ -1428,34 +1444,41 @@ export default function NotebookPagesView({
                 pagesViewportHeight > 0 && { height: pagesViewportHeight },
               ]}
             >
-              <SmartSnappingProvider
-                stickers={p.stickers || []}
-                textBlocks={p.textBlocks || []}
-                canvasWidth={windowWidth}
-                canvasHeight={pagesViewportHeight}
-                ruling={paper.ruling}
+              <View
+                style={{
+                  width: pageWidth,
+                  height: pageHeight,
+                  alignSelf: 'center',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
               >
-                <ZoomableCanvas
-                  ref={(r) => {
-                    if (r) canvasRefs.current[p.pageId] = r;
-                    else delete canvasRefs.current[p.pageId];
-                  }}
-                  onTransformChange={isActive ? handleActiveTransformChange : undefined}
-                  onDoubleTap={isActive ? () => setActiveMode('text') : undefined}
-                  isDrawingMode={isActive && activeMode === 'drawing'}
-                  isTextMode={isActive && activeMode === 'text'}
-                  minScale={1.0}
-                  maxScale={4.0}
-                  style={[
-                    styles.canvasContainer,
-                    isTablet && {
-                      maxWidth: maxContentWidth,
-                      alignSelf: 'center',
-                      width: '100%',
-                      paddingVertical: 4,
-                    },
-                  ]}
+                <SmartSnappingProvider
+                  stickers={p.stickers || []}
+                  textBlocks={p.textBlocks || []}
+                  canvasWidth={pageWidth}
+                  canvasHeight={pageHeight}
+                  ruling={paper.ruling}
                 >
+                  <ZoomableCanvas
+                    ref={(r) => {
+                      if (r) canvasRefs.current[p.pageId] = r;
+                      else delete canvasRefs.current[p.pageId];
+                    }}
+                    onTransformChange={isActive ? handleActiveTransformChange : undefined}
+                    onDoubleTap={isActive ? () => setActiveMode('text') : undefined}
+                    isDrawingMode={isActive && activeMode === 'drawing'}
+                    isTextMode={isActive && activeMode === 'text'}
+                    minScale={1.0}
+                    maxScale={4.0}
+                    style={[
+                      styles.canvasContainer,
+                      {
+                        width: pageWidth,
+                        height: pageHeight,
+                      },
+                    ]}
+                  >
                   <View
                     ref={(r) => {
                       if (r) pageShotRefs.current[p.pageId] = r;
@@ -1586,6 +1609,7 @@ export default function NotebookPagesView({
                   </View>
                 </ZoomableCanvas>
               </SmartSnappingProvider>
+              </View>
             </View>
           );
         })}
