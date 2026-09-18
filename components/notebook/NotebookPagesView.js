@@ -152,6 +152,7 @@ export default function NotebookPagesView({
 
   const scrollViewRef = useRef(null);
   const saveTimeoutRef = useRef(null);
+  const textBlocksSaveTimeoutRef = useRef(null);
   const lastPageSaveRef = useRef(null);
 
   // Sayfa başına ZoomableCanvas referansları (pageId -> ref)
@@ -749,12 +750,12 @@ export default function NotebookPagesView({
 
         const updated = { ...prev, pages: currentPages };
 
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-        saveTimeoutRef.current = setTimeout(async () => {
+        if (textBlocksSaveTimeoutRef.current) clearTimeout(textBlocksSaveTimeoutRef.current);
+        textBlocksSaveTimeoutRef.current = setTimeout(async () => {
           await storageRef.current.updatePage(currentPages[pageIndex].pageId, {
             textBlocks: newTextBlocks,
           });
-        }, 400);
+        }, 300);
 
         return updated;
       });

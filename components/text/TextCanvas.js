@@ -7,9 +7,13 @@ import {
   StyleSheet,
   Pressable,
   Platform,
-  PanResponder,
-  Animated,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  runOnJS,
+} from 'react-native-reanimated';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
@@ -40,205 +44,243 @@ const DraggableTextBlock = React.memo(function DraggableTextBlock({
 }) {
   const { t } = useTranslation();
   const { scale: zoomScale } = useZoomableCanvas();
-  const pan = useRef(new Animated.ValueXY({ x: block.x, y: block.y })).current;
-  const initialDragPosRef = useRef({ x: block.x, y: block.y });
-  const [isDragging, setIsDragging] = useState(false);
-  const [boxWidth, setBoxWidth] = useState(block.width || 120);
-  const isSnappedVRef = useRef(false);
-  const isSnappedHRef = useRef(false);
 
+  const translateX = useSharedValue(block.x || 0);
+  const translateY = useSharedValue(block.y || 0);
+  const savedTranslateX = useSharedValue(block.x || 0);
+  const savedTranslateY = useSharedValue(block.y || 0);
+  const isDragging = useSharedValue(false);
+  const [isDraggingState, setIsDraggingState] = useState(false);
+
+  const isSnappedV = useSharedValue(false);
+  const isSnappedH = useSharedValue(false);
+
+  const [boxWidth, setBoxWidth] = useState(block.width || 120);
+
+  // Parent'tan gelen x veya y değiştiğinde SharedValue'ları senkronize et
   useEffect(() => {
-    pan.setValue({ x: block.x, y: block.y });
-    initialDragPosRef.current = { x: block.x, y: block.y };
+    translateX.value = block.x || 0;
+    translateY.value = block.y || 0;
+    savedTranslateX.value = block.x || 0;
+    savedTranslateY.value = block.y || 0;
   }, [block.x, block.y]);
 
   useEffect(() => {
     if (block.width) setBoxWidth(block.width);
   }, [block.width]);
 
-  // Sürükle (Taşı) PanResponder + Akıllı Hizalama (Snapping) — Doğrudan Animated ile 0 Re-render
-  // Çizim veya silgi modu aktifken dokunma olaylarını dinlemez (kalem çizgisi asla kesilmez)
-  const dragPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: (evt) =>
-        !isEditing &&
-        !isEraserActive &&
-        !isDrawingMode &&
-        (!evt.nativeEvent.touches || evt.nativeEvent.touches.length <= 1),
-      onMoveShouldSetPanResponder: (evt, gestureState) =>
-        !isEditing &&
-        !isEraserActive &&
-        !isDrawingMode &&
-        (!evt.nativeEvent.touches || evt.nativeEvent.touches.length <= 1) &&
-        (Math.abs(gestureState.dx) > 3 || Math.abs(gestureState.dy) > 3),
-      onPanResponderGrant: () => {
-        initialDragPosRef.current = {
-          x: pan.x._value !== undefined ? pan.x._value : block.x,
-          y: pan.y._value !== undefined ? pan.y._value : block.y,
-        };
-        setIsDragging(true);
-      },
-      onPanResponderMove: (_, gestureState) => {
-        const currentScale = zoomScale?.value || 1.0;
-        let rawX = initialDragPosRef.current.x + gestureState.dx / currentScale;
-        let rawY = initialDragPosRef.current.y + gestureState.dy / currentScale;
+  // Sürükleme (Pan) Gesture'ı: Zoom ölçeğine göre dengeli ve akıllı snap destekli
+  const panGesture = Gesture.Pan()
+    .maxPointers(1)
+    .activeOffsetX([-4, 4])
+    .activeOffsetY([-4, 4])
+    .enabled(!isEditing && !isEraserActive && !isDrawingMode)
+    .onStart(() => {
+      'worklet';
+      savedTranslateX.value = translateX.value;
+      savedTranslateY.value = translateY.value;
+      isDragging.value = true;
+      runOnJS(setIsDraggingState)(true);
+      isSnappedV.value = false;
+      isSnappedH.value = false;
+    })
+    .onUpdate((event) => {
+      'worklet';
+      const s = (zoomScale && zoomScale.value) || 1.0;
+      let rawX = savedTranslateX.value + event.translationX / s;
+      let rawY = savedTranslateY.value + event.translationY / s;
 
-        // Akıllı Hizalama (Snapping)
-        if (canvasWidth > 0 && canvasHeight > 0) {
-          const itemW = boxWidth;
-          const itemH = 40;
-          const centerX = rawX + itemW / 2;
-          const centerY = rawY + itemH / 2;
-          const midX = canvasWidth / 2;
-          const midY = canvasHeight / 2;
-          const threshold = 14;
+      // Akıllı Hizalama (Snapping)
+      if (canvasWidth > 0 && canvasHeight > 0) {
+        const itemW = boxWidth;
+        const itemH = 40;
+        const centerX = rawX + itemW / 2;
+        const centerY = rawY + itemH / 2;
+        const midX = canvasWidth / 2;
+        const midY = canvasHeight / 2;
+        const threshold = 14;
 
-          // Dikey eksen (yatay merkez) snap
-          if (Math.abs(centerX - midX) < threshold) {
-            rawX = midX - itemW / 2;
-            if (!isSnappedVRef.current) {
-              isSnappedVRef.current = true;
-              triggerHaptic();
-              if (onSnapChange) onSnapChange({ v: true });
-            }
-          } else {
-            if (isSnappedVRef.current) {
-              isSnappedVRef.current = false;
-              if (onSnapChange) onSnapChange({ v: false });
-            }
+        // Dikey eksen (yatay merkez) snap
+        if (Math.abs(centerX - midX) < threshold) {
+          rawX = midX - itemW / 2;
+          if (!isSnappedV.value) {
+            isSnappedV.value = true;
+            runOnJS(triggerHaptic)();
+            if (onSnapChange) runOnJS(onSnapChange)({ v: true });
           }
-
-          // Yatay eksen (dikey merkez) snap
-          if (Math.abs(centerY - midY) < threshold) {
-            rawY = midY - itemH / 2;
-            if (!isSnappedHRef.current) {
-              isSnappedHRef.current = true;
-              triggerHaptic();
-              if (onSnapChange) onSnapChange({ h: true });
-            }
-          } else {
-            if (isSnappedHRef.current) {
-              isSnappedHRef.current = false;
-              if (onSnapChange) onSnapChange({ h: false });
-            }
-          }
-        }
-
-        // Sıfır re-render: doğrudan Animated.ValueXY güncelle
-        pan.setValue({ x: rawX, y: rawY });
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        setIsDragging(false);
-        isSnappedVRef.current = false;
-        isSnappedHRef.current = false;
-        if (onSnapChange) onSnapChange({ v: false, h: false });
-
-        const finalX = pan.x._value !== undefined ? pan.x._value : initialDragPosRef.current.x;
-        const finalY = pan.y._value !== undefined ? pan.y._value : initialDragPosRef.current.y;
-
-        if (Math.abs(gestureState.dx) < 4 && Math.abs(gestureState.dy) < 4) {
-          onEdit(block.id);
         } else {
-          onMoveEnd(block.id, Math.round(finalX), Math.round(finalY));
+          if (isSnappedV.value) {
+            isSnappedV.value = false;
+            if (onSnapChange) runOnJS(onSnapChange)({ v: false });
+          }
         }
-      },
-      onPanResponderTerminate: () => {
-        setIsDragging(false);
-        isSnappedVRef.current = false;
-        isSnappedHRef.current = false;
-        if (onSnapChange) onSnapChange({ v: false, h: false });
-      },
-    })
-  ).current;
 
-  // Genişlik (Resize) PanResponder
-  const initialWidthRef = useRef(boxWidth);
-  const resizePanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        initialWidthRef.current = boxWidth;
-      },
-      onPanResponderMove: (_, gestureState) => {
-        const currentScale = zoomScale?.value || 1.0;
-        const newWidth = Math.max(60, initialWidthRef.current + gestureState.dx / currentScale);
-        setBoxWidth(newWidth);
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        const currentScale = zoomScale?.value || 1.0;
-        const finalWidth = Math.max(60, initialWidthRef.current + gestureState.dx / currentScale);
-        onResizeEnd(block.id, finalWidth);
-      },
+        // Yatay eksen (dikey merkez) snap
+        if (Math.abs(centerY - midY) < threshold) {
+          rawY = midY - itemH / 2;
+          if (!isSnappedH.value) {
+            isSnappedH.value = true;
+            runOnJS(triggerHaptic)();
+            if (onSnapChange) runOnJS(onSnapChange)({ h: true });
+          }
+        } else {
+          if (isSnappedH.value) {
+            isSnappedH.value = false;
+            if (onSnapChange) runOnJS(onSnapChange)({ h: false });
+          }
+        }
+      }
+
+      translateX.value = rawX;
+      translateY.value = rawY;
     })
-  ).current;
+    .onEnd(() => {
+      'worklet';
+      isDragging.value = false;
+      runOnJS(setIsDraggingState)(false);
+      if (isSnappedV.value || isSnappedH.value) {
+        isSnappedV.value = false;
+        isSnappedH.value = false;
+      }
+      if (onSnapChange) {
+        runOnJS(onSnapChange)({ v: false, h: false });
+      }
+      const finalX = Math.round(translateX.value);
+      const finalY = Math.round(translateY.value);
+      savedTranslateX.value = finalX;
+      savedTranslateY.value = finalY;
+      if (onMoveEnd) {
+        runOnJS(onMoveEnd)(block.id, finalX, finalY);
+      }
+    })
+    .onFinalize(() => {
+      'worklet';
+      isDragging.value = false;
+      runOnJS(setIsDraggingState)(false);
+      if (isSnappedV.value || isSnappedH.value) {
+        isSnappedV.value = false;
+        isSnappedH.value = false;
+      }
+      if (onSnapChange) {
+        runOnJS(onSnapChange)({ v: false, h: false });
+      }
+    });
+
+  // Tıklama (Tap) Gesture'ı: Düzenleme moduna girme
+  const tapGesture = Gesture.Tap()
+    .maxDuration(250)
+    .enabled(!isEditing && !isEraserActive && !isDrawingMode)
+    .onEnd(() => {
+      'worklet';
+      if (onEdit) {
+        runOnJS(onEdit)(block.id);
+      }
+    });
+
+  const composedGesture = Gesture.Race(panGesture, tapGesture);
+
+  // Yeniden Boyutlandırma (Resize) Gesture'ı
+  const initialWidth = useSharedValue(boxWidth);
+  const currentResizeWidth = useSharedValue(boxWidth);
+  const resizePanGesture = Gesture.Pan()
+    .maxPointers(1)
+    .activeOffsetX([-2, 2])
+    .onStart(() => {
+      'worklet';
+      initialWidth.value = boxWidth;
+      currentResizeWidth.value = boxWidth;
+    })
+    .onUpdate((event) => {
+      'worklet';
+      const s = (zoomScale && zoomScale.value) || 1.0;
+      const newWidth = Math.max(60, initialWidth.value + event.translationX / s);
+      currentResizeWidth.value = newWidth;
+      runOnJS(setBoxWidth)(newWidth);
+    })
+    .onEnd(() => {
+      'worklet';
+      if (onResizeEnd) {
+        runOnJS(onResizeEnd)(block.id, Math.round(currentResizeWidth.value));
+      }
+    });
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+      ],
+      zIndex: isDragging.value ? 100 : isEditing ? 50 : 10,
+      opacity: isDragging.value ? 0.94 : 1.0,
+    };
+  });
 
   return (
-    <Animated.View
-      style={[
-        styles.blockContainer,
-        {
-          left: pan.x,
-          top: pan.y,
-          width: boxWidth,
-        },
-        Platform.OS === 'web' && { cursor: isEditing ? 'text' : 'grab', userSelect: 'none' },
-        isEditing && styles.blockEditing,
-        isDragging && styles.blockDragging,
-      ]}
-      {...(!isEditing && !isEraserActive && !isDrawingMode ? dragPanResponder.panHandlers : {})}
-    >
-      {isEditing ? (
-        <View style={styles.inputWrapper}>
-          <TextInput
-            value={block.text}
-            onChangeText={(txt) => onChange(block.id, txt)}
-            onBlur={() => onBlur(block.id)}
-            autoFocus
-            multiline
-            placeholder={t('drawing.typeNotePlaceholder', 'Notunu yaz...')}
-            placeholderTextColor={block.color + '55'}
-            style={[
-              styles.textInput,
-              {
-                color: block.color || activeColor,
-                fontSize: block.fontSize || activeFontSize,
-                fontFamily: block.fontFamily || undefined,
-              },
-            ]}
-          />
+    <GestureDetector gesture={composedGesture}>
+      <Animated.View
+        style={[
+          styles.blockContainer,
+          animatedStyle,
+          { width: boxWidth },
+          Platform.OS === 'web' && { cursor: isEditing ? 'text' : 'grab', userSelect: 'none' },
+          isEditing && styles.blockEditing,
+          isDraggingState && styles.blockDragging,
+        ]}
+      >
+        {isEditing ? (
+          <View style={styles.inputWrapper}>
+            <TextInput
+              value={block.text}
+              onChangeText={(txt) => onChange(block.id, txt)}
+              onBlur={() => onBlur(block.id)}
+              autoFocus
+              multiline
+              placeholder={t('drawing.typeNotePlaceholder', 'Notunu yaz...')}
+              placeholderTextColor={block.color + '55'}
+              style={[
+                styles.textInput,
+                {
+                  color: block.color || activeColor,
+                  fontSize: block.fontSize || activeFontSize,
+                  fontFamily: block.fontFamily || undefined,
+                },
+              ]}
+            />
 
-          {/* Sağ Taraftaki Boyutlandırma Tutamacı (Resize Handle) */}
-          <View style={styles.resizeHandleContainer} {...resizePanResponder.panHandlers}>
-            <MaterialCommunityIcons name="drag-vertical" size={20} color="#E91E63" />
+            {/* Sağ Taraftaki Boyutlandırma Tutamacı (Resize Handle) */}
+            <GestureDetector gesture={resizePanGesture}>
+              <View style={styles.resizeHandleContainer}>
+                <MaterialCommunityIcons name="drag-vertical" size={20} color="#E91E63" />
+              </View>
+            </GestureDetector>
+
+            {/* Sol Üst Köşede Sil Butonu */}
+            <TouchableOpacity
+              onPress={() => onDelete(block.id)}
+              style={styles.deleteBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <MaterialCommunityIcons name="close-circle" size={20} color="#E91E63" />
+            </TouchableOpacity>
           </View>
-
-          {/* Sol Üst Köşede Sil Butonu */}
-          <TouchableOpacity
-            onPress={() => onDelete(block.id)}
-            style={styles.deleteBtn}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <MaterialCommunityIcons name="close-circle" size={20} color="#E91E63" />
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={styles.viewBlock}>
-          <Text
-            style={[
-              styles.savedText,
-              {
-                color: block.color || activeColor,
-                fontSize: block.fontSize || activeFontSize,
-                fontFamily: block.fontFamily || undefined,
-              },
-            ]}
-          >
-            {block.text}
-          </Text>
-        </View>
-      )}
-    </Animated.View>
+        ) : (
+          <View style={styles.viewBlock}>
+            <Text
+              style={[
+                styles.savedText,
+                {
+                  color: block.color || activeColor,
+                  fontSize: block.fontSize || activeFontSize,
+                  fontFamily: block.fontFamily || undefined,
+                },
+              ]}
+            >
+              {block.text}
+            </Text>
+          </View>
+        )}
+      </Animated.View>
+    </GestureDetector>
   );
 });
 
@@ -393,6 +435,8 @@ export default function TextCanvas({
 const styles = StyleSheet.create({
   blockContainer: {
     position: 'absolute',
+    left: 0,
+    top: 0,
     minWidth: 60,
     zIndex: 10,
   },
