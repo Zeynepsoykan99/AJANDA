@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -25,6 +26,7 @@ import ColorPicker, { Panel3, Preview } from 'reanimated-color-picker';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const INK_COLORS = [
+  { id: 'black', color: '#1A1A1A', name: 'Siyah' },
   { id: 'rose', color: '#C2185B', name: 'Gül Kurusu' },
   { id: 'lavender', color: '#7B1FA2', name: 'Lavanta Moru' },
   { id: 'mocha', color: '#4E342E', name: 'Moka Kahve' },
@@ -88,7 +90,27 @@ export default function DrawingToolbar({
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
   const [isCustomColorModalVisible, setIsCustomColorModalVisible] = useState(false);
   const [customColors, setCustomColors] = useState([]);
-  const [tempColor, setTempColor] = useState('#FF0000');
+  const [tempColor, setTempColor] = useState('#1A1A1A');
+
+  // Son seçilen rengi hafızadan yükle (Persistence)
+  useEffect(() => {
+    (async () => {
+      try {
+        const savedColor = await AsyncStorage.getItem('lastSelectedDrawingColor');
+        if (savedColor) {
+          if (onChangeColor && currentColor !== savedColor) {
+            onChangeColor(savedColor);
+          }
+        } else if (!currentColor || currentColor === '#C2185B') {
+          if (onChangeColor) {
+            onChangeColor('#1A1A1A');
+          }
+        }
+      } catch (e) {
+        console.warn('Çizim rengi okunamadı:', e);
+      }
+    })();
+  }, []);
 
   // Sürükleme Koordinatları (Başlangıçta ekranın sağ üst-orta kenarında)
   const INITIAL_X = SCREEN_WIDTH - 66;
@@ -187,7 +209,10 @@ export default function DrawingToolbar({
     if (!customColors.includes(tempColor)) {
       setCustomColors((prev) => [...prev, tempColor].slice(-5));
     }
-    if (isDrawingMode) onChangeColor(tempColor);
+    if (isDrawingMode) {
+      onChangeColor(tempColor);
+      AsyncStorage.setItem('lastSelectedDrawingColor', tempColor).catch(() => {});
+    }
     if (isTextMode) onChangeTextColor(tempColor);
     setIsCustomColorModalVisible(false);
     setIsColorPickerOpen(false);
@@ -527,7 +552,10 @@ export default function DrawingToolbar({
                         key={item.id}
                         onPress={() => {
                           triggerHaptic();
-                          if (isDrawingMode) onChangeColor(item.color);
+                          if (isDrawingMode) {
+                            onChangeColor(item.color);
+                            AsyncStorage.setItem('lastSelectedDrawingColor', item.color).catch(() => {});
+                          }
                           if (isTextMode) onChangeTextColor(item.color);
                           setIsColorPickerOpen(false);
                         }}
@@ -545,7 +573,10 @@ export default function DrawingToolbar({
                         key={`custom_${index}`}
                         onPress={() => {
                           triggerHaptic();
-                          if (isDrawingMode) onChangeColor(customColor);
+                          if (isDrawingMode) {
+                            onChangeColor(customColor);
+                            AsyncStorage.setItem('lastSelectedDrawingColor', customColor).catch(() => {});
+                          }
                           if (isTextMode) onChangeTextColor(customColor);
                           setIsColorPickerOpen(false);
                         }}

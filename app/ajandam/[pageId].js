@@ -95,7 +95,7 @@ export default function PageViewScreen() {
 
   // Çizim Ayarları
   const [drawingTool, setDrawingTool] = useState('pen'); // 'pen' | 'highlighter' | 'eraser'
-  const [drawingColor, setDrawingColor] = useState('#C2185B');
+  const [drawingColor, setDrawingColor] = useState('#1A1A1A');
   const [drawingWidth, setDrawingWidth] = useState(3);
 
   // Klavye / Metin Ayarları
@@ -120,6 +120,10 @@ export default function PageViewScreen() {
         const found = pages.find((p) => p.id === pageId);
         if (found) {
           setPage(found);
+        }
+        const savedColor = await StorageService.getLastDrawingColor();
+        if (savedColor) {
+          setDrawingColor(savedColor);
         }
       } catch (error) {
         console.warn('Sayfa yüklenirken hata:', error);
@@ -1277,7 +1281,10 @@ export default function PageViewScreen() {
           currentTool={drawingTool}
           onChangeTool={setDrawingTool}
           currentColor={drawingColor}
-          onChangeColor={setDrawingColor}
+          onChangeColor={(color) => {
+            setDrawingColor(color);
+            StorageService.setLastDrawingColor(color);
+          }}
           currentWidth={drawingWidth}
           onChangeWidth={setDrawingWidth}
           textColor={textColor}

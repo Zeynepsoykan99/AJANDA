@@ -59,7 +59,7 @@ export default function AjandamScreen() {
 
   // Çizim Ayarları
   const [drawingTool, setDrawingTool] = useState('pen');
-  const [drawingColor, setDrawingColor] = useState('#C2185B');
+  const [drawingColor, setDrawingColor] = useState('#1A1A1A');
   const [drawingWidth, setDrawingWidth] = useState(3);
 
   // Klavye / Metin Ayarları
@@ -83,6 +83,10 @@ export default function AjandamScreen() {
             drawings: [],
             textBlocks: [],
           });
+        }
+        const savedColor = await StorageService.getLastDrawingColor();
+        if (savedColor) {
+          setDrawingColor(savedColor);
         }
       } catch (error) {
         console.warn('Kapak yüklenirken hata:', error);
@@ -319,7 +323,10 @@ export default function AjandamScreen() {
           currentTool={drawingTool}
           onChangeTool={setDrawingTool}
           currentColor={drawingColor}
-          onChangeColor={setDrawingColor}
+          onChangeColor={(color) => {
+            setDrawingColor(color);
+            StorageService.setLastDrawingColor(color);
+          }}
           currentWidth={drawingWidth}
           onChangeWidth={setDrawingWidth}
           textColor={textColor}

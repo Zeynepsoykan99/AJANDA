@@ -45,6 +45,7 @@ import AudioRecorderModal from '../audio/AudioRecorderModal';
 import AudioNotesDeck from '../audio/AudioNotesDeck';
 import IndexFlagsRail from '../stationery/IndexFlagsRail';
 import { AudioService } from '../../services/audioService';
+import { StorageService } from '../../services/storageService';
 import { isSameDay, formatFilterDate } from '../../components/ui/GlobalFilterHeader';
 import { SecurityService } from '../../services/securityService';
 import { captureRef } from 'react-native-view-shot';
@@ -108,7 +109,7 @@ export default function NotebookPagesView({
 
   // Çizim Ayarları
   const [drawingTool, setDrawingTool] = useState('pen');
-  const [drawingColor, setDrawingColor] = useState('#C2185B');
+  const [drawingColor, setDrawingColor] = useState('#1A1A1A');
   const [drawingWidth, setDrawingWidth] = useState(3);
 
   // Metin Ayarları
@@ -220,6 +221,11 @@ export default function NotebookPagesView({
               animated: false,
             });
           }, 100);
+        }
+        // Son seçilen çizim rengini yükle
+        const savedColor = await StorageService.getLastDrawingColor();
+        if (savedColor) {
+          setDrawingColor(savedColor);
         }
       } catch (error) {
         console.warn('Defter yüklenirken hata:', error);
@@ -1694,7 +1700,10 @@ export default function NotebookPagesView({
             setActiveMode('drawing');
           }}
           currentColor={drawingColor}
-          onChangeColor={setDrawingColor}
+          onChangeColor={(color) => {
+            setDrawingColor(color);
+            StorageService.setLastDrawingColor(color);
+          }}
           currentWidth={drawingWidth}
           onChangeWidth={setDrawingWidth}
           textColor={textColor}

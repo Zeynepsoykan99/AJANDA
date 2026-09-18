@@ -43,6 +43,7 @@ import TextCanvas from '../../components/text/TextCanvas';
 import DatePickerModal from '../../components/ui/DatePickerModal';
 import GlobalSearchModal from '../../components/ui/GlobalSearchModal';
 import MonthlyMoodAnalyticsModal from '../diary/MonthlyMoodAnalyticsModal';
+import { StorageService } from '../../services/storageService';
 import { isSameDay, formatFilterDate } from '../../components/ui/GlobalFilterHeader';
 
 const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
@@ -103,7 +104,7 @@ export default function NotebookCoverView({
 
   // Çizim Ayarları
   const [drawingTool, setDrawingTool] = useState('pen');
-  const [drawingColor, setDrawingColor] = useState('#C2185B');
+  const [drawingColor, setDrawingColor] = useState('#1A1A1A');
   const [drawingWidth, setDrawingWidth] = useState(3);
 
   // Metin Ayarları
@@ -138,6 +139,10 @@ export default function NotebookCoverView({
             setNotebook(savedNotebook);
           } else if (isActive) {
             setNotebook(null);
+          }
+          if (isActive) {
+            const savedColor = await StorageService.getLastDrawingColor();
+            if (savedColor) setDrawingColor(savedColor);
           }
         } catch (error) {
           console.warn('Defter yüklenirken hata:', error);
@@ -580,7 +585,10 @@ export default function NotebookCoverView({
           currentTool={drawingTool}
           onChangeTool={setDrawingTool}
           currentColor={drawingColor}
-          onChangeColor={setDrawingColor}
+          onChangeColor={(color) => {
+            setDrawingColor(color);
+            StorageService.setLastDrawingColor(color);
+          }}
           currentWidth={drawingWidth}
           onChangeWidth={setDrawingWidth}
           textColor={textColor}

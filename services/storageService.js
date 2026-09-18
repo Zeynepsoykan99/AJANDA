@@ -14,6 +14,7 @@ const KEYS = {
   LANGUAGE: '@ajanda_language',
   DIARY: '@ajanda_diary_v1',
   NOTEBOOKS: '@ajanda_notebooks_v1',
+  LAST_DRAWING_COLOR: 'lastSelectedDrawingColor',
 };
 
 // ─── Defter (Günlüğüm / Notlarım) Ortak Altyapısı ─────────────────
@@ -712,4 +713,23 @@ export const StorageService = {
         return null;
       }
     }),
+
+  getLastDrawingColor: async () => {
+    try {
+      const color = await AsyncStorage.getItem(KEYS.LAST_DRAWING_COLOR);
+      return color || '#1A1A1A';
+    } catch (e) {
+      return '#1A1A1A';
+    }
+  },
+
+  setLastDrawingColor: async (color) => {
+    try {
+      if (color) {
+        await AsyncStorage.setItem(KEYS.LAST_DRAWING_COLOR, color);
+      }
+    } catch (e) {
+      console.warn('StorageService.setLastDrawingColor hata:', e);
+    }
+  },
 };
