@@ -673,4 +673,202 @@ export function eraseCharactersFromBlock(block, erasedIndices = []) {
   };
 }
 
+/**
+ * Aynı satırda yer alan ve birbirine doğal kelime mesafesinde olan OCR metin kümelerini
+ * tek bir metin kutusunda birleştirir (Spatial Clustering & Line Merging).
+ *
+ * @param {Array<object>} clusters - Ham tanıma kümeleri
+ * @param {object} options - Tolerans ayarları
+ * @returns {Array<object>} - Birleştirilmiş kümeler
+ */
+export function mergeSpatialClusters(clusters, options = {}) {
+  if (!Array.isArray(clusters) || clusters.length <= 1) {
+    return clusters || [];
+  }
+
+  const {
+    overlapYRatio = 0.40,       // Dikeyde en az %40 örtüşme
+    centerDiffRatio = 0.35,      // veya dikey merkez farkı refHeight * 0.35'ten az
+    wordGapMultiplier = 1.6,     // refHeight * 1.6 maksimum kelime boşluğu
+    minWordGap = 35,             // En az 35px kelime boşluğuna izin ver
+  } = options;
+
+  // 1. Kümeleri renge göre grupla (Farklı renkler asla birleşmez)
+  const colorGroups = new Map();
+  clusters.forEach((c) => {
+    const col = (c.color || '#000000').toLowerCase().trim();
+    if (!colorGroups.has(col)) colorGroups.set(col, []);
+    colorGroups.get(col).push(c);
+  });
+
+  const mergedResults = [];
+
+  for (const [col, group] of colorGroups.entries()) {
+    if (group.length === 1) {
+      mergedResults.push(group[0]);
+      continue;
+    }
+
+    // Doğal okuma sırasına göre diz (Yukarıdan aşağıya, aynı satırda soldan sağa)
+    const sorted = [...group].sort((a, b) => {
+      const diffY = a.bounds.minY - b.bounds.minY;
+      if (Math.abs(diffY) <= 25) {
+        return a.bounds.minX - b.bounds.minX;
+      }
+      return diffY;
+    });
+
+    const merged = [];
+    let current = { ...sorted[0] };
+
+    for (let i = 1; i < sorted.length; i++) {
+      const next = sorted[i];
+      const a = current;
+      const b = next;
+
+      // Dikey örtüşme ve referans satır yüksekliği
+      const overlapY = Math.min(a.bounds.maxY, b.bounds.maxY) - Math.max(a.bounds.minY, b.bounds.minY);
+      const hA = Math.max(1, a.bounds.height || a.bounds.maxY - a.bounds.minY);
+      const hB = Math.max(1, b.bounds.height || b.bounds.maxY - b.bounds.minY);
+      const refHeight = Math.min(hA, hB);
+
+      const centerYA = a.bounds.minY + hA / 2;
+      const centerYB = b.bounds.minY + hB / 2;
+      const diffCenterY = Math.abs(centerYA - centerYB);
+
+      // Aynı satırda mı?
+      const isSameLine =
+        overlapY >= refHeight * overlapYRatio ||
+        diffCenterY <= refHeight * centerDiffRatio;
+
+      // Yatay boşluk
+      const gapX = b.bounds.minX - a.bounds.maxX;
+      const maxGapX = Math.max(minWordGap, Math.round(refHeight * wordGapMultiplier));
+
+      // Aynı satırda ve aralarındaki boşluk makul kelime boşluğu aralığındaysa birleştir
+      if (isSameLine && gapX >= -30 && gapX <= maxGapX) {
+        const textA = (a.text || '').trim();
+        const textB = (b.text || '').trim();
+        const mergedText = `${textA} ${textB}`.trim();
+
+        const mergedMinX = Math.min(a.bounds.minX, b.bounds.minX);
+        const mergedMinY = Math.min(a.bounds.minY, b.bounds.minY);
+        const mergedMaxX = Math.max(a.bounds.maxX, b.bounds.maxX);
+        const mergedMaxY = Math.max(a.bounds.maxY, b.bounds.maxY);
+        const mergedWidth = Math.max(mergedMaxX - mergedMinX, 1);
+        const mergedHeight = Math.max(mergedMaxY - mergedMinY, 1);
+
+        const mergedStrokes = [...(a.strokes || []), ...(b.strokes || [])];
+        const mergedStrokeIds = [...(a.strokeIds || []), ...(b.strokeIds || [])];
+
+        const lenA = textA.length;
+        const lenB = textB.length;
+        const fontA = a.fontSize || a.estimatedFontSize || 18;
+        const fontB = b.fontSize || b.estimatedFontSize || 18;
+        const mergedFont = Math.round((fontA * lenA + fontB * lenB) / Math.max(1, lenA + lenB));
+
+        const fitted = fitTextToBounds({ width: mergedWidth, height: mergedHeight }, mergedText);
+
+        current = {
+          ...a,
+          id: a.id,
+          text: mergedText,
+          strokes: mergedStrokes,
+          strokeIds: mergedStrokeIds,
+          bounds: {
+            minX: mergedMinX,
+            minY: mergedMinY,
+            maxX: mergedMaxX,
+            maxY: mergedMaxY,
+            width: mergedWidth,
+            height: mergedHeight,
+          },
+          fontSize: mergedFont || fitted.fontSize,
+          estimatedFontSize: mergedFont || fitted.fontSize,
+          fittedWidth: Math.max(fitted.width, mergedWidth),
+        };
+      } else {
+        merged.push(current);
+        current = { ...next };
+      }
+    }
+
+    merged.push(current);
+    mergedResults.push(...merged);
+  }
+
+  return mergedResults;
+}
+
+/**
+ * Punto Normalizasyonu (Font Size Smoothing):
+ * İnsan el yazısından kaynaklanan ufak boyut dalgalanmalarını medyan filtreleme ile standartlaştırır.
+ *
+ * @param {Array<object>} clusters - Kümeler listesi
+ * @param {object} options - Tolerans ayarları ({ toleranceRatio: 0.30 })
+ * @returns {Array<object>} - Normalleştirilmiş kümeler
+ */
+export function smoothClusterFontSizes(clusters, options = {}) {
+  if (!Array.isArray(clusters) || clusters.length === 0) {
+    return clusters || [];
+  }
+
+  const { toleranceRatio = 0.30 } = options; // %30 tolerans
+
+  const fontSizes = clusters
+    .map((c) => c.fontSize || c.estimatedFontSize || 18)
+    .filter((s) => typeof s === 'number' && s > 0);
+
+  if (fontSizes.length === 0) return clusters;
+
+  // Medyan hesapla
+  const sorted = [...fontSizes].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  const medianFontSize =
+    sorted.length % 2 !== 0 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+
+  return clusters.map((c) => {
+    const currentSize = c.fontSize || c.estimatedFontSize || 18;
+    const diffRatio = Math.abs(currentSize - medianFontSize) / medianFontSize;
+
+    // Eğer fark %30 tolerans içindeyse medyana pürüzsüzleştir
+    if (diffRatio <= toleranceRatio) {
+      const fitted = fitTextToBounds(c.bounds, c.text);
+      return {
+        ...c,
+        fontSize: medianFontSize,
+        estimatedFontSize: medianFontSize,
+        fittedWidth: Math.max(c.fittedWidth || 0, fitted.width),
+      };
+    }
+
+    // Tolerans dışındaysa (büyük başlık veya minik alt not) orijinal boyutu koru
+    return c;
+  });
+}
+
+/**
+ * Kement Tanıma Sonuçlarını İşleme Pipeline'ı:
+ * 1. Mekansal Kümeleme ve Satır Birleştirme (mergeSpatialClusters)
+ * 2. Punto Normalizasyonu (smoothClusterFontSizes)
+ *
+ * @param {Array<object>} clusterResults - Ham OCR tanıma sonuçları
+ * @param {object} options - Konfigürasyon
+ * @returns {Array<object>} - İşlenmiş, birleştirilmiş ve normalize edilmiş kümeler
+ */
+export function processLassoRecognitionResults(clusterResults, options = {}) {
+  if (!Array.isArray(clusterResults) || clusterResults.length === 0) {
+    return [];
+  }
+
+  // 1. Adım: Aynı satırdaki yakın kelimeleri tek cümle haline getir
+  const merged = mergeSpatialClusters(clusterResults, options);
+
+  // 2. Adım: Ufak punto dalgalanmalarını medyan ile normalize et
+  const smoothed = smoothClusterFontSizes(merged, options);
+
+  return smoothed;
+}
+
+
 

@@ -39,7 +39,11 @@ import { AudioService } from '../../services/audioService';
 import { transcribeAudioFile } from '../../services/transcriptionService';
 import LassoActionMenu from '../../components/drawing/LassoActionMenu';
 import RecognitionConfirmationModal from '../../components/drawing/RecognitionConfirmationModal';
-import { fitTextToBounds, clusterStrokesByColorAndProximity } from '../../utils/lassoGeometry';
+import {
+  fitTextToBounds,
+  clusterStrokesByColorAndProximity,
+  processLassoRecognitionResults,
+} from '../../utils/lassoGeometry';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 import { getPageDisplayTitle, getCategoryDisplayName } from '../../utils/pageTitleHelper';
 
@@ -364,16 +368,19 @@ export default function TodoViewScreen() {
       })
     );
 
-    const combinedText = clusterResults.map((c) => c.text).filter(Boolean).join(' ');
-    const firstFitted = clusterResults[0]
-      ? fitTextToBounds(clusterResults[0].bounds, clusterResults[0].text)
+    // Akıllı Mekansal Birleştirme (Spatial Clustering) & Punto Normalizasyonu (Smoothing)
+    const processedClusters = processLassoRecognitionResults(clusterResults);
+
+    const combinedText = processedClusters.map((c) => c.text).filter(Boolean).join(' ');
+    const firstFitted = processedClusters[0]
+      ? fitTextToBounds(processedClusters[0].bounds, processedClusters[0].text)
       : { fontSize: 18 };
 
     setRecognizedData({
       text: combinedText,
       candidates: clusterResults[0]?.candidates || [],
-      estimatedFontSize: firstFitted.fontSize || 18,
-      clusters: clusterResults,
+      estimatedFontSize: processedClusters[0]?.fontSize || firstFitted.fontSize || 18,
+      clusters: processedClusters,
     });
     setIsRecognizingSelected(false);
   }, [selectedStrokes, i18n.language]);
