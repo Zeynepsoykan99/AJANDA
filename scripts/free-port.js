@@ -6,8 +6,7 @@
 
 const { execSync } = require('child_process');
 
-function freePort(port = 8081) {
-  console.log(`[FreePort] Port ${port} kontrol ediliyor...`);
+function freeSinglePort(port) {
   const isWindows = process.platform === 'win32';
 
   try {
@@ -28,17 +27,16 @@ function freePort(port = 8081) {
       });
 
       if (pids.size === 0) {
-        console.log(`[FreePort] Port ${port} zaten boşta.`);
         return true;
       }
 
       pids.forEach((pid) => {
         try {
-          console.log(`[FreePort] Asılı kalan süreç sonlandırılıyor (PID: ${pid})...`);
+          console.log(`[FreePort] Port ${port} üzerinde asılı kalan süreç sonlandırılıyor (PID: ${pid})...`);
           execSync(`taskkill /F /PID ${pid}`, { stdio: 'ignore' });
           console.log(`[FreePort] PID ${pid} başarıyla sonlandırıldı.`);
         } catch (err) {
-          console.warn(`[FreePort] PID ${pid} sonlandırılamadı (zaten kapanmış olabilir).`);
+          // Zaten kapanmış olabilir
         }
       });
     } else {
@@ -53,21 +51,28 @@ function freePort(port = 8081) {
           }
         });
       } catch {
-        console.log(`[FreePort] Port ${port} zaten boşta.`);
         return true;
       }
     }
 
-    console.log(`[FreePort] Port ${port} başarıyla serbest bırakıldı.`);
     return true;
   } catch (error) {
-    console.log(`[FreePort] Port ${port} üzerinde aktif bir süreç bulunamadı veya port zaten boş.`);
     return true;
   }
 }
 
+function freePort(ports = [8081, 8082]) {
+  const portList = Array.isArray(ports) ? ports : [ports];
+  console.log(`[FreePort] Port(lar) kontrol ediliyor: ${portList.join(', ')}...`);
+  for (const p of portList) {
+    freeSinglePort(p);
+  }
+  console.log(`[FreePort] Port temizliği tamamlandı.`);
+  return true;
+}
+
 if (require.main === module) {
-  const targetPort = process.argv[2] ? parseInt(process.argv[2], 10) : 8081;
+  const targetPort = process.argv[2] ? parseInt(process.argv[2], 10) : [8081, 8082];
   freePort(targetPort);
 }
 

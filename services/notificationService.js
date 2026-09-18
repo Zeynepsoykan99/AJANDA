@@ -12,6 +12,7 @@ import { Platform, Alert, Linking } from 'react-native';
 // Sistem bildirimini bastırıyoruz; onun yerine projenin tema renklerine uyumlu
 // özel InAppNotificationBanner bileşeni ekranda belirecek.
 export const configureNotificationHandler = () => {
+  if (Platform.OS === 'web') return;
   try {
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
@@ -29,18 +30,17 @@ export const configureNotificationHandler = () => {
  * Android için yüksek öncelikli bildirim kanalı yapılandırır
  */
 export const setupNotificationChannel = async () => {
-  if (Platform.OS === 'android') {
-    try {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'Hatırlatıcılar',
-        importance: Notifications.AndroidImportance.HIGH,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#C2185B',
-        sound: 'default',
-      });
-    } catch (error) {
-      console.warn('Android bildirim kanalı oluşturma hatası:', error);
-    }
+  if (Platform.OS !== 'android') return;
+  try {
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'Hatırlatıcılar',
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#C2185B',
+      sound: 'default',
+    });
+  } catch (error) {
+    console.warn('Android bildirim kanalı oluşturma hatası:', error);
   }
 };
 
@@ -49,6 +49,9 @@ export const setupNotificationChannel = async () => {
  * @returns {Promise<{ granted: boolean, canAskAgain: boolean }>}
  */
 export const getPermissions = async () => {
+  if (Platform.OS === 'web') {
+    return { granted: false, canAskAgain: false };
+  }
   try {
     const settings = await Notifications.getPermissionsAsync();
     const isGranted =
@@ -220,6 +223,9 @@ export const getAllScheduledNotifications = async () => {
  * @returns {function} unsubscribe fonksiyonu
  */
 export const addNotificationListeners = ({ onReceived, onResponse }) => {
+  if (Platform.OS === 'web') {
+    return () => {};
+  }
   const subscriptions = [];
 
   if (onReceived) {

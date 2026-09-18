@@ -6,7 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ThemeProvider, useTheme } from '../context/ThemeContext';
 import Skeleton from '../components/ui/Skeleton';
-import { View, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import InAppNotificationBanner from '../components/ui/InAppNotificationBanner';
 import {
   configureNotificationHandler,
@@ -14,15 +14,98 @@ import {
   addNotificationListeners,
 } from '../services/notificationService';
 
+/**
+ * GlobalErrorBoundary - React Render Ağacındaki Tüm Ölümcül Hataları Yakalayan Kalkan
+ * Beyaz ekran oluşmasını engeller, hatayı ve stack trace'i ekrana yansıtır.
+ */
+class GlobalErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('⚠️ [AJANDA GlobalErrorBoundary] Hata yakalandı:', error, errorInfo);
+    this.setState({ errorInfo });
+  }
+
+  handleRetry = () => {
+    this.setState({ hasError: false, error: null, errorInfo: null });
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={errorStyles.container}>
+          <View style={errorStyles.card}>
+            <Text style={errorStyles.icon}>⚠️</Text>
+            <Text style={errorStyles.title}>Uygulama Hatası Yakalandı</Text>
+            <Text style={errorStyles.subtitle}>
+              Bileşen render edilirken beklenmeyen bir hata oluştu:
+            </Text>
+            <ScrollView style={errorStyles.errorBox} contentContainerStyle={{ padding: 10 }}>
+              <Text style={errorStyles.errorMessage}>
+                {this.state.error?.message || String(this.state.error)}
+              </Text>
+              {this.state.error?.stack && (
+                <Text style={errorStyles.errorStack}>
+                  {this.state.error.stack}
+                </Text>
+              )}
+            </ScrollView>
+            <TouchableOpacity style={errorStyles.retryButton} onPress={this.handleRetry} activeOpacity={0.8}>
+              <Text style={errorStyles.retryText}>Yeniden Dene</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+/**
+ * Expo Router Varsayılan Hata Sınırı (Route ErrorBoundary)
+ */
+export function ErrorBoundary({ error, retry }) {
+  return (
+    <View style={errorStyles.container}>
+      <View style={errorStyles.card}>
+        <Text style={errorStyles.icon}>⚠️</Text>
+        <Text style={errorStyles.title}>Sayfa Yükleme Hatası (Expo Router)</Text>
+        <ScrollView style={errorStyles.errorBox} contentContainerStyle={{ padding: 10 }}>
+          <Text style={errorStyles.errorMessage}>
+            {error?.message || String(error)}
+          </Text>
+          {error?.stack && (
+            <Text style={errorStyles.errorStack}>
+              {error.stack}
+            </Text>
+          )}
+        </ScrollView>
+        <TouchableOpacity style={errorStyles.retryButton} onPress={retry} activeOpacity={0.8}>
+          <Text style={errorStyles.retryText}>Sayfayı Yeniden Yükle</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 export default function RootLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider>
-        <SafeAreaProvider>
-          <ThemedApp />
-        </SafeAreaProvider>
-      </ThemeProvider>
-    </GestureHandlerRootView>
+    <GlobalErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <ThemeProvider>
+          <SafeAreaProvider>
+            <ThemedApp />
+          </SafeAreaProvider>
+        </ThemeProvider>
+      </GestureHandlerRootView>
+    </GlobalErrorBoundary>
   );
 }
 
@@ -38,8 +121,10 @@ function ThemedApp() {
     data: null,
   });
 
-  // Bildirim altyapısını ve dinleyicilerini başlat
+  // Bildirim altyapısını ve dinleyicilerini başlat (Web ortamında güvenli)
   useEffect(() => {
+    if (Platform.OS === 'web') return;
+
     configureNotificationHandler();
     setupNotificationChannel();
 
@@ -66,7 +151,7 @@ function ThemedApp() {
     });
 
     return () => {
-      unsubscribe();
+      unsubscribe && unsubscribe();
     };
   }, [router]);
 
@@ -121,4 +206,80 @@ function ThemedApp() {
     </>
   );
 }
+
+const errorStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#1E1E2E',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 600,
+    backgroundColor: '#282A36',
+    borderRadius: 16,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#44475A',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  icon: {
+    fontSize: 40,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FF5555',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#F8F8F2',
+    textAlign: 'center',
+    marginBottom: 16,
+    opacity: 0.8,
+  },
+  errorBox: {
+    maxHeight: 220,
+    backgroundColor: '#181920',
+    borderRadius: 8,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#383A4A',
+  },
+  errorMessage: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FF79C6',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    marginBottom: 8,
+  },
+  errorStack: {
+    fontSize: 11,
+    color: '#8BE9FD',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    lineHeight: 16,
+  },
+  retryButton: {
+    backgroundColor: '#50FA7B',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  retryText: {
+    color: '#1E1E2E',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+});
 

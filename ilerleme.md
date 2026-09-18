@@ -4,6 +4,28 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-18] - UI Sadeleştirme & Defter Açma Butonunun Temizlenmesi
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Defterlerim ve Günlüğüm sayfalarında kullanıcıların doğrudan 3D interaktif kapak görseline dokunarak defteri/günlüğü açabilmesi nedeniyle, kapak altında yer alan gereksiz "Defteri Aç" butonu ve metni temizlenerek arayüz sadeleştirildi.
+- **Yapılan İyileştirmeler:**
+  1. `app/defterlerim/[notebookId]/index.js`: `openButtonLabel` prop'u kaldırıldı.
+  2. `components/notebook/NotebookCoverView.js`: `openButtonLabel` parametresi, JSX buton bloğu ve artık kalan `openNotebookButton` stilleri temizlendi. Kapak görselini sarmalayan `<InteractiveCover3D>` bileşeninin doğrudan `onPress` tetikleyicisi üzerinden sayfa açılışı ve PIN doğrulaması korundu.
+  3. `locales/{tr,en,de,es,fr}.json`: 5 dilde `notebooks.openButton` anahtarı temizlendi.
+  4. Web kararlılık kalkanı ve `_layout.js` içine `GlobalErrorBoundary` eklenerek beyaz ekran hatalarına karşı tam koruma sağlandı.
+
+### 📁 Değiştirilen Dosyalar
+- [`app/defterlerim/[notebookId]/index.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/defterlerim/[notebookId]/index.js)
+- [`components/notebook/NotebookCoverView.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/notebook/NotebookCoverView.js)
+- [`locales/tr.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/tr.json)
+- [`locales/en.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/en.json)
+- [`locales/de.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/de.json)
+- [`locales/es.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/es.json)
+- [`locales/fr.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/fr.json)
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+---
+
 ## 📅 [2026-09-17] - Kalıcı Sunucu Kararlılık Kalkanı: Metro Watcher Optimizasyonu & Akıllı Başlatıcı
 
 ### 🔍 Kapsam ve İhtiyaç

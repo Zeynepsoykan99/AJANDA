@@ -39,14 +39,16 @@
     "tailwindcss": "3.3.2"
   },
   "scripts": {
-    "start": "node scripts/start-server.js",
+    "prestart": "node scripts/free-port.js",
+    "start": "node scripts/free-port.js && node scripts/start-server.js --clear",
+    "preweb": "node scripts/free-port.js",
+    "web": "node scripts/free-port.js && node scripts/start-server.js --web --clear",
     "start:clean": "node scripts/clean.js",
     "clean": "node scripts/clean.js",
     "clean:dry": "node scripts/clean.js --no-start",
     "free-port": "node scripts/free-port.js",
-    "android": "node scripts/start-server.js --android",
-    "ios": "node scripts/start-server.js --ios",
-    "web": "node scripts/start-server.js --web",
+    "android": "node scripts/free-port.js && node scripts/start-server.js --android --clear",
+    "ios": "node scripts/free-port.js && node scripts/start-server.js --ios --clear",
     "postinstall": "node -e \"const fs = require('fs'); const p = 'node_modules/i18next/package.json'; if (fs.existsSync(p)) { const pkg = JSON.parse(fs.readFileSync(p)); if (pkg.module !== './dist/cjs/i18next.js') { pkg.module = './dist/cjs/i18next.js'; fs.writeFileSync(p, JSON.stringify(pkg, null, 2)); } }\""
   },
   "private": true,

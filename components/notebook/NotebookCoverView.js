@@ -56,7 +56,6 @@ const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
  *   load() -> defter | null
  *   updateMeta(fields) -> defter | null  (yalnızca kapak / varsayılan şablon alanları)
  * @param {(notebook) => string} getTitle - Üst bardaki başlık
- * @param {string} openButtonLabel - Defteri açma butonunun metni
  * @param {function} onOpen - Sayfalara geçiş
  * @param {boolean} [showSearch=false] - Sağ üstte arama butonu gösterilsin mi
  * @param {boolean} [showDatePicker=false] - Sağ üstte tarih filtreleme butonu gösterilsin mi
@@ -66,7 +65,6 @@ const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
 export default function NotebookCoverView({
   storage,
   getTitle,
-  openButtonLabel,
   onOpen,
   showSearch = false,
   showDatePicker = false,
@@ -554,24 +552,6 @@ export default function NotebookCoverView({
             </View>
           ) : null}
         </InteractiveCover3D>
-
-        {/* Günlüğü Aç Butonu */}
-        {openButtonLabel ? (
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={handleOpenNotebook}
-            style={[styles.openNotebookButton, { backgroundColor: colors.accent }]}
-            accessibilityLabel={openButtonLabel}
-          >
-            <MaterialCommunityIcons
-              name={notebook?.isLocked ? 'lock-outline' : 'book-open-page-variant'}
-              size={18}
-              color="#FFFFFF"
-              style={{ marginRight: 8 }}
-            />
-            <Text style={styles.openNotebookButtonText}>{openButtonLabel}</Text>
-          </TouchableOpacity>
-        ) : null}
       </View>
 
       {/* Kapak Seçim Modalı */}
@@ -774,25 +754,5 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 990,
     elevation: 15,
-  },
-  openNotebookButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 18,
-    paddingVertical: 12,
-    paddingHorizontal: 28,
-    borderRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.16,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  openNotebookButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: 0.4,
   },
 });

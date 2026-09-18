@@ -16,9 +16,9 @@ const { freePort } = require('./free-port');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 
-// 1. Port 8081'i temizle
-console.log('\n[AJANDA Shield] Port 8081 kontrol ediliyor...');
-freePort(8081);
+// 1. Port 8081 ve 8082'yi temizle (asılı zombi süreçleri sonlandır)
+console.log('\n[AJANDA Shield] Portlar (8081, 8082) kontrol ediliyor ve serbest bırakılıyor...');
+freePort([8081, 8082]);
 
 // 2. Bayat .expo kilit klasörünü temizle
 const expoDir = path.join(PROJECT_ROOT, '.expo');
@@ -31,7 +31,7 @@ if (fs.existsSync(expoDir)) {
   }
 }
 
-// 3. Ortam değişkenlerine 4 GB bellek aktarımı (tüm worker'lar miras alır)
+// 3. Ortam değişkenlerine 4 GB bellek aktarımı (tüm Metro worker'lar miras alır)
 const env = {
   ...process.env,
   NODE_OPTIONS: '--max-old-space-size=4096',
@@ -39,10 +39,11 @@ const env = {
 
 // 4. Komut satırı argümanlarını topla (--web, --android, --ios vb.)
 const userArgs = process.argv.slice(2);
+const filteredArgs = userArgs.filter(arg => arg !== '-c' && arg !== '--clear');
 const cliPath = path.join(PROJECT_ROOT, 'node_modules', 'expo', 'bin', 'cli');
-const expoArgs = ['start', '-c', ...userArgs];
+const expoArgs = ['start', '--clear', ...filteredArgs];
 
-console.log('[AJANDA Shield] Metro Bundler 4GB RAM limiti ve temiz önbellekle (-c) başlatılıyor...');
+console.log('[AJANDA Shield] Metro Bundler 4GB RAM limiti ve otomatik önbellek temizleme (--clear) ile başlatılıyor...');
 console.log(`[AJANDA Shield] Komut: expo ${expoArgs.join(' ')}`);
 console.log('[AJANDA Shield] Adres: http://localhost:8081\n');
 
@@ -72,18 +73,18 @@ function cleanExit() {
     }
   } catch {}
 
-  freePort(8081);
+  freePort([8081, 8082]);
   process.exit(0);
 }
 
 process.on('SIGINT', cleanExit);
 process.on('SIGTERM', cleanExit);
 process.on('exit', () => {
-  freePort(8081);
+  freePort([8081, 8082]);
 });
 
 child.on('exit', (code) => {
-  freePort(8081);
+  freePort([8081, 8082]);
   if (!isExiting) {
     process.exit(code || 0);
   }

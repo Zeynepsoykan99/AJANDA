@@ -245,7 +245,6 @@
     "emptyDesc": "Erstelle dein erstes Notizbuch mit der + Taste oben rechts.",
     "emptyFilterTitle": "Keine Notizbücher gefunden",
     "emptyFilterDesc": "Am {{date}} wurden keine Notizbücher geändert.",
-    "openButton": "📓 Notizbuch Öffnen",
 
     "singlePageWarning": "Das Notizbuch muss mindestens eine Seite enthalten.",
     "notFound": "Notizbuch nicht gefunden",

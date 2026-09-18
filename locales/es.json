@@ -245,7 +245,6 @@
     "emptyDesc": "Crea tu primer cuaderno con el botón + de arriba a la derecha.",
     "emptyFilterTitle": "No se encontraron cuadernos",
     "emptyFilterDesc": "No hay cuadernos modificados el {{date}}.",
-    "openButton": "📓 Abrir Cuaderno",
 
     "singlePageWarning": "El cuaderno debe contener al menos una página.",
     "notFound": "Cuaderno no encontrado",

@@ -245,7 +245,6 @@
     "emptyDesc": "Créez votre premier carnet avec le bouton + en haut à droite.",
     "emptyFilterTitle": "Aucun carnet trouvé",
     "emptyFilterDesc": "Aucun carnet modifié le {{date}}.",
-    "openButton": "📓 Ouvrir le Carnet",
 
     "singlePageWarning": "Le carnet doit contenir au moins une page.",
     "notFound": "Carnet introuvable",

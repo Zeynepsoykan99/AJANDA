@@ -245,7 +245,6 @@
     "emptyDesc": "Create your first notebook with the + button at the top right.",
     "emptyFilterTitle": "No notebooks found",
     "emptyFilterDesc": "No notebooks modified on {{date}}.",
-    "openButton": "📓 Open Notebook",
 
     "singlePageWarning": "The notebook must contain at least one page.",
     "notFound": "Notebook not found",

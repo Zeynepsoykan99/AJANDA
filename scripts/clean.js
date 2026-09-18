@@ -71,8 +71,8 @@ function runClean(options = {}) {
   console.log('🧹 AJANDA - SİSTEM VE SUNUCU TEMİZLİĞİ BAŞLIYOR');
   console.log('=============================================\n');
 
-  // 1. Port 8081'i serbest bırak
-  freePort(8081);
+  // 1. Port 8081 ve 8082'yi serbest bırak
+  freePort([8081, 8082]);
 
   // 2. Proje önbelleklerini temizle
   removeDirSafe(path.join(PROJECT_ROOT, '.expo'));
@@ -87,13 +87,13 @@ function runClean(options = {}) {
   console.log('\n✅ TÜM ÖNBELLEKLER VE ASILI SÜREÇLER TEMİZLENDİ!\n');
 
   if (shouldStart) {
-    console.log('🚀 Expo Metro Bundler 4GB RAM limitiyle (-c) başlatılıyor...');
+    console.log('🚀 Expo Metro Bundler 4GB RAM limiti ve --clear bayrağıyla başlatılıyor...');
     console.log('👉 Yerel adres: http://localhost:8081\n');
 
     const cliPath = path.join(PROJECT_ROOT, 'node_modules', 'expo', 'bin', 'cli');
     const child = spawn(
       process.execPath,
-      ['--max-old-space-size=4096', cliPath, 'start', '-c'],
+      ['--max-old-space-size=4096', cliPath, 'start', '--clear'],
       {
         cwd: PROJECT_ROOT,
         stdio: 'inherit',

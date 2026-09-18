@@ -29,7 +29,6 @@ export default function NotebookCoverScreen() {
   return (
     <NotebookCoverView
       storage={storage}
-      openButtonLabel={t('notebooks.openButton', '📓 Defteri Aç')}
       onOpen={handleOpen}
     />
   );

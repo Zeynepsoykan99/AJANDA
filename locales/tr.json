@@ -245,7 +245,6 @@
     "emptyDesc": "Sağ üstteki + butonuyla ilk defterini oluştur.",
     "emptyFilterTitle": "Defter bulunamadı",
     "emptyFilterDesc": "{{date}} tarihinde düzenlenmiş defter yok.",
-    "openButton": "📓 Defteri Aç",
 
     "singlePageWarning": "Defterde en az bir sayfa bulunmalıdır.",
     "notFound": "Defter bulunamadı",
