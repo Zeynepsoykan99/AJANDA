@@ -4,6 +4,39 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-23] - PDF Dışa Aktarmada Boş Sayfa Hatasının Giderilmesi & Sesli Not Transkripsiyon Teşhisi
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Cihazda doğrulanan iki hata: (1) Sayfa PDF olarak dışa aktarıldığında PDF'in içi boş geliyordu, (2) Sesli notlar metne dönüşmüyordu. Kapsam yalnızca bu iki hatayla sınırlı tutuldu.
+
+### 🐛 1. PDF Boş Çıkma Hatası (ÇÖZÜLDÜ)
+- **Kök Neden:** Expo SDK 54'te `expo-file-system` ana girişi artık yeni `File`/`Directory` API'sini export ediyor; eski (legacy) metodlar `legacyWarnings.ts` üzerinden **çalışma anında hata fırlatıyor** ve `EncodingType` sabiti bu girişten **hiç export edilmiyor**.
+  - `services/pdfExportService.js` içindeki `FileSystem.EncodingType.Base64` ifadesi `undefined` üzerinden okuma yaptığı için `TypeError` fırlatıyordu.
+  - Hata, `catch` bloğundaki sessiz fallback tarafından yutuluyor ve görsel HTML'e `<img src="file://...">` olarak gömülüyordu. `expo-print` WebView'ı yerel dosya yolunu yükleyemediği için PDF yalnızca arka plan rengiyle, yani **boş** üretiliyordu.
+  - Ek bulgu: `captureRef(result: 'tmpfile')` Android'de `file:///...` döndürürken **iOS'ta şemasız ham yol** (`/var/.../x.png`) döndürüyor (`RNViewShot.mm` → `RCTTempFilePath`). Dosya sisteminden geri okuma yolunda iOS için ayrıca URI normalizasyonu gerekiyordu.
+- **Çözüm (dosya sistemi adımının tamamen kaldırılması):**
+  1. `components/notebook/NotebookPagesView.js`: `captureRef` çağrısı `result: 'tmpfile'` yerine **`result: 'data-uri'`** ile yapılıyor; base64 görsel doğrudan bellekte alınıyor. Geçici dosyaya yazma ve geri okuma adımı ortadan kalktı.
+  2. `services/pdfExportService.js`: `expo-file-system` bağımlılığı ve base64 okuma bloğu tamamen kaldırıldı. Böylece legacy/yeni API seçimi, URI şeması ve dosya izni belirsizliklerinin üçü birden ortadan kalktı. Base64 dizesi zaten HTML'e gömüldüğü için ek bellek maliyeti oluşmadı.
+  3. **Sessiz fallback kaldırıldı:** `convertImageToPdf` artık `data:` URI almazsa hatayı `console.error` ile loglayıp `throw` ediyor. Çağıran taraftaki `try/catch` bunu yakalayıp kullanıcıya "Dışa Aktarma Hatası" uyarısını gösteriyor; hata artık boş PDF olarak gizlenmiyor.
+
+### 🔬 2. Sesli Not Metne Dönüşmüyor (TEŞHİS EDİLDİ — KOD DEĞİŞTİRİLMEDİ)
+- **Kök Neden (çalışma ortamı engeli):** `expo-speech-recognition@57.1.0`, `ExpoSpeechRecognitionModule.ts` içinde modül yüklenirken `requireNativeModule("ExpoSpeechRecognition")` çağırıyor. Bu yerel modül **Expo Go'da bulunmadığı için** çağrı hata fırlatıyor; `services/transcriptionService.js` içindeki koruyucu `try/catch` modülü `null`'a düşürüyor, `isTranscriptionAvailable()` `false` dönüyor ve `AudioRecorderModal` transkripsiyonu hiç başlatmadan `transcriptStatus: null` yazıyor. Sonuç: sessizce metin üretilmiyor.
+- **Ortam kanıtı:** Projede `android/`, `ios/` yerel klasörleri, `eas.json` ve `expo-dev-client` bağımlılığı yok → development build alınmamış, uygulama Expo Go ile çalışıyor.
+- **İkinci, bağımsız engel (development build alınsa bile geçerli):** `services/audioService.js` kayıtları `Audio.RecordingOptionsPresets.HIGH_QUALITY` ile alıyor → **44100 Hz, 2 kanal, AAC `.m4a`**. `expo-speech-recognition` dosyadan transkripsiyon için 16000 Hz WAV (PCM 16-bit) / MP3 / OGG biçimlerini destekliyor; `.m4a`/AAC desteklenen biçimler arasında değil. Ayrıca `transcriptionService.js` `audioSource` içinde `sampleRate: 44100` gönderiyor ve `audioEncoding` belirtmiyor.
+- **Karar kullanıcıya bırakıldı:** Bu bir kod hatası olmadığı, çalışma ortamı kısıtı olduğu için hiçbir dosya değiştirilmedi.
+
+### 📁 Değiştirilen Dosyalar
+- [`services/pdfExportService.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/services/pdfExportService.js)
+- [`components/notebook/NotebookPagesView.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/notebook/NotebookPagesView.js)
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- `tests/` altındaki 6 test dosyasının tamamı geçti (`node tests/*.test.js`).
+- Değiştirilen iki dosya `babel-preset-expo` ile sözdizimi denetiminden geçti; 109 kaynak dosyada kırık relative import bulunmadı.
+- **Cihazda doğrulanmadı:** PDF çıktısının içeriği gerçek cihazda test edilmelidir.
+
+---
+
 ## 📅 [2026-09-18] - UI Sadeleştirme & Defter Açma Butonunun Temizlenmesi
 
 ### 🔍 Kapsam ve İhtiyaç

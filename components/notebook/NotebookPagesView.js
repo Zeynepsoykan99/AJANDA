@@ -1144,10 +1144,13 @@ export default function NotebookPagesView({
       }
 
       // 3. Görseli tam çözünürlükte yakala
+      // NOT: 'data-uri' ile base64 doğrudan alınır. 'tmpfile' geçici bir dosya yolu döndürür
+      // (iOS'ta şemasız ham yol) ve expo-print'in WebView'ı bu yolu yükleyemediği için
+      // PDF boş çıkardı.
       const imageUri = await captureRef(targetRef, {
         format: 'png',
         quality: 1,
-        result: 'tmpfile',
+        result: 'data-uri',
       });
 
       // 4. PDF'e dönüştür (A4 kenarlıksız tam sayfa)
