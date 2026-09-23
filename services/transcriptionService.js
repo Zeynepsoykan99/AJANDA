@@ -2,7 +2,15 @@
  * TranscriptionService - AJANDA Sesli Not Transkripsiyon (Speech-to-Text) Servisi
  *
  * Cihaz üzerinde yerel (on-device) ses tanıma motorunu (iOS: SFSpeechRecognizer, Android: SpeechRecognizer)
- * kullanarak kaydedilen .m4a ses dosyalarını metne dönüştürür.
+ * kullanarak sesi metne dönüştürür. Motor yalnızca 16 kHz mono PCM WAV (ayrıca 16 kHz MP3/OGG)
+ * girdisini kabul ettiği için tüm kayıt zinciri bu formata göre kurulmuştur.
+ *
+ * İki çalışma yolu:
+ * - Dosya tabanlı tanıma (`transcribeAudioFile`): iOS'ta expo-av LINEARPCM üretebildiği için
+ *   kaydedilmiş WAV dosyası sonradan metne dönüştürülür.
+ * - Canlı tanıma + persist (`startLiveRecognition`): Android'de expo-av STT-uyumlu hiçbir format
+ *   üretemediği için kayıt doğrudan tanıma motoruyla yapılır; tek geçişte hem transkript hem de
+ *   16 kHz mono PCM WAV dosyası elde edilir.
  *
  * Güvenli Mimari:
  * - Expo Go veya yerel modül bulunmayan ortamlarda çökmeyi önleyen yalıtım (safe fallback).
@@ -13,13 +21,22 @@
 import { Platform } from 'react-native';
 
 // Modülü güvenli şekilde yükle (Expo Go veya unlinked ortamlarda çökme olmaması için)
+// NOT: Paketin index'i modül gövdesinde requireNativeModule çağırdığı için, yerel modül
+// bulunmayan ortamlarda bu require hata fırlatır. Sabitler de aynı require üzerinden alınır.
 let ExpoSpeechRecognitionModule = null;
+let AudioEncodingAndroid = null;
 try {
   const speechRecognitionModule = require('expo-speech-recognition');
   ExpoSpeechRecognitionModule = speechRecognitionModule.ExpoSpeechRecognitionModule;
+  AudioEncodingAndroid = speechRecognitionModule.AudioEncodingAndroid || null;
 } catch (e) {
   ExpoSpeechRecognitionModule = null;
+  AudioEncodingAndroid = null;
 }
+
+// Kayıt ve tanıma zincirinin tamamı bu örnekleme hızına göre kurulur
+// (expo-speech-recognition dosyadan tanıma için 16 kHz mono PCM bekliyor).
+const SPEECH_SAMPLE_RATE = 16000;
 
 // Clipboard modülünü güvenli yükle
 let ExpoClipboard = null;
@@ -220,15 +237,22 @@ export const transcribeAudioFile = async (
         subscriptions.push(endSub);
       }
 
-      // Tanıma motorunu dosya kaynağıyla başlat
+      // Tanıma motorunu dosya kaynağıyla başlat.
+      // sampleRate/audioEncoding, kaydın gerçek formatıyla (16 kHz mono PCM) eşleşmek
+      // zorunda; eşleşmezse motor 'audio-capture' hatası veriyor veya boş sonuç dönüyor.
       ExpoSpeechRecognitionModule.start({
         lang: targetLang,
         addsPunctuation: true,
         continuous: false,
+        // Uzun kayıtlarda ağ tabanlı tanıma kesildiği için iOS'ta cihaz üzeri tanıma tercih edilir
+        requiresOnDeviceRecognition: Platform.OS === 'ios',
         audioSource: {
           uri: fileUri,
-          sampleRate: 44100,
+          sampleRate: SPEECH_SAMPLE_RATE,
           audioChannels: 1,
+          ...(AudioEncodingAndroid
+            ? { audioEncoding: AudioEncodingAndroid.ENCODING_PCM_16BIT }
+            : {}),
         },
       });
     } catch (startError) {
@@ -239,6 +263,210 @@ export const transcribeAudioFile = async (
       });
     }
   });
+};
+
+/**
+ * Cihazın canlı tanıma sırasında sesi dosyaya kaydedebilmesini (persist) destekleyip
+ * desteklemediğini bildirir. Bu özellik Android 13+ ve iOS gerektirir.
+ * @returns {boolean}
+ */
+export const supportsLiveRecording = () => {
+  if (!ExpoSpeechRecognitionModule) return false;
+  try {
+    return typeof ExpoSpeechRecognitionModule.supportsRecording === 'function'
+      ? Boolean(ExpoSpeechRecognitionModule.supportsRecording())
+      : false;
+  } catch (error) {
+    console.warn('supportsLiveRecording kontrol hatası:', error);
+    return false;
+  }
+};
+
+/**
+ * Canlı mikrofon tanıması başlatır ve aynı anda sesi WAV dosyasına kaydeder.
+ *
+ * Android'de expo-av hiçbir STT-uyumlu format üretemediği için kayıt bu yolla yapılır:
+ * tek geçişte hem transkript hem de 16 kHz mono PCM WAV dosyası elde edilir.
+ *
+ * @param {object} [options]
+ * @param {string} [options.language='tr-TR'] - i18n dil kodu veya BCP-47 kodu
+ * @param {string} [options.outputFileName] - Kaydedilecek dosya adı (ör. 'note_123.wav')
+ * @param {function} [options.onPartialTranscript] - (text) => void, canlı ara sonuçlar
+ * @param {function} [options.onAutoStop] - Motor kendiliğinden durursa çağrılır
+ * @returns {Promise<{ success: boolean, stop?: function, abort?: function, error?: string, isUnavailable?: boolean }>}
+ */
+export const startLiveRecognition = async ({
+  language = 'tr-TR',
+  outputFileName,
+  onPartialTranscript,
+  onAutoStop,
+} = {}) => {
+  if (!ExpoSpeechRecognitionModule || !isTranscriptionAvailable()) {
+    return { success: false, isUnavailable: true, error: 'transcription_not_available' };
+  }
+
+  if (!supportsLiveRecording()) {
+    return { success: false, isUnavailable: true, error: 'recording_not_supported' };
+  }
+
+  const permission = await requestTranscriptionPermissions();
+  if (!permission.granted) {
+    return { success: false, error: 'permission_denied' };
+  }
+
+  const targetLang = resolveTranscriptionLanguage(language);
+
+  const subscriptions = [];
+  let finalTranscript = '';
+  let audioUri = null;
+  let recognitionError = null;
+  let endReceived = false;
+  let audioEndReceived = false;
+  let isFinished = false;
+  let pendingResult = null;
+  let resolveStop = null;
+  let stopTimer = null;
+
+  const removeListeners = () => {
+    subscriptions.forEach((sub) => {
+      try {
+        if (typeof sub?.remove === 'function') sub.remove();
+      } catch (e) {}
+    });
+    subscriptions.length = 0;
+  };
+
+  const buildResult = () => ({
+    success: true,
+    transcript: finalTranscript.trim(),
+    uri: audioUri,
+    language: targetLang,
+    error: recognitionError,
+  });
+
+  const settle = () => {
+    if (isFinished) return;
+    isFinished = true;
+    if (stopTimer) clearTimeout(stopTimer);
+    removeListeners();
+
+    const result = buildResult();
+    if (resolveStop) {
+      resolveStop(result);
+    } else {
+      // Motor kullanıcı durdurmadan kendiliğinden bitti (sessizlik, süre limiti vb.)
+      pendingResult = result;
+      if (onAutoStop) onAutoStop(result);
+    }
+  };
+
+  const maybeSettle = () => {
+    if (endReceived && audioEndReceived) settle();
+  };
+
+  try {
+    if (typeof ExpoSpeechRecognitionModule.addListener === 'function') {
+      subscriptions.push(
+        ExpoSpeechRecognitionModule.addListener('result', (event) => {
+          const best = event?.results?.[0]?.transcript || '';
+          if (!best) return;
+          finalTranscript = best;
+          if (onPartialTranscript) onPartialTranscript(best);
+        })
+      );
+
+      subscriptions.push(
+        ExpoSpeechRecognitionModule.addListener('error', (event) => {
+          // Hata yutulmuyor: kaydedilip sonuçla birlikte çağırana bildiriliyor
+          console.warn('Canlı tanıma hata olayı:', event?.error, event?.message);
+          recognitionError = event?.error || 'recognition_failed';
+        })
+      );
+
+      subscriptions.push(
+        ExpoSpeechRecognitionModule.addListener('audioend', (event) => {
+          audioUri = event?.uri || audioUri;
+          audioEndReceived = true;
+          maybeSettle();
+        })
+      );
+
+      subscriptions.push(
+        ExpoSpeechRecognitionModule.addListener('end', () => {
+          endReceived = true;
+          maybeSettle();
+        })
+      );
+    }
+
+    ExpoSpeechRecognitionModule.start({
+      lang: targetLang,
+      interimResults: true,
+      continuous: true,
+      addsPunctuation: true,
+      // Uzun kayıtlarda ağ tabanlı tanıma kesilebildiği için iOS'ta cihaz üzeri tanıma tercih edilir
+      requiresOnDeviceRecognition: Platform.OS === 'ios',
+      recordingOptions: {
+        persist: true,
+        ...(outputFileName ? { outputFileName } : {}),
+        // Aşağıdaki iki alan yalnızca iOS'ta geçerli; Android zaten 16 kHz mono PCM üretiyor
+        outputSampleRate: SPEECH_SAMPLE_RATE,
+        outputEncoding: 'pcmFormatInt16',
+      },
+    });
+  } catch (startError) {
+    console.warn('startLiveRecognition start hatası:', startError);
+    removeListeners();
+    return { success: false, error: startError.message || 'start_failed' };
+  }
+
+  return {
+    success: true,
+    /**
+     * Kaydı ve tanımayı durdurur, dosya yazımının bitmesini bekler.
+     * @returns {Promise<{ success, transcript, uri, language, error }>}
+     */
+    stop: () =>
+      new Promise((resolve) => {
+        if (pendingResult) {
+          resolve(pendingResult);
+          return;
+        }
+        if (isFinished) {
+          resolve(buildResult());
+          return;
+        }
+
+        resolveStop = resolve;
+
+        // Güvenlik zamanlayıcısı: 'audioend'/'end' gelmezse asılı kalmayı engeller
+        stopTimer = setTimeout(() => {
+          if (isFinished) return;
+          console.warn('Canlı tanıma durdurma zaman aşımı; eldeki sonuçla devam ediliyor.');
+          isFinished = true;
+          removeListeners();
+          resolve(buildResult());
+        }, 8000);
+
+        try {
+          ExpoSpeechRecognitionModule.stop();
+        } catch (e) {
+          console.warn('Canlı tanıma stop hatası:', e);
+        }
+      }),
+
+    /**
+     * Kaydı iptal eder (sonuç beklenmez).
+     */
+    abort: () => {
+      if (stopTimer) clearTimeout(stopTimer);
+      isFinished = true;
+      removeListeners();
+      try {
+        if (ExpoSpeechRecognitionModule?.abort) ExpoSpeechRecognitionModule.abort();
+      } catch (e) {}
+    },
+  };
 };
 
 /**
@@ -269,8 +497,10 @@ export const copyTextToClipboard = async (text) => {
 
 export const TranscriptionService = {
   isTranscriptionAvailable,
+  supportsLiveRecording,
   requestTranscriptionPermissions,
   transcribeAudioFile,
+  startLiveRecognition,
   resolveTranscriptionLanguage,
   copyTextToClipboard,
 };

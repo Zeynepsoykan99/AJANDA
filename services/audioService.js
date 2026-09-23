@@ -16,6 +16,33 @@ import { Alert, Linking, Platform } from 'react-native';
 const AUDIO_DIR = `${FileSystem.documentDirectory}audio_notes/`;
 
 /**
+ * Konuşma tanıma (STT) ile uyumlu kayıt ayarları.
+ *
+ * iOS: `expo-speech-recognition` dosyadan tanıma için 16 kHz mono PCM WAV bekliyor.
+ * expo-av iOS'ta LINEARPCM'i desteklediği için bu format doğrudan üretilebiliyor.
+ *
+ * Android: expo-av hiçbir STT-uyumlu format üretemiyor (`AndroidOutputFormat` içinde
+ * WAV/PCM yok, `AndroidAudioEncoder` içinde PCM/MP3/Vorbis yok). Bu yüzden Android'de
+ * kayıt + tanıma `expo-speech-recognition`ın kendi motoruyla (canlı tanıma + persist)
+ * yapılır; buradaki AAC/.m4a ayarları yalnızca o motorun kullanılamadığı yedek yolda
+ * (Expo Go veya Android 12 ve altı) devreye girer.
+ */
+export const SPEECH_RECORDING_OPTIONS = {
+  ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
+  ios: {
+    extension: '.wav',
+    outputFormat: Audio.IOSOutputFormat.LINEARPCM,
+    audioQuality: Audio.IOSAudioQuality.MAX,
+    sampleRate: 16000,
+    numberOfChannels: 1,
+    bitRate: 256000,
+    linearPCMBitDepth: 16,
+    linearPCMIsBigEndian: false,
+    linearPCMIsFloat: false,
+  },
+};
+
+/**
  * Kalıcı ses dizininin varlığını garanti eder
  */
 export const ensureAudioDirectory = async () => {
@@ -116,7 +143,7 @@ export const startRecording = async ({ t, onStatusUpdate } = {}) => {
     });
 
     const recording = new Audio.Recording();
-    await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+    await recording.prepareToRecordAsync(SPEECH_RECORDING_OPTIONS);
 
     if (onStatusUpdate) {
       recording.setOnRecordingStatusUpdate(onStatusUpdate);

@@ -31,6 +31,8 @@ import {
 import {
   transcribeAudioFile,
   isTranscriptionAvailable,
+  supportsLiveRecording,
+  startLiveRecognition,
   resolveTranscriptionLanguage,
 } from '../../services/transcriptionService';
 
@@ -64,6 +66,39 @@ export default function AudioRecorderModal({
   const recordingRef = useRef(null);
   const tempUriRef = useRef(null);
   const durationMsRef = useRef(0);
+
+  // Android canlı tanıma oturumu (expo-speech-recognition kendi kayıt motoruyla)
+  const liveSessionRef = useRef(null);
+  const liveTranscriptRef = useRef(null);
+  const elapsedMsRef = useRef(0);
+  const timerRef = useRef(null);
+
+  /**
+   * Android'de expo-av, konuşma tanımanın kabul ettiği hiçbir formatta kayıt yapamadığı için
+   * (WAV/PCM, MP3, OGG-Vorbis desteklenmiyor) kayıt doğrudan tanıma motoruyla yapılır:
+   * tek geçişte hem transkript hem de 16 kHz mono PCM WAV dosyası elde edilir.
+   * iOS'ta expo-av LINEARPCM üretebildiği için mevcut dosya tabanlı akış korunur.
+   */
+  const shouldUseLiveRecognition = () =>
+    Platform.OS === 'android' && isTranscriptionAvailable() && supportsLiveRecording();
+
+  const startElapsedTimer = () => {
+    const startedAt = Date.now();
+    elapsedMsRef.current = 0;
+    setElapsedMs(0);
+    timerRef.current = setInterval(() => {
+      const ms = Date.now() - startedAt;
+      elapsedMsRef.current = ms;
+      setElapsedMs(ms);
+    }, 200);
+  };
+
+  const stopElapsedTimer = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  };
 
   // Nabız (Pulse) Animasyonu Değerleri
   const pulseScale = useSharedValue(1);
@@ -102,7 +137,21 @@ export default function AudioRecorderModal({
     }
   }, [visible]);
 
+  // Bileşen kaldırılırsa süre sayacının arkada çalışmaya devam etmesini engelle
+  useEffect(() => () => stopElapsedTimer(), []);
+
   const cleanup = async () => {
+    stopElapsedTimer();
+
+    // Aktif canlı tanıma oturumu varsa iptal et
+    if (liveSessionRef.current) {
+      try {
+        liveSessionRef.current.abort();
+      } catch (e) {}
+      liveSessionRef.current = null;
+    }
+    liveTranscriptRef.current = null;
+
     // Aktif kayıt varsa durdur
     if (recordingRef.current) {
       try {
@@ -128,6 +177,7 @@ export default function AudioRecorderModal({
 
     setRecordState('idle');
     setElapsedMs(0);
+    elapsedMsRef.current = 0;
     setIsPreviewPlaying(false);
     setPreviewPositionMs(0);
     durationMsRef.current = 0;
@@ -138,10 +188,35 @@ export default function AudioRecorderModal({
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
+      liveTranscriptRef.current = null;
+
+      // Android: kayıt + tanıma tek geçişte, tanıma motorunun kendi kayıt yoluyla
+      if (shouldUseLiveRecognition()) {
+        const session = await startLiveRecognition({
+          language: i18n.language,
+          outputFileName: `note_${Date.now()}.wav`,
+          onAutoStop: handleLiveAutoStop,
+        });
+
+        if (session.success) {
+          liveSessionRef.current = session;
+          startElapsedTimer();
+          setRecordState('recording');
+          return;
+        }
+
+        // Canlı tanıma başlatılamadıysa sessizce yutmuyoruz; expo-av yoluna düşüyoruz
+        console.warn(
+          'Canlı tanıma başlatılamadı, expo-av kaydına geçiliyor:',
+          session.error
+        );
+      }
+
       const result = await startRecording({
         t,
         onStatusUpdate: (status) => {
           if (status.isRecording) {
+            elapsedMsRef.current = status.durationMillis;
             setElapsedMs(status.durationMillis);
           }
         },
@@ -156,8 +231,54 @@ export default function AudioRecorderModal({
     }
   };
 
+  /**
+   * Tanıma motoru kullanıcı durdurmadan kendiliğinden bittiğinde (sessizlik, süre limiti)
+   * eldeki kayıt ve transkript korunur, arayüz 'recorded' durumuna geçer.
+   */
+  const handleLiveAutoStop = (result) => {
+    liveSessionRef.current = null;
+    stopElapsedTimer();
+
+    if (result?.uri) {
+      tempUriRef.current = result.uri;
+      liveTranscriptRef.current = result.transcript || null;
+      durationMsRef.current = elapsedMsRef.current;
+      setRecordState('recorded');
+    } else {
+      console.warn('Canlı tanıma ses dosyası üretmeden sona erdi:', result?.error);
+      setRecordState('idle');
+    }
+  };
+
   // Kaydı Durdur
   const handleStopRecording = async () => {
+    // Android canlı tanıma oturumu: durdur, dosya yazımını bekle, transkripti al
+    if (liveSessionRef.current) {
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+        const session = liveSessionRef.current;
+        liveSessionRef.current = null;
+        const result = await session.stop();
+        stopElapsedTimer();
+
+        if (result?.uri) {
+          tempUriRef.current = result.uri;
+          liveTranscriptRef.current = result.transcript || null;
+          durationMsRef.current = elapsedMsRef.current;
+          setRecordState('recorded');
+        } else {
+          console.warn('Canlı tanıma ses dosyası döndürmedi:', result?.error);
+          setRecordState('idle');
+        }
+      } catch (error) {
+        console.warn('Canlı tanıma durdurma hatası:', error);
+        stopElapsedTimer();
+        setRecordState('idle');
+      }
+      return;
+    }
+
     if (!recordingRef.current) return;
 
     try {
@@ -221,6 +342,16 @@ export default function AudioRecorderModal({
   const handleResetRecording = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
+    stopElapsedTimer();
+    if (liveSessionRef.current) {
+      try {
+        liveSessionRef.current.abort();
+      } catch (e) {}
+      liveSessionRef.current = null;
+    }
+    liveTranscriptRef.current = null;
+    elapsedMsRef.current = 0;
+
     if (previewSound) {
       await previewSound.stopAsync().catch(() => {});
       await previewSound.unloadAsync().catch(() => {});
@@ -260,19 +391,28 @@ export default function AudioRecorderModal({
 
       const isAvailable = isTranscriptionAvailable();
 
+      // Android canlı tanıma yolunda transkript kayıtla birlikte zaten üretildi
+      const liveTranscript = liveTranscriptRef.current;
+      const hasLiveTranscript = Boolean(liveTranscript && liveTranscript.trim());
+
       const newAudioNote = {
         id: `audio_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
         uri: permanentUri,
         durationMs: durationMsRef.current || elapsedMs || 1000,
         createdAt: new Date().toISOString(),
         title: t('audio.defaultTitle', 'Sesli Not'),
-        transcript: null,
+        transcript: hasLiveTranscript ? liveTranscript.trim() : null,
         transcriptLanguage: resolveTranscriptionLanguage(i18n.language),
-        transcriptStatus: isAvailable ? 'pending' : null,
+        transcriptStatus: hasLiveTranscript
+          ? 'completed'
+          : isAvailable
+          ? 'pending'
+          : null,
       };
 
       // Geçici URI ref'ini sıfırla ki cleanup silmesin
       tempUriRef.current = null;
+      liveTranscriptRef.current = null;
 
       if (onSave) {
         onSave(newAudioNote);
@@ -281,7 +421,7 @@ export default function AudioRecorderModal({
       onClose && onClose();
 
       // Arka planda asenkron transkripsiyonu başlat (UI bloklanmaz)
-      if (isAvailable && onTranscriptReady) {
+      if (!hasLiveTranscript && isAvailable && onTranscriptReady) {
         transcribeAudioFile(permanentUri, { language: i18n.language })
           .then((res) => {
             if (res.success && res.transcript) {

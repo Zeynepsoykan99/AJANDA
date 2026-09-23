@@ -34,7 +34,8 @@
       "expo-localization",
       "expo-local-authentication",
       "expo-speech-recognition",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-font"
     ]
   }
 }

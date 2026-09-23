@@ -4,6 +4,54 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-23] - Development Build'e Geçiş & Konuşmayı Metne Dökme (STT) Hatasının Giderilmesi
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Sesli notların metne dönüşmemesi hatası, Expo Go yerine development build'e geçilerek ve kayıt formatı uyumsuzluğu giderilerek kalıcı olarak çözüldü. Kapsam yalnızca bu hatayla ve gerektirdiği altyapı ayarlarıyla sınırlı tutuldu.
+
+### 🧬 1. Kök Nedenler (koddan doğrulandı)
+- **Çalışma ortamı engeli:** `expo-speech-recognition@57.1.0`, `ExpoSpeechRecognitionModule.ts` içinde modül gövdesinde `requireNativeModule("ExpoSpeechRecognition")` çağırıyor. Bu yerel modül Expo Go'da bulunmadığı için çağrı hata fırlatıyor, `transcriptionService.js`'teki koruyucu `try/catch` modülü `null`'a düşürüyor ve transkripsiyon hiç başlatılmadan sessizce atlanıyordu.
+- **Format uyumsuzluğu (development build'de de geçerliydi):** Kayıtlar `Audio.RecordingOptionsPresets.HIGH_QUALITY` ile 44100 Hz, 2 kanal, AAC `.m4a` olarak alınıyordu. `expo-speech-recognition` dosyadan tanıma için 16 kHz WAV/PCM, MP3 veya OGG bekliyor. Ayrıca `transcriptionService.js` `audioSource` içinde `sampleRate: 44100` gönderiyor ve `audioEncoding` belirtmiyordu.
+- **Platform asimetrisi:** expo-av'ın `AndroidOutputFormat` enum'unda WAV/PCM, `AndroidAudioEncoder` enum'unda PCM/MP3/Vorbis **yok** → Android'de STT-uyumlu kayıt üretmek mümkün değil. iOS'ta ise `IOSOutputFormat.LINEARPCM` mevcut → 16 kHz mono WAV kaydı mümkün.
+
+### 🏗️ 2. Development Build Altyapısı
+1. `expo-dev-client@~6.0.21` bağımlılığı eklendi (`npx expo install`).
+2. `eas.json` [NEW] oluşturuldu: `development` profili (`developmentClient: true`, `distribution: "internal"`, Android `apk`, iOS gerçek cihaz).
+3. **Build engelleri giderildi (expo-doctor ile tespit):**
+   - `expo-font@~14.0.12` eklendi. `@expo/vector-icons`ın zorunlu peer bağımlılığıydı; Expo Go bunu kendi içinde taşıdığı için eksikliği fark edilmiyordu, development build'de ikon kaynaklı çökmeye yol açacaktı. Config plugin olarak `app.json`a da eklendi.
+   - `expo-clipboard` `^57.0.2` → `~8.0.8`'e düşürüldü. Kurulu sürüm SDK 57'ye göre derlenmişti (kendi `devDependencies.expo: 57.0.22`), proje ise SDK 54 kullanıyor; development build'de yerel kodun SDK 54 ile derlenmesi hata verecekti. Kullanılan tek API (`setStringAsync`) iki sürümde de aynı.
+4. `expo-speech-recognition` config plugin'i zaten `app.json`da kayıtlıydı; introspection ile doğrulandı: iOS `NSMicrophoneUsageDescription` ve `NSSpeechRecognitionUsageDescription` korunuyor, Android `RECORD_AUDIO` izni ve tanıma servisi `queries` kaydı ekleniyor.
+5. `npx expo-doctor`: **18/18 kontrol geçti** (öncesinde 16/18).
+
+### 🎙️ 3. Hibrit STT Mimarisi (platform başına en doğal yöntem)
+- **iOS — dosya tabanlı tanıma:** `services/audioService.js` içine `SPEECH_RECORDING_OPTIONS` eklendi; iOS kaydı artık `.wav` / `LINEARPCM` / 16000 Hz / 1 kanal / 16-bit. Mevcut "kaydet → sonra transkribe et" akışı korundu.
+- **Android — canlı tanıma + persist:** `services/transcriptionService.js` içine `startLiveRecognition()` ve `supportsLiveRecording()` eklendi. `ExpoSpeechRecognitionModule.start({ recordingOptions: { persist: true } })` ile tek geçişte hem transkript hem de 16 kHz mono PCM WAV dosyası üretiliyor. `result`, `error`, `audiostart`, `audioend` ve `end` olayları dinleniyor; `stop()` dosya yazımının bitmesini bekliyor ve 8 sn güvenlik zamanlayıcısıyla asılı kalmıyor.
+- **Dosya tabanlı tanıma parametreleri düzeltildi:** `audioSource` artık `sampleRate: 16000`, `audioChannels: 1` ve (modül yüklüyse) `audioEncoding: ENCODING_PCM_16BIT` gönderiyor. `AudioEncodingAndroid` sabiti, Expo Go'da çökmemek için aynı korumalı `require` üzerinden alınıyor. Uzun kayıtlarda ağ tabanlı tanımanın kesilmemesi için iOS'ta `requiresOnDeviceRecognition: true`.
+- **`components/audio/AudioRecorderModal.js`:** Platform dallanması eklendi. Android'de canlı oturum kullanılıyor, kullanılamıyorsa (Expo Go veya Android 12 ve altı) `console.warn` ile loglanıp mevcut expo-av kaydına düşülüyor. Canlı yolda süre sayacı kendi `setInterval`'ı ile yürüyor (bileşen kaldırılınca temizleniyor), motor kendiliğinden durursa `onAutoStop` ile arayüz `recorded` durumuna geçiyor ve eldeki kayıt korunuyor. Transkript kayıtla birlikte geldiği için `transcriptStatus` doğrudan `completed` yazılıyor, ikinci bir tanıma turu başlatılmıyor.
+- **Dil kodu eşlemesi kontrol edildi:** `resolveTranscriptionLanguage` → tr-TR, en-US, de-DE, es-ES, fr-FR. `i18n/index.js` içindeki `SUPPORTED_LANGUAGES` ile birebir örtüşüyor, değişiklik gerekmedi.
+
+### 📁 Değiştirilen ve Eklenen Dosyalar
+- [`eas.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/eas.json) [NEW]
+- [`services/transcriptionService.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/services/transcriptionService.js)
+- [`services/audioService.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/services/audioService.js)
+- [`components/audio/AudioRecorderModal.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/audio/AudioRecorderModal.js)
+- [`app.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/app.json)
+- [`package.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/package.json)
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- `npx expo-doctor`: 18/18 kontrol geçti.
+- `npx expo config --type introspect`: config plugin çıktısı doğrulandı (izinler ve infoPlist açıklamaları yerinde).
+- 104 kaynak dosya `babel-preset-expo` ile sözdizimi denetiminden geçti; kırık relative import yok.
+- `tests/` altındaki 6 test dosyasının tamamı geçti.
+- **Cihazda doğrulanmadı:** Build henüz alınmadı (EAS girişi kullanıcı tarafından yapılacak). Transkripsiyonun gerçek cihazda çalışması, Android'de uzun kayıtlarda tanıma motorunun kesilip kesilmediği ve iOS WAV kaydının tanınması cihazda test edilmelidir.
+
+### ⚠️ Kapsam Dışı Bırakılanlar (dokunulmadı)
+- `services/audioService.js` içindeki legacy `expo-file-system` sorunu: `saveAudioPermanently` hâlâ başarısız olup geçici (cache) URI döndürüyor. STT bundan etkilenmiyor (dosya cache'te gerçek ve doğru uzantıda duruyor) ama kayıtlar kalıcı klasöre taşınmıyor. Ayrıca aynı fonksiyondaki dosya adı `.m4a` olarak sabit; FS sorunu ileride düzeltilirse WAV dosyaları yanlış uzantıyla adlandırılır.
+- `expo-av` → `expo-audio` geçişi, `convertImageToPdf` parametre uyumsuzluğu, `CLAUDE.md` güncellemesi.
+
+---
+
 ## 📅 [2026-09-23] - PDF Dışa Aktarmada Boş Sayfa Hatasının Giderilmesi & Sesli Not Transkripsiyon Teşhisi
 
 ### 🔍 Kapsam ve İhtiyaç
