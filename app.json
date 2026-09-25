@@ -9,6 +9,7 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.zeynepsoykan.AJANDA",
       "infoPlist": {
         "NSFaceIDUsageDescription": "Günlüğünüzü ve kişisel defterlerinizi korumak için Face ID doğrulaması kullanılır.",
         "NSMicrophoneUsageDescription": "Sayfalarınıza sesli notlar eklemek ve kaydetmek için mikrofon erişimi gereklidir.",
@@ -16,6 +17,7 @@
       }
     },
     "android": {
+      "package": "com.zeynepsoykan.AJANDA",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -23,7 +25,10 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "permissions": [
-        "RECORD_AUDIO"
+        "RECORD_AUDIO",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -36,6 +41,13 @@
       "expo-speech-recognition",
       "expo-secure-store",
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "4f1a2a4b-656c-45ea-b087-0a939e2537c6"
+      }
+    },
+    "owner": "zeynepsoykan"
   }
 }

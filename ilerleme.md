@@ -4,6 +4,35 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-25] - EAS Projesi Bağlantısı, Uygulama Kimliği ve Gradle Derleme Hatasının Giderilmesi
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Android development build'inin alınabilmesi için projenin EAS'e bağlanması, kalıcı uygulama kimliğinin belirlenmesi ve ilk build'i düşüren Gradle hatasının çözülmesi.
+
+### 🆔 1. Uygulama Kimliği ve EAS Bağlantısı
+- `app.json`: `ios.bundleIdentifier` ve `android.package` → **`com.zeynepsoykan.AJANDA`** (iOS ve Android için tek ve aynı değer).
+- `npx eas-cli init --account zeynepsoykan` ile EAS projesi oluşturuldu: **@zeynepsoykan/AJANDA**, proje kimliği `4f1a2a4b-656c-45ea-b087-0a939e2537c6`. `app.json` içine `owner` ve `extra.eas.projectId` yazıldı.
+
+### 🐛 2. İlk Android Build'inin Gradle Aşamasında Düşmesi
+- **Belirti:** Build `13f30534-0749-48db-b53a-436f5cce854b` `ERRORED` durumuna düştü; EAS genel `EAS_BUILD_UNKNOWN_GRADLE_ERROR` kodunu döndürdü (ayrıntılı Gradle çıktısı yalnızca web arayüzünde).
+- **Elenen olasılık:** `app.json` değişikliklerinin commit edilmemiş olması. `eas.json` içinde `requireCommit` ayarlı olmadığı için eas-cli varsayılan davranışı git klonunun üzerine çalışma dizinindeki değişmiş ve takip edilmeyen dosyaları da kopyalıyor (`eas-cli/build/vcs/clients/git.js`); yani `android.package` ve `projectId` build'e dahil olmuştu.
+- **Tespit edilen kök neden:** Tüm yerel (native) bağımlılıkların hangi Expo sürümüne göre derlendiği tarandı. Tek uyumsuz paket `expo-speech-recognition@57.1.0` idi; kendi `devDependencies.expo` alanı **`~56.0.12`** diyor, proje ise SDK **54** kullanıyor. Bu, daha önce `expo-clipboard@57.0.2` ile yaşanan sorunun aynısı; üçüncü parti olduğu için `expo-doctor` kapsamına girmiyor.
+- **Çözüm:** `expo-speech-recognition` **57.1.0 → 3.1.3**'e düşürüldü (`devDependencies.expo: ~54.0.32`). Paket 56.x sürümünden itibaren SDK hizalı numaralandırmaya geçmiş; 3.x serisi SDK 54 hattı.
+- **Kod değişikliği gerekmedi:** 3.1.3'ün API yüzeyi tek tek doğrulandı — `supportsRecording()`, `recordingOptions.{persist,outputFileName,outputSampleRate,outputEncoding}`, `audioend.uri`, `audioSource.{uri,sampleRate,audioChannels,audioEncoding}` ve `AudioEncodingAndroid` sabitinin tamamı mevcut.
+
+### 📁 Değiştirilen Dosyalar
+- [`app.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/app.json)
+- [`package.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/package.json)
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- `npx expo-doctor`: 18/18 kontrol geçti.
+- `npx expo config --type introspect`: `com.zeynepsoykan.AJANDA` her iki platformda yerinde, mikrofon/konuşma-tanıma izin açıklamaları ve Android `RECORD_AUDIO` korunuyor.
+- `tests/` altındaki 6 test dosyasının tamamı geçti.
+- **Cihazda doğrulanmadı:** Gradle'ın gerçek hata çıktısı okunamadığı için kök neden sürüm meta verisine dayanan güçlü bir hipotezdir; kesin teyit yeni build'in sonucuyla gelecektir.
+
+---
+
 ## 📅 [2026-09-23] - Development Build'e Geçiş & Konuşmayı Metne Dökme (STT) Hatasının Giderilmesi
 
 ### 🔍 Kapsam ve İhtiyaç
