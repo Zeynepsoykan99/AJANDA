@@ -4,6 +4,38 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-26] - Sesli Not Oynat Düğmesinin İlk Basışta Tepki Vermemesi
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Sesli notu dinlemek için oynat düğmesine basıldığında ilk basışta genellikle bir şey olmaması; birkaç kez üst üste veya bir süre bekleyip tekrar basınca çalışması. Kapsam yalnızca bu davranışla sınırlı tutuldu.
+
+### 🧬 Kök Neden (iki ayrı kusur bir arada)
+1. **Görsel geri bildirim yokluğu:** İlk basışta ses çıkana kadar üç asenkron adım çalışıyordu — `Audio.setAudioModeAsync`, `Audio.Sound.createAsync` (decoder açılışı, asıl yavaş adım) ve `getStatusAsync`. Bu süre boyunca buton ikonu "play" olarak kalıyor, hiçbir şey değişmiyordu; kullanıcı "tepki vermedi" sanıp tekrar basıyordu.
+2. **Yeniden giriş (re-entrancy) koruması yokluğu — asıl hata:** İlk basışın yüklemesi sürerken `sound` state'i hâlâ `null`, `isLoaded` hâlâ `false` olduğu için ikinci basış `loadSound()`'u **yeniden** çağırıyordu. Böylece aynı dosya için **ikinci bir `Audio.Sound` nesnesi** oluşuyor, `setSound` iki kez çağrıldığı için `useEffect([sound])` temizliği **ilk nesneyi unload ediyor** ve ilk basışın `playAsync()` çağrısı unload edilmiş nesne üzerinde hata veriyordu. Hata yalnızca `console.warn` ile yutulduğu için dışarıdan "hiçbir şey olmadı" gibi görünüyordu. "Birkaç kez tıklayınca çalışıyor" davranışı tam olarak bundan kaynaklanıyordu.
+- **Önceki düzeltmenin payı:** Kayıt bitince başa sarma düzeltmesinde eklenen `getStatusAsync()` çağrısı, **her** oynat basışında fazladan bir köprü gidiş-dönüşü ekliyordu. Çökmenin nedeni değildi ama ilk basıştaki algılanan gecikmeyi bir miktar artırıyordu.
+
+### 🛠️ Çözüm
+- `loadPromiseRef` eklendi: yükleme sürerken gelen ikinci çağrı yeni bir `Audio.Sound` oluşturmak yerine **aynı sözü (promise) paylaşıyor**. Böylece çift nesne ve unload yarışı ortadan kalktı.
+- `togglePendingRef` eklendi: önceki basış tamamlanmadan gelen yeni basışlar yok sayılıyor.
+- `isPreparing` durumu ve butonda `ActivityIndicator` eklendi; hazırlık sırasında buton `disabled` oluyor ve `accessibilityState={{ busy }}` bildiriliyor. Kullanıcı artık "tepki vermiyor" hissi yaşamıyor.
+- Güncel ses nesnesi `sound` state'i yerine `soundRef.current` üzerinden okunuyor (state bir render geride kalabiliyordu).
+- Yeni yüklenen ses zaten 0. konumda olduğu için `getStatusAsync()` yalnızca **önceden yüklenmiş** seslerde çalışıyor; ilk basıştaki gereksiz gecikme kaldırıldı.
+
+### 📁 Değiştirilen Dosyalar
+- [`components/audio/AudioNotePlayer.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/audio/AudioNotePlayer.js)
+- [`.gitignore`](file:///c:/Users/Zeynep/Desktop/AJANDA/.gitignore) — `crash.txt` ve `crash_only.txt` yok sayılıyor
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- 104 kaynak dosya `babel-preset-expo` ile sözdizimi denetiminden geçti; kırık relative import yok.
+- `tests/` altındaki 6 test dosyasının tamamı geçti.
+- **Cihazda doğrulanmadı:** Gerçek dokunma davranışı ve decoder açılış süresi cihazda test edilmelidir.
+
+### 📝 Not
+- `isLoaded` state'i artık yalnızca yazılıyor, hiçbir yerde okunmuyor (oynatma kararı `soundRef` üzerinden veriliyor). Kapsam dışı olduğu için kaldırılmadı.
+
+---
+
 ## 📅 [2026-09-26] - Renk Çarkı Çökmesinin Giderilmesi (Worklet Olmayan Callback'in UI Thread'den Çağrılması)
 
 ### 🔍 Kapsam ve İhtiyaç

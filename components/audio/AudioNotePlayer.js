@@ -47,7 +47,14 @@ export default function AudioNotePlayer({
   const [isCopied, setIsCopied] = useState(false);
   const [isExpandedTranscript, setIsExpandedTranscript] = useState(false);
 
+  // Ses dosyasi hazirlanirken (decoder acilirken) butona gorsel geri bildirim verilir
+  const [isPreparing, setIsPreparing] = useState(false);
+
   const isSeekingRef = useRef(false);
+  // Ayni anda birden fazla basisin ust uste binmesini engeller
+  const togglePendingRef = useRef(false);
+  // Devam eden yukleme varsa ikinci bir Audio.Sound olusturulmaz, ayni soz paylasilir
+  const loadPromiseRef = useRef(null);
   // `onPlaybackStatusUpdate` yalnizca loadSound'un olusturuldugu render'in closure'ini
   // gordugu icin oradaki `sound` state'i her zaman null kaliyordu. Ses nesnesine
   // guncel erisim icin ref kullaniliyor.
@@ -65,32 +72,45 @@ export default function AudioNotePlayer({
   const loadSound = useCallback(async () => {
     if (!audioNote?.uri) return null;
 
-    try {
-      // Oynatma modunu garantiye al
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
-      });
-
-      const { sound: newSound, status } = await Audio.Sound.createAsync(
-        { uri: audioNote.uri },
-        { shouldPlay: false, progressUpdateIntervalMillis: 100 },
-        onPlaybackStatusUpdate
-      );
-
-      soundRef.current = newSound;
-      setSound(newSound);
-      setIsLoaded(true);
-
-      if (status.isLoaded && status.durationMillis) {
-        setDurationMs(status.durationMillis);
-      }
-
-      return newSound;
-    } catch (error) {
-      console.warn('Ses yüklenirken hata:', error);
-      return null;
+    // Yukleme suruyorsa ayni sozu dondur; aksi halde her basis yeni bir
+    // Audio.Sound olusturur, ilki unload edilir ve calan ses yarida kesilir.
+    if (loadPromiseRef.current) {
+      return loadPromiseRef.current;
     }
+
+    const task = (async () => {
+      try {
+        // Oynatma modunu garantiye al
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+        });
+
+        const { sound: newSound, status } = await Audio.Sound.createAsync(
+          { uri: audioNote.uri },
+          { shouldPlay: false, progressUpdateIntervalMillis: 100 },
+          onPlaybackStatusUpdate
+        );
+
+        soundRef.current = newSound;
+        setSound(newSound);
+        setIsLoaded(true);
+
+        if (status.isLoaded && status.durationMillis) {
+          setDurationMs(status.durationMillis);
+        }
+
+        return newSound;
+      } catch (error) {
+        console.warn('Ses yüklenirken hata:', error);
+        return null;
+      } finally {
+        loadPromiseRef.current = null;
+      }
+    })();
+
+    loadPromiseRef.current = task;
+    return task;
   }, [audioNote?.uri]);
 
   // Oynatma durum güncellemeleri
@@ -139,12 +159,23 @@ export default function AudioNotePlayer({
 
   // Oynat / Duraklat
   const handleTogglePlay = async () => {
+    // Onceki basis daha bitmediyse yenisini yok say. Aksi halde ilk basisin
+    // yuklemesi surerken atilan ikinci basis ayri bir akis baslatiyordu.
+    if (togglePendingRef.current) return;
+    togglePendingRef.current = true;
+
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-      let currentSound = sound;
-      if (!currentSound || !isLoaded) {
+      // State bir render geride kalabildigi icin guncel nesne ref'ten okunuyor
+      let currentSound = soundRef.current;
+      let isFreshlyLoaded = false;
+
+      if (!currentSound) {
+        // Decoder acilana kadar butonda yukleniyor gostergesi gorunur
+        setIsPreparing(true);
         currentSound = await loadSound();
+        isFreshlyLoaded = true;
       }
 
       if (!currentSound) return;
@@ -159,18 +190,21 @@ export default function AudioNotePlayer({
 
         // Kayıt sonuna kadar çalmışsa yerel oynatıcı hâlâ sonda durur ve
         // playAsync() sessizce hiçbir şey yapmaz. Gerçek durumu okuyup gerekirse başa sarıyoruz.
-        try {
-          const status = await currentSound.getStatusAsync();
-          if (
-            status.isLoaded &&
-            status.durationMillis > 0 &&
-            status.positionMillis >= status.durationMillis - 50
-          ) {
-            await currentSound.setPositionAsync(0);
-            setPositionMs(0);
+        // Yeni yüklenen ses zaten 0. konumdadır; o durumda fazladan gecikme yaratmıyoruz.
+        if (!isFreshlyLoaded) {
+          try {
+            const status = await currentSound.getStatusAsync();
+            if (
+              status.isLoaded &&
+              status.durationMillis > 0 &&
+              status.positionMillis >= status.durationMillis - 50
+            ) {
+              await currentSound.setPositionAsync(0);
+              setPositionMs(0);
+            }
+          } catch (statusError) {
+            console.warn('Oynatma konumu okunamadı:', statusError);
           }
-        } catch (statusError) {
-          console.warn('Oynatma konumu okunamadı:', statusError);
         }
 
         await currentSound.playAsync();
@@ -178,6 +212,9 @@ export default function AudioNotePlayer({
       }
     } catch (error) {
       console.warn('Oynatma/Durdurma hatası:', error);
+    } finally {
+      setIsPreparing(false);
+      togglePendingRef.current = false;
     }
   };
 
@@ -284,15 +321,22 @@ export default function AudioNotePlayer({
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={handleTogglePlay}
+          disabled={isPreparing}
           style={[styles.playButton, { backgroundColor: colors.accent + '15' }]}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityState={{ busy: isPreparing }}
         >
-          <MaterialCommunityIcons
-            name={isPlaying ? 'pause' : 'play'}
-            size={24}
-            color={colors.accent}
-            style={{ marginLeft: isPlaying ? 0 : 2 }}
-          />
+          {isPreparing ? (
+            // Ses dosyası hazırlanırken "tepki vermiyor" hissini önleyen gösterge
+            <ActivityIndicator size="small" color={colors.accent} />
+          ) : (
+            <MaterialCommunityIcons
+              name={isPlaying ? 'pause' : 'play'}
+              size={24}
+              color={colors.accent}
+              style={{ marginLeft: isPlaying ? 0 : 2 }}
+            />
+          )}
         </TouchableOpacity>
 
         {/* Orta: Başlık, İlerleme Çubuğu ve Süre */}

@@ -5,3 +5,5 @@ web-build/
 *.log
 .DS_Store
 scratch/
+crash.txt
+crash_only.txt
