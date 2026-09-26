@@ -134,8 +134,12 @@ export const transcribeAudioFile = async (
 
   return new Promise((resolve) => {
     let isSettled = false;
-    let finalTranscript = '';
+    // Canlı tanımadaki ile aynı kural: final sonuçlar üzerine yazılmaz, biriktirilir.
+    let finalizedTranscript = '';
+    let interimTranscript = '';
     const subscriptions = [];
+    const composeTranscript = () =>
+      `${finalizedTranscript} ${interimTranscript}`.replace(/\s+/g, ' ').trim();
 
     const cleanup = () => {
       if (timeoutTimer) {
@@ -166,10 +170,10 @@ export const transcribeAudioFile = async (
 
     // Zaman aşımı koruması (asılı kalmayı engeller)
     const timeoutTimer = setTimeout(() => {
-      if (finalTranscript.trim().length > 0) {
+      if (composeTranscript().length > 0) {
         finish({
           success: true,
-          transcript: finalTranscript.trim(),
+          transcript: composeTranscript(),
           language: targetLang,
         });
       } else {
@@ -184,17 +188,21 @@ export const transcribeAudioFile = async (
       // 1. Sonuç dinleyicisi
       if (typeof ExpoSpeechRecognitionModule.addListener === 'function') {
         const resultSub = ExpoSpeechRecognitionModule.addListener('result', (event) => {
-          if (event?.results && event.results.length > 0) {
-            const bestResult = event.results[0]?.transcript || '';
-            if (bestResult) {
-              finalTranscript = bestResult;
+          const text = event?.results?.[0]?.transcript || '';
+
+          if (event?.isFinal) {
+            if (text) {
+              finalizedTranscript = `${finalizedTranscript} ${text}`.trim();
             }
+            interimTranscript = '';
+          } else {
+            interimTranscript = text;
           }
 
           if (event?.isFinal) {
             finish({
               success: true,
-              transcript: finalTranscript.trim(),
+              transcript: composeTranscript(),
               language: targetLang,
             });
           }
@@ -204,10 +212,10 @@ export const transcribeAudioFile = async (
         // 2. Hata dinleyicisi
         const errorSub = ExpoSpeechRecognitionModule.addListener('error', (event) => {
           console.warn('SpeechRecognition hata olayı:', event?.error);
-          if (finalTranscript.trim().length > 0) {
+          if (composeTranscript().length > 0) {
             finish({
               success: true,
-              transcript: finalTranscript.trim(),
+              transcript: composeTranscript(),
               language: targetLang,
             });
           } else {
@@ -221,10 +229,10 @@ export const transcribeAudioFile = async (
 
         // 3. Bitiş dinleyicisi
         const endSub = ExpoSpeechRecognitionModule.addListener('end', () => {
-          if (finalTranscript.trim().length > 0) {
+          if (composeTranscript().length > 0) {
             finish({
               success: true,
-              transcript: finalTranscript.trim(),
+              transcript: composeTranscript(),
               language: targetLang,
             });
           } else {
@@ -317,7 +325,12 @@ export const startLiveRecognition = async ({
   const targetLang = resolveTranscriptionLanguage(language);
 
   const subscriptions = [];
-  let finalTranscript = '';
+  // Motor `continuous` modda BİRDEN FAZLA final sonuç yayar ve her olay yalnızca
+  // o segmentin metnini taşır (bkz. paket README'si: "multiple final results will
+  // likely be returned so you'll need to concatenate previous final results").
+  // Bu yüzden final sonuçlar biriktirilir; ara sonuç yalnızca o anki segmenti temsil eder.
+  let finalizedTranscript = '';
+  let interimTranscript = '';
   let audioUri = null;
   let recognitionError = null;
   let endReceived = false;
@@ -336,9 +349,13 @@ export const startLiveRecognition = async ({
     subscriptions.length = 0;
   };
 
+  // Biriken final metinle o anki ara segmenti birleştirir
+  const composeTranscript = () =>
+    `${finalizedTranscript} ${interimTranscript}`.replace(/\s+/g, ' ').trim();
+
   const buildResult = () => ({
     success: true,
-    transcript: finalTranscript.trim(),
+    transcript: composeTranscript(),
     uri: audioUri,
     language: targetLang,
     error: recognitionError,
@@ -368,10 +385,20 @@ export const startLiveRecognition = async ({
     if (typeof ExpoSpeechRecognitionModule.addListener === 'function') {
       subscriptions.push(
         ExpoSpeechRecognitionModule.addListener('result', (event) => {
-          const best = event?.results?.[0]?.transcript || '';
-          if (!best) return;
-          finalTranscript = best;
-          if (onPartialTranscript) onPartialTranscript(best);
+          const text = event?.results?.[0]?.transcript || '';
+
+          if (event?.isFinal) {
+            // Segment kesinleşti: üzerine yazmak yerine biriktir
+            if (text) {
+              finalizedTranscript = `${finalizedTranscript} ${text}`.trim();
+            }
+            interimTranscript = '';
+          } else {
+            // Ara sonuç yalnızca o anki segmenti temsil eder, biriktirilmez
+            interimTranscript = text;
+          }
+
+          if (onPartialTranscript) onPartialTranscript(composeTranscript());
         })
       );
 
