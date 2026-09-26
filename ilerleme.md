@@ -4,6 +4,37 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-26] - Defter Ekleme Ekranındaki Render Hatasının Giderilmesi (ImageWithSkeleton)
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Notlarım modülünde yeni defter eklerken açılan ad + kapak seçim panelinin render hatası vermesi. Kapsam yalnızca bu hatayla sınırlı tutuldu.
+
+### 🧬 Kök Neden (koddan kanıtlandı)
+- `components/ui/ImageWithSkeleton.js` tek bir `ImageComponent` değişkeni üzerinden hem `ImageBackground` hem `Image` render ediyor ve çocuk olarak `{isBackground && children}` veriyordu.
+- `isBackground` false olduğunda bu ifade `false` değerine iniyor, ancak JSX bunu yine de `children` prop'u olarak geçiriyor. Derlenmiş çıktı bunu doğruluyor: `jsx(ImageComponent, { ..., children: isBackground && children })`.
+- React Native'in `Image` bileşeni çocuk kabul etmiyor ve kontrolü **`if (props.children != null)`** şeklinde yapıyor (`node_modules/react-native/Libraries/Image/Image.android.js:148`, `Image.ios.js:145`). JavaScript'te `false != null` **true** olduğu için koşul sağlanıyor ve şu hata fırlatılıyor: *"The <Image> component cannot contain children."*
+- `const Image = BaseImage` (aynı dosya, satır 261) olduğundan bu kontrol gerçekten render sırasında çalışıyor.
+- **Sonuç:** `isBackground` verilmeden kullanılan her `ImageWithSkeleton` render anında hata fırlatıyordu. `components/notebook/NotebookFormSheet.js:96` kapak seçicide 6 adet böyle bileşen render ettiği için panel her açılışta patlıyordu.
+- **Aynı gizli hatadan etkilenen diğer iki yer:** `app/defterlerim/index.js:197` (defter rafındaki kapak görselleri) ve `components/stickers/DraggableSticker.js:249` (sayfaya yerleştirilmiş çıkartmalar).
+- **Eleme:** Hata son STT/PDF çalışmalarından kaynaklanmıyor. `{isBackground && children}` satırı `git log -L` ile izlendi; bileşenin ilk eklendiği `de421a87` commit'inden beri hiç değişmemiş.
+
+### 🛠️ Çözüm
+- `components/ui/ImageWithSkeleton.js`: Ortak `ImageComponent` değişkeni kaldırıldı; `isBackground` durumuna göre `ImageBackground` ve `Image` ayrı dallarda render ediliyor. `Image` dalına artık hiç `children` prop'u geçmiyor; anlamsız olan `imageStyle` prop'u da yalnızca `ImageBackground` dalında kaldı.
+- `ImageBackground` dalı (Günlüğüm ve Notlarım kapak ekranları, Ajandam kapağı, görsel sayfa şablonları) **davranış olarak hiç değişmedi** — aynı `style`, `imageStyle`, `resizeMode`, `onLoad` ve `children` ile render ediliyor.
+
+### 📁 Değiştirilen Dosyalar
+- [`components/ui/ImageWithSkeleton.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/ui/ImageWithSkeleton.js)
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- Derlenmiş JSX çıktısı kontrol edildi: `Image` dalında `children` prop'u **yok**, `ImageBackground` dalında **var**.
+- `isBackground={true}` kullanan üç çağrı yeri (`app/ajandam/index.js:266`, `components/pages/ImageTemplatePage.js:17`, `components/notebook/NotebookCoverView.js:513`) gözden geçirildi; hepsi değişmeyen dalı kullanıyor.
+- Projedeki diğer doğrudan `<Image>` kullanımları (`AddPageModal.js`, `AddTodoModal.js`, `CoverEditor.js`, `StickerMenu.js`) tarandı; hiçbiri çocuk geçirmiyor, aynı hata başka yerde yok.
+- 104 kaynak dosya `babel-preset-expo` ile sözdizimi denetiminden geçti; `tests/` altındaki 6 test dosyasının tamamı geçti.
+- **Cihazda doğrulanmadı:** Defter ekleme panelinin gerçekten açıldığı ve Günlüğüm kapak ekranının bozulmadığı cihazda test edilmelidir.
+
+---
+
 ## 📅 [2026-09-25] - EAS Projesi Bağlantısı, Uygulama Kimliği ve Gradle Derleme Hatasının Giderilmesi
 
 ### 🔍 Kapsam ve İhtiyaç

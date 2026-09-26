@@ -28,19 +28,29 @@ export default function ImageWithSkeleton({
     opacity: skeletonOpacity.value,
   }));
 
-  const ImageComponent = isBackground ? ImageBackground : Image;
-
+  // NOT: <Image> children KABUL ETMEZ; React Native `props.children != null` kontrolüyle
+  // hata fırlatır ve `false` da bu kontrolü geçer. Bu yüzden ortak bir `ImageComponent`
+  // değişkenine children verilemez; iki dal ayrı ayrı render edilir.
   return (
     <View style={[styles.container, style]}>
-      <ImageComponent
-        source={source}
-        style={[styles.image, style]}
-        imageStyle={[styles.image, imageStyle, { resizeMode }]}
-        resizeMode={resizeMode}
-        onLoad={handleLoad}
-      >
-        {isBackground && children}
-      </ImageComponent>
+      {isBackground ? (
+        <ImageBackground
+          source={source}
+          style={[styles.image, style]}
+          imageStyle={[styles.image, imageStyle, { resizeMode }]}
+          resizeMode={resizeMode}
+          onLoad={handleLoad}
+        >
+          {children}
+        </ImageBackground>
+      ) : (
+        <Image
+          source={source}
+          style={[styles.image, style]}
+          resizeMode={resizeMode}
+          onLoad={handleLoad}
+        />
+      )}
 
       {!isLoaded && !isBackground && (
         <Animated.View style={[styles.skeletonOverlay, animatedSkeletonStyle]} pointerEvents="none">
