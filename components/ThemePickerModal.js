@@ -404,11 +404,14 @@ export default function ThemePickerModal({ visible, onClose }) {
 
                 {/* Reanimated Color Picker Paneli */}
                 <View style={styles.colorPickerWrapper}>
+                  {/* NOT: `onComplete`/`onChange` UI thread'den senkron çağrılır ve YALNIZCA worklet
+                      kabul eder. `onSelectColor` normal bir JS fonksiyonu olduğu için kütüphanenin
+                      runOnJS ile sardığı `onCompleteJS`/`onChangeJS` kullanılıyor. */}
                   <ColorPicker
                     style={styles.pickerStyle}
                     value={currentCustomHex}
-                    onComplete={onSelectColor}
-                    onChange={onSelectColor}
+                    onCompleteJS={onSelectColor}
+                    onChangeJS={onSelectColor}
                     boundedThumb
                   >
                     <Preview style={styles.pickerPreview} hideInitialColor />

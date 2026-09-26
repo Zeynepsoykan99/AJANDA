@@ -653,10 +653,13 @@ export default function DrawingToolbar({
             </Text>
 
             <View style={styles.colorPickerContainer}>
+              {/* NOT: `onComplete`/`onChange` UI thread'den senkron çağrılır ve YALNIZCA worklet
+                  kabul eder. Normal JS fonksiyonları için kütüphanenin runOnJS ile sardığı
+                  `onCompleteJS`/`onChangeJS` kullanılmalıdır; aksi halde uygulama çöker. */}
               <ColorPicker
                 style={{ width: '100%', alignItems: 'center', gap: 20 }}
                 value={tempColor}
-                onComplete={(c) => onSelectColor(c.hex)}
+                onCompleteJS={(c) => onSelectColor(c.hex)}
               >
                 <Panel3 style={styles.panel3Style} thumbSize={28} />
                 <Preview style={styles.previewStyle} hideInitialColor />

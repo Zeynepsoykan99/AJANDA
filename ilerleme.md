@@ -4,6 +4,43 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-26] - Renk Çarkı Çökmesinin Giderilmesi (Worklet Olmayan Callback'in UI Thread'den Çağrılması)
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Renk çarkından renk seçerken uygulamanın tamamen kapanması. Kapsam yalnızca bu çökmeyle sınırlı tutuldu.
+
+### 🧬 Kök Neden: Proje Tarafı Yanlış Kullanım (kütüphane hatası DEĞİL)
+- Cihazdan alınan yerel hata: `com.facebook.jni.CppException: [Worklets] Tried to synchronously call a non-worklet function onComplete on the UI thread.`
+- `reanimated-color-picker` callback'ler için **iki ayrı prop çifti** sunuyor (`lib/src/ColorPicker.tsx:100-135`):
+  - `onChange` / `onComplete` → `'worklet'` etiketli `onGestureChange` / `onGestureEnd` içinden **doğrudan UI thread'de senkron** çağrılır. Kütüphanenin tip dokümantasyonu birebir şunu diyor: *"Accepts `worklet` functions only. For regular functions, use `onCompleteJS`."*
+  - `onChangeJS` / `onCompleteJS` → kütüphane bunları **kendisi `runOnJS` ile sarar**, dolayısıyla normal JS fonksiyonları güvenle verilebilir.
+- Proje her iki kullanım yerinde de normal JS fonksiyonlarını worklet-only proplara veriyordu; bu yüzden Worklets çalışma zamanı sürükleme sırasında hata fırlatıp uygulamayı kapatıyordu.
+- **Etkilenen iki yer:**
+  - `components/drawing/DrawingToolbar.js`: `onComplete={(c) => onSelectColor(c.hex)}`
+  - `components/ThemePickerModal.js`: `onComplete={onSelectColor}` **ve** `onChange={onSelectColor}` (`onSelectColor` içinde `setTheme` çağrılıyor, kesinlikle worklet değil)
+
+### 🛠️ Çözüm
+- `components/drawing/DrawingToolbar.js`: `onComplete` → **`onCompleteJS`**
+- `components/ThemePickerModal.js`: `onComplete` → **`onCompleteJS`**, `onChange` → **`onChangeJS`**
+- Her iki dosyaya, propların neden bu şekilde kullanılması gerektiğini açıklayan yorum eklendi.
+- Kütüphaneye dokunulmadı: sürüm yükseltmesi, `patch-package` yaması veya `node_modules` düzenlemesi **gerekmedi**.
+
+### 📁 Değiştirilen Dosyalar
+- [`components/drawing/DrawingToolbar.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/drawing/DrawingToolbar.js)
+- [`components/ThemePickerModal.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/ThemePickerModal.js)
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- Projede worklet-only `onComplete` / `onChange` prop'u kullanan başka `ColorPicker` kalmadığı tarandı.
+- 104 kaynak dosya `babel-preset-expo` ile sözdizimi denetiminden geçti; kırık relative import yok.
+- `tests/` altındaki 6 test dosyasının tamamı geçti.
+- **Cihazda doğrulanmadı:** Çökmenin gerçekten bittiği cihazda test edilmelidir.
+
+### ⚠️ Dikkat Edilecek Yan Etki
+- `ThemePickerModal` içindeki `onChangeJS`, sürükleme boyunca her karede `onSelectColor` → `setTheme` çağırıyor; `setTheme` ise her çağrıda `StorageService.setTheme` ile AsyncStorage'a yazıyor. Bu davranış kodun özgün amacıydı ("Canlı Önizleme") ama çökme nedeniyle bugüne kadar hiç çalışmamıştı. Sürüklerken takılma görülürse yazma sıklığının kısılması (throttle) veya kalıcı kaydın yalnızca `onCompleteJS` anında yapılması gerekir; bu, kapsam dışı bırakıldı.
+
+---
+
 ## 📅 [2026-09-26] - Transkriptte Kelime Kaybı ve Sesli Not Tekrar Oynatma Hatalarının Giderilmesi
 
 ### 🔍 Kapsam ve İhtiyaç
