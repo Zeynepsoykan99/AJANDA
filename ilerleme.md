@@ -4,6 +4,39 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-26] - Transkriptte Kelime Kaybı ve Sesli Not Tekrar Oynatma Hatalarının Giderilmesi
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Cihazda bildirilen üç hata ayrı ayrı teşhis edildi: (1) renk çarkından renk seçerken uygulamanın kapanması, (2) transkriptte kelimelerin eksik kalması, (3) sesli not duraklatıldıktan/bittikten sonra tekrar oynatılamaması.
+
+### 🐛 1. Renk Çarkı Çökmesi (TEŞHİS DARALTILDI — KOD DEĞİŞTİRİLMEDİ)
+- Cihaz `adb` ile bağlı olmadığı için yerel (native) kayıt alınamadı; kök neden kanıtlanamadığından kod değiştirilmedi.
+- **Elenen olasılıklar:** (a) Modal içinde `GestureHandlerRootView` eksikliği — `reanimated-color-picker` kendi içinde `GestureHandlerRootView` render ediyor (`lib/commonjs/ColorPicker.js:221`). (b) Reanimated 4 uyumsuzluğu — kütüphanenin kullandığı sekiz API'nin (`runOnJS`, `runOnUI`, `useAnimatedProps`, `useAnimatedRef`, `useAnimatedStyle`, `useDerivedValue`, `useSharedValue`, `withTiming`) tamamı kurulu 4.1.7 sürümünde mevcut. (c) `Panel3` içindeki `Image` çağrılarında çocuk yok.
+- **Kalan en güçlü aday:** `lib/commonjs/components/PreviewText.js:69-81`, `useAnimatedProps` ile bir `AnimatedTextInput` üzerine `text` ve `defaultValue` yazıyor. Bu desen Yeni Mimari'de (Fabric) desteklenmiyor. Proje Yeni Mimari ile çalışıyor (`RCTNewArchEnabled: true`) ve `colorString` değeri sürükleme sırasında her karede güncellendiği için çökmenin "renk seçerken" oluşması bu adayla örtüşüyor. `Preview` bileşeni hem `DrawingToolbar.js:659` hem `ThemePickerModal.js:414` içinde kullanılıyor.
+
+### 🐛 2. Transkriptte Kelime Kaybı (ÇÖZÜLDÜ)
+- **Kök Neden:** Motor `continuous` modda **birden fazla final sonuç** yayıyor ve her olay yalnızca o segmentin metnini taşıyor. Paketin kendi README'si bunu açıkça uyarıyor: *"multiple final results will likely be returned so you'll need to concatenate previous final results"*. Kod ise `finalTranscript = best` ile **üzerine yazıyordu**, dolayısıyla her yeni final önceki segmentleri siliyordu.
+- Aynı kusur iki yolda birden vardı: `startLiveRecognition` (Android canlı tanıma) ve `transcribeAudioFile` (iOS / yeniden deneme).
+- **Çözüm:** Final sonuçlar artık biriktiriliyor, ara sonuç yalnızca o anki segmenti temsil ediyor. `composeTranscript()` ikisini birleştirip fazla boşlukları temizliyor.
+- **Doğrulama:** Mantık ayrı bir simülasyonla test edildi — ara sonuçlar ve iki final içeren tipik bir olay akışında eski kod yalnızca son parçayı ("kahvalti") üretirken yeni kod tüm cümleyi üretiyor.
+
+### 🐛 3. Sesli Not Tekrar Oynatılamıyor (ÇÖZÜLDÜ)
+- **Kök Neden:** `onPlaybackStatusUpdate`, `loadSound`'un oluşturulduğu ilk render'ın closure'ını gördüğü için içindeki `sound` state'i **her zaman `null`** kalıyordu. Kayıt bittiğinde çalışan `sound?.setPositionAsync(0)` bu yüzden hiçbir şey yapmıyordu: React tarafı konumu 0 gösterirken yerel oynatıcı kaydın sonunda kalıyor, tekrar oynat'a basıldığında `playAsync()` sondan başladığı için ses duyulmuyordu.
+- **Çözüm:** `soundRef` eklendi; durum geri çağrısı güncel ses nesnesine ref üzerinden erişiyor ve başa sarma gerçekten çalışıyor. Ayrıca oynatma dalında `getStatusAsync()` ile gerçek konum okunup kayıt sonundaysa başa sarılıyor; böylece bayat state'e bağlı kalınmıyor. Başa sarma hatası artık yutulmuyor, loglanıyor.
+
+### 📁 Değiştirilen Dosyalar
+- [`services/transcriptionService.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/services/transcriptionService.js)
+- [`components/audio/AudioNotePlayer.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/audio/AudioNotePlayer.js)
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- 104 kaynak dosya `babel-preset-expo` ile sözdizimi denetiminden geçti; kırık relative import yok.
+- `tests/` altındaki 6 test dosyasının tamamı geçti.
+- Transkript birikim mantığı simülasyonla doğrulandı.
+- **Cihazda doğrulanmadı:** Transkriptin artık eksiksiz olduğu ve sesli notun tekrar oynatılabildiği gerçek cihazda test edilmelidir. Renk çarkı çökmesi için yerel kayıt gerekiyor.
+
+---
+
 ## 📅 [2026-09-26] - Defter Ekleme Ekranındaki Render Hatasının Giderilmesi (ImageWithSkeleton)
 
 ### 🔍 Kapsam ve İhtiyaç

@@ -48,6 +48,10 @@ export default function AudioNotePlayer({
   const [isExpandedTranscript, setIsExpandedTranscript] = useState(false);
 
   const isSeekingRef = useRef(false);
+  // `onPlaybackStatusUpdate` yalnizca loadSound'un olusturuldugu render'in closure'ini
+  // gordugu icin oradaki `sound` state'i her zaman null kaliyordu. Ses nesnesine
+  // guncel erisim icin ref kullaniliyor.
+  const soundRef = useRef(null);
 
   // Başka bir ses çalmaya başladıysa bu sesi duraklat
   useEffect(() => {
@@ -74,6 +78,7 @@ export default function AudioNotePlayer({
         onPlaybackStatusUpdate
       );
 
+      soundRef.current = newSound;
       setSound(newSound);
       setIsLoaded(true);
 
@@ -107,11 +112,16 @@ export default function AudioNotePlayer({
 
     setIsPlaying(status.isPlaying);
 
-    // Ses sona ulaştığında başa dön
+    // Ses sona ulaştığında başa dön.
+    // NOT: Burada state'teki `sound` bayat (null) kaldığı için başa sarma hiç
+    // çalışmıyordu; yerel oynatıcı kaydın sonunda kalıyor ve tekrar oynat'a
+    // basıldığında ses çalmıyordu. Ref üzerinden güncel nesneye erişiliyor.
     if (status.didJustFinish && !status.isLooping) {
       setIsPlaying(false);
       setPositionMs(0);
-      sound?.setPositionAsync(0).catch(() => {});
+      soundRef.current?.setPositionAsync(0).catch((e) => {
+        console.warn('Kayıt başa sarılamadı:', e);
+      });
     }
   };
 
@@ -120,6 +130,9 @@ export default function AudioNotePlayer({
     return () => {
       if (sound) {
         sound.unloadAsync().catch(() => {});
+        if (soundRef.current === sound) {
+          soundRef.current = null;
+        }
       }
     };
   }, [sound]);
@@ -143,6 +156,23 @@ export default function AudioNotePlayer({
         if (onPlayStart) {
           onPlayStart(audioNote.id);
         }
+
+        // Kayıt sonuna kadar çalmışsa yerel oynatıcı hâlâ sonda durur ve
+        // playAsync() sessizce hiçbir şey yapmaz. Gerçek durumu okuyup gerekirse başa sarıyoruz.
+        try {
+          const status = await currentSound.getStatusAsync();
+          if (
+            status.isLoaded &&
+            status.durationMillis > 0 &&
+            status.positionMillis >= status.durationMillis - 50
+          ) {
+            await currentSound.setPositionAsync(0);
+            setPositionMs(0);
+          }
+        } catch (statusError) {
+          console.warn('Oynatma konumu okunamadı:', statusError);
+        }
+
         await currentSound.playAsync();
         setIsPlaying(true);
       }
