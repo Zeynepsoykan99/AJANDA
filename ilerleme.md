@@ -4,6 +4,40 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-26] - Sesin Döngüye Girmesi (Çözüldü) ve Eski Sesli Notların Açılamaması (Teşhis)
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** (1) Kayıt bittikten sonra sesin sonsuz döngüde çalması, (2) daha önce kaydedilmiş sesli notların oynat düğmesine tepki vermemesi.
+
+### 🐛 1. Ses Döngüye Giriyor (ÇÖZÜLDÜ — bu oturumda eklenen bir gerileme)
+- **Kök Neden:** Projede hiçbir yerde `isLooping: true` ayarlanmıyor; döngü bir ayardan değil, `didJustFinish` işleyicisindeki başa sarmadan geliyordu.
+  - expo-av tarafında kayıt bittiğinde `shouldPlay` bayrağı **true kalıyor**: `SimpleExoPlayerData.java:296-300` yalnızca `callStatusUpdateListenerWithDidJustFinish()` çağırıyor, ExoPlayer'ın `playWhenReady` değerini sıfırlamıyor.
+  - `PlayerData.java:337-339`, `setStatus` içinde `mShouldPlay`'i **yalnızca** gönderilen bundle içinde `shouldPlay` anahtarı varsa değiştiriyor. `setPositionAsync(0)` sadece `positionMillis` gönderdiği için `mShouldPlay` true kalıyor, `applyNewStatus` başa sarıp oynatmayı yeniden başlatıyor → tekrar bitiyor → tekrar başa sarılıyor → **sonsuz döngü**.
+- **Gerileme kaynağı:** `98d29f29` numaralı commit'e kadar bu satır bayat closure yüzünden `sound` değişkeni `null` olduğundan hiç çalışmıyordu. O commit `soundRef` ile çağrıyı gerçekten çalışır hâle getirince gizli sorun ortaya çıktı.
+- **Çözüm:** Başa sarma artık konumla birlikte `shouldPlay: false` da gönderiyor: `setStatusAsync({ shouldPlay: false, positionMillis: 0 })`. Böylece kayıt bitince durup başa sarılıyor, yeniden başlamıyor. "Kayıt bitince tekrar oynatılabilme" davranışı korunuyor.
+
+### 🔬 2. Eski Sesli Notlar Açılmıyor (TEŞHİS EDİLDİ — KOD DEĞİŞTİRİLMEDİ)
+- **Kök neden, bilinen "legacy expo-file-system" sorununun ta kendisi.** Kapsam dışı listede olduğu için kullanıcı onayı beklendi.
+  - `services/audioService.js:2` modülü `expo-file-system` ana girişinden alıyor. SDK 54'te bu girişte `documentDirectory` sabiti **hiç export edilmiyor** (`src/index.ts` yalnızca `./FileSystem`, `./ExpoFileSystem.types` ve `./legacyWarnings` yayıyor; hiçbirinde `documentDirectory` yok). Sonuç: `AUDIO_DIR` değeri `"undefinedaudio_notes/"` oluyor.
+  - `saveAudioPermanently` içindeki `ensureAudioDirectory()` ve `copyAsync()` legacy metotları çalışma anında hata fırlatıyor, `catch` bloğu devreye girip **geçici URI'yi olduğu gibi döndürüyor**. Yani hiçbir kayıt kalıcı dizine taşınmıyor.
+  - Android canlı tanıma yolunda dosyayı `expo-speech-recognition` yazıyor ve `recordingOptions` içinde `outputDirectory` verilmediği için varsayılan olarak **önbellek (cache) dizini** kullanılıyor.
+  - Sonuç: her sesli notun kayıtlı `uri` değeri bir **önbellek dosyasını** gösteriyor. İşletim sistemi önbelleği boşalttığında dosya kayboluyor; `Audio.Sound.createAsync` hata fırlatıyor, `loadSound` `null` dönüyor ve `handleTogglePlay` sessizce çıkıyor — düğme "tepki vermiyor" gibi görünüyor.
+- **Elenen olasılıklar:**
+  - *Format/uzantı çakışması:* `SPEECH_RECORDING_OPTIONS` yalnızca **yeni** iOS kayıtlarının formatını belirliyor; `AudioNotePlayer` dosya uzantısına göre hiçbir varsayım yapmıyor, `uri`'yi doğrudan `createAsync`'e veriyor. Eski `.m4a` dosyaları için bir çakışma yok.
+  - *Expo Go döneminden kalma dosyalar:* Geliştirme derlemesi ayrı bir uygulama kimliğine sahip olduğundan Expo Go'nun AsyncStorage verisi de taşınmazdı; notların listede görünmesi, kayıtların geliştirme derlemesi içinde oluşturulduğunu gösteriyor.
+  - *Yeni eklenen yeniden giriş/yükleme mantığı:* Eski ve yeni notlar aynı kod yolundan geçiyor; tek fark dosyanın diskte olup olmaması.
+
+### 📁 Değiştirilen Dosyalar
+- [`components/audio/AudioNotePlayer.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/audio/AudioNotePlayer.js)
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- 104 kaynak dosya `babel-preset-expo` ile sözdizimi denetiminden geçti; kırık relative import yok.
+- `tests/` altındaki 6 test dosyasının tamamı geçti.
+- **Cihazda doğrulanmadı:** Döngünün bittiği ve kaydın bitince durduğu cihazda test edilmelidir.
+
+---
+
 ## 📅 [2026-09-26] - Sesli Not Oynat Düğmesinin İlk Basışta Tepki Vermemesi
 
 ### 🔍 Kapsam ve İhtiyaç

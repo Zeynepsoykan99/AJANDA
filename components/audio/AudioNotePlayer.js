@@ -139,9 +139,17 @@ export default function AudioNotePlayer({
     if (status.didJustFinish && !status.isLooping) {
       setIsPlaying(false);
       setPositionMs(0);
-      soundRef.current?.setPositionAsync(0).catch((e) => {
-        console.warn('Kayıt başa sarılamadı:', e);
-      });
+      // ÖNEMLİ: Burada `setPositionAsync(0)` KULLANILMAZ. expo-av tarafında kayıt
+      // bitince `shouldPlay` bayrağı true kalıyor (SimpleExoPlayerData yalnızca
+      // didJustFinish yayıyor, playWhenReady'yi sıfırlamıyor). Yalnızca konum
+      // gönderilirse PlayerData.setStatus `mShouldPlay`'e dokunmadığı için oynatma
+      // baştan yeniden başlıyor ve ses sonsuz döngüye giriyordu.
+      // Konumla birlikte `shouldPlay: false` göndermek döngüyü engelliyor.
+      soundRef.current
+        ?.setStatusAsync({ shouldPlay: false, positionMillis: 0 })
+        .catch((e) => {
+          console.warn('Kayıt başa sarılamadı:', e);
+        });
     }
   };
 
