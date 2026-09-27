@@ -4,6 +4,48 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-27] - Kalıcı Ses Saklamanın Uçtan Uca Doğrulanması ve Uç Durumların Kapatılması
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** `06bd363d` ile yapılan kalıcı saklama düzeltmesinin yayına çıkacak sürüm için gerçekten eksiksiz olduğunu adım adım doğrulamak; açık kalan uç durumları kapatmak.
+
+### 🔬 Doğrulanan Kayıt Yolları
+| Senaryo | Dosyayı kim yazıyor | Hedef dizin | Sonuç |
+| --- | --- | --- | --- |
+| Android canlı tanıma | `expo-speech-recognition` (`recordingOptions.persist`) | `outputDirectory: AUDIO_DIR` | ✔ doğrudan kalıcı dizine |
+| Android/iOS expo-av yedek yolu | `expo-av` → önbellek | `saveAudioPermanently` ile `AUDIO_DIR`'e kopyalanıyor | ✔ kopyalama sonrası kalıcı |
+| iOS `.wav`/LINEARPCM | `expo-av` → önbellek | aynı kopyalama yolu | ✔ kopyalama sonrası kalıcı |
+- `ensureAudioDirectory()` her iki yolda da kayıttan önce çağrılıyor; dizini atlayan başka bir kod yolu bulunmadı.
+- `saveAudioPermanently` yalnızca `AudioRecorderModal` tarafından çağrılıyor; başka bir dosya kaydetme mantığı yok. `deleteAudioFile`/`deleteAudioFiles` çağrıları da aynı dizin üzerinde çalışıyor.
+
+### 🛠️ Kapatılan Uç Durumlar
+1. **Dosya adı çakışması:** Canlı tanıma dosya adı `note_${Date.now()}.wav` idi; projenin `${prefix}_${Date.now()}_${random}` konvansiyonuna uyacak şekilde rastgele son ek eklendi.
+2. **Sessizce yutulan kritik hata:** `saveAudioPermanently` başarısız olduğunda yalnızca `console.warn` yazıp geçici (önbellek) URI'yi döndürüyordu — yani ses aslında kalıcı değilken her şey yolundaymış gibi görünüyordu. Artık `console.error` ile URI ve hedef dizin birlikte loglanıyor.
+3. **Dizin hazırlanamaması:** `ensureAudioDirectory` hatası `console.warn`'dan `console.error`'a çıkarıldı; bu adım başarısız olursa hiçbir kayıt kalıcı olamaz.
+
+### 🧪 Eklenen Test
+- **`tests/audioStoragePaths.test.js`** [NEW] — 9 doğrulama. Mantığı kopyalamak yerine `services/audioService.js`, `components/audio/AudioRecorderModal.js` ve `services/transcriptionService.js` dosyalarının **gerçek kaynağını** okuyor; `getFileExtension` fonksiyonu kaynaktan çıkarılıp 10 senaryoda çalıştırılıyor.
+- Testin gerçekten hata yakaladığı iki kasıtlı bozma denemesiyle kanıtlandı: (a) legacy import'un geri alınması, (b) uzantı regex'indeki kaçış karakterinin silinmesi. Her ikisinde de test kaldı, düzeltme sonrası tekrar geçti.
+
+### ⚠️ Bulunan Ama Düzeltilmeyen Risk (karar kullanıcıya bırakıldı)
+- **iOS'ta uygulama güncellemesinden sonra kayıtlı URI'ler geçersiz kalabilir.** Sesli notun `uri` alanı AsyncStorage'a **mutlak yol** olarak yazılıyor. iOS'ta `documentDirectory`, `appContext.config.documentDirectory.absoluteString` üzerinden geliyor ve `/var/mobile/Containers/Data/Application/<UUID>/Documents/` biçiminde; bu **UUID uygulama güncellemesi/yeniden kurulumunda değişebiliyor**. Dosya diskte durmaya devam etse de kayıtlı URI eski UUID'yi gösterdiği için ses bulunamaz.
+- Android'de bu risk **yok**: `documentDirectory` → `context.filesDir` (`/data/user/0/<paket>/files/`), güncellemeler arasında sabit.
+- Kalıcı çözüm, URI yerine yalnızca **dosya adının** saklanıp okuma anında `AUDIO_DIR` ile birleştirilmesi (ve mevcut kayıtlar için göç/migration) olur. Bu bir veri modeli değişikliği olduğu için kapsam dışı bırakıldı ve kullanıcıya soruldu.
+
+### 📁 Değiştirilen Dosyalar
+- [`services/audioService.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/services/audioService.js)
+- [`components/audio/AudioRecorderModal.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/audio/AudioRecorderModal.js)
+- [`tests/audioStoragePaths.test.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/tests/audioStoragePaths.test.js) [NEW]
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- `tests/` altındaki **7 test dosyasının tamamı** geçti (yeni eklenen dahil).
+- 104 kaynak dosya `babel-preset-expo` ile sözdizimi denetiminden geçti.
+- Android ve iOS tarafındaki `documentDirectory` kaynakları native kodda okunarak doğrulandı.
+- **Cihazda doğrulanmadı:** "kaydet → uygulamayı kapat → aç → çal" akışı gerçek cihazda test edilmelidir.
+
+---
+
 ## 📅 [2026-09-27] - Sesli Notların Kalıcı Saklanması (Legacy expo-file-system Düzeltmesi)
 
 ### 🔍 Kapsam ve İhtiyaç

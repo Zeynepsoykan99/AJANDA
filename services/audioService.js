@@ -56,7 +56,8 @@ export const ensureAudioDirectory = async () => {
       await FileSystem.makeDirectoryAsync(AUDIO_DIR, { intermediates: true });
     }
   } catch (error) {
-    console.warn('ensureAudioDirectory hatası:', error);
+    // Bu basarisiz olursa kayitlar kalici dizine yazilamaz; sessiz kalmamali
+    console.error('ensureAudioDirectory hatası, kalıcı ses dizini hazırlanamadı:', AUDIO_DIR, error);
   }
 };
 
@@ -256,7 +257,13 @@ export const saveAudioPermanently = async (tempUri, pageId = 'page') => {
 
     return destUri;
   } catch (error) {
-    console.warn('saveAudioPermanently hatası:', error);
+    // KRITIK: Buraya dusuldugunde kayit kalici dizine TASINAMAMIS demektir ve
+    // donen URI gecici (cache) bir dosyayi isaret eder. Isletim sistemi onbellegi
+    // bosalttiginda ses kaybolur. Sessiz kalmamasi icin error seviyesinde loglanir.
+    console.error(
+      'saveAudioPermanently BASARISIZ: ses kalıcı dizine taşınamadı, geçici URI kullanılıyor.',
+      { tempUri, audioDir: AUDIO_DIR, error }
+    );
     return tempUri; // Hata durumunda geçici URI fallback olarak korunur
   }
 };

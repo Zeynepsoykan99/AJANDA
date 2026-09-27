@@ -200,7 +200,10 @@ export default function AudioRecorderModal({
         const session = await startLiveRecognition({
           language: i18n.language,
           outputDirectory: AUDIO_DIR,
-          outputFileName: `note_${Date.now()}.wav`,
+          // Proje konvansiyonu: ${prefix}_${Date.now()}_${random}
+          outputFileName: `note_${Date.now()}_${Math.random()
+            .toString(36)
+            .substring(2, 6)}.wav`,
           onAutoStop: handleLiveAutoStop,
         });
 
