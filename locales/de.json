@@ -330,7 +330,7 @@
     "readyToSave": "Aufnahme bereit",
     "reRecord": "Neu aufnehmen",
     "saveToPage": "Zur Seite hinzufügen",
-    "notesPill": "{{count}} Sprachnotiz",
+    "notesPill": "{{count}} Sprachnotizen",
     "notesDeckTitle": "Sprachnotizen ({{count}})",
     "deleteConfirmTitle": "Sprachnotiz löschen",
     "deleteConfirmMessage": "Möchten Sie diese Sprachnotiz wirklich löschen? Dieser Vorgang kann nicht rückgängig gemacht werden.",

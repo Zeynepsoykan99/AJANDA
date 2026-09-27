@@ -330,7 +330,7 @@
     "readyToSave": "Enregistrement prêt",
     "reRecord": "Réenregistrer",
     "saveToPage": "Ajouter à la Page",
-    "notesPill": "{{count}} Note Vocale",
+    "notesPill": "{{count}} Notes Vocales",
     "notesDeckTitle": "Notes Vocales ({{count}})",
     "deleteConfirmTitle": "Supprimer la Note Vocale",
     "deleteConfirmMessage": "Êtes-vous sûr de vouloir supprimer cette note vocale ? Cette action est irréversible.",

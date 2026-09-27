@@ -330,7 +330,7 @@
     "readyToSave": "Recording ready",
     "reRecord": "Re-record",
     "saveToPage": "Add to Page",
-    "notesPill": "{{count}} Audio Note",
+    "notesPill": "{{count}} Voice Notes",
     "notesDeckTitle": "Voice Notes ({{count}})",
     "deleteConfirmTitle": "Delete Voice Note",
     "deleteConfirmMessage": "Are you sure you want to delete this voice note? This action cannot be undone.",

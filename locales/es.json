@@ -330,7 +330,7 @@
     "readyToSave": "Grabación lista",
     "reRecord": "Re-grabar",
     "saveToPage": "Agregar a la Página",
-    "notesPill": "{{count}} Nota de Voz",
+    "notesPill": "{{count}} Notas de Voz",
     "notesDeckTitle": "Notas de Voz ({{count}})",
     "deleteConfirmTitle": "Eliminar Nota de Voz",
     "deleteConfirmMessage": "¿Está seguro de que desea eliminar esta nota de voz? Esta acción no se puede deshacer.",

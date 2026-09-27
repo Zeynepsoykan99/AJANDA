@@ -4,6 +4,36 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-27] - Sesli Not Terminoloji Birliği ve Dil Dosyası Bütünlük Testi
+
+### 🔤 1. `audio.notesPill` Terminolojisi Hizalandı
+- Bu anahtar mükerrer blok birleştirmesinde eski bloktan `"{{count}} Audio Note"` olarak dönmüştü; aynı bölümdeki diğer anahtarlar "Voice Note" terminolojisini kullanıyordu. Ayrıca sayı ile birlikte kullanılmasına rağmen tekil yazılmıştı.
+- Kodda kullanılmayan `audio.collapsedBadge` anahtarı zaten doğru terminolojiyi ve çoğul biçimi taşıdığı için referans alındı; `notesPill` beş dilde onunla aynı hâle getirildi.
+- `tr` değeri değişmedi (Türkçede sayıdan sonra çoğul eki kullanılmaz). Diğerleri: `"{{count}} Voice Notes"`, `"{{count}} Sprachnotizen"`, `"{{count}} Notas de Voz"`, `"{{count}} Notes Vocales"`.
+
+### 🧪 2. Dil Dosyası Bütünlük Testi Eklendi
+- **`tests/localeIntegrity.test.js`** [NEW] — 5 denetim:
+  1. Beş dosyanın geçerli JSON olması.
+  2. **Mükerrer anahtar olmaması** — testin asıl varlık sebebi. Ham metin taranır, çünkü `JSON.parse` mükerrer anahtarları sessizce birleştirdiği için ayrıştırılmış nesne üzerinden tespit edilemez.
+  3. Beş dosyanın tam paritede olması.
+  4. Kodda kullanılan her `t()` anahtarının beş dilde de tanımlı olması.
+  5. `{{...}}` interpolasyon değişkenlerinin diller arasında tutarlı olması.
+- Testin gerçekten yakaladığı kasıtlı bozmayla kanıtlandı: `en.json` sonuna ikinci bir `notebooks` bloğu eklendiğinde test, her iki tanımın satır numarasını vererek başarısız oldu.
+
+### 📁 Değiştirilen Dosyalar
+- [`locales/tr.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/tr.json), [`en.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/en.json), [`de.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/de.json), [`es.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/es.json), [`fr.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/fr.json)
+- [`tests/localeIntegrity.test.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/tests/localeIntegrity.test.js) [NEW]
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- `tests/` altındaki 10 test dosyasının tamamı geçti; 104 kaynak dosya sözdizimi denetiminden geçti.
+- Beş dil dosyası: 401 anahtar, tam parite, 0 mükerrer.
+
+### 📝 Not
+- Proje genelinde i18next çoğul eki (`_one`/`_other`) kullanılmıyor; `{{count}}` içeren tüm anahtarlar tek biçimli. `notesPill` de bu konvansiyona uydu, dolayısıyla `count=1` durumunda İngilizcede "1 Voice Notes" görünür. Bu, mevcut `collapsedBadge` ve `pageCards.eventsSummary` gibi anahtarlarla aynı davranıştır; çoğul desteği ayrı bir karar olduğu için değiştirilmedi.
+
+---
+
 ## 📅 [2026-09-27] - Dil Dosyalarındaki Mükerrer Bölümlerin Birleştirilmesi (Kaybolan Çeviriler)
 
 ### 🔍 Kapsam ve İhtiyaç
