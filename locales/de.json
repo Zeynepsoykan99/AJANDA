@@ -299,7 +299,10 @@
     "confirmNewPinTitle": "Neue PIN bestätigen",
     "confirmNewPinDesc": "Gib deine neue PIN zur Bestätigung erneut ein",
     "pinChangedTitle": "Erfolgreich",
-    "pinChangedSuccess": "Deine PIN wurde erfolgreich aktualisiert."
+    "pinChangedSuccess": "Deine PIN wurde erfolgreich aktualisiert.",
+    "attemptsRemaining": "Noch {{count}} Versuche.",
+    "lockedSeconds": "Versuchen Sie es in {{count}} Sekunden erneut.",
+    "lockedMinutes": "Versuchen Sie es in {{count}} Minuten erneut."
   },
   "reminder": {
     "title": "Erinnerung einstellen",

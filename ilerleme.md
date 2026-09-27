@@ -4,6 +4,56 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-27] - PIN Deneme Sınırı (B2) ve Arka Plandan Dönüşte Kilit (B3)
+
+### 🔍 Kapsam ve İhtiyaç
+- Denetim raporundaki iki güvenlik bulgusu: PIN denemelerinde hiçbir sınır olmaması (B2) ve uygulama arka plana atılıp geri dönüldüğünde kilidin yeniden istenmemesi (B3).
+
+### 🔐 B2 — Kademeli Deneme Gecikmesi
+- **Önceki durum:** `PinAuthModal` yanlış denemeyi saymıyor, yalnızca ekranı titretiyordu. 4 haneli PIN = 10.000 kombinasyon, sınırsız deneme.
+- **Politika (kullanıcı kararı):** İlk 3 deneme serbest; 4. hatadan itibaren bekleme katlanarak artıyor — 30 sn → 1 dk → 2 dk → 5 dk → 15 dk (tavan). Doğru PIN sayacı sıfırlıyor.
+- **Kalıcılık (kullanıcı kararı):** Sayaç ve kilit bitiş zamanı `@ajanda_pin_attempts_v1` altında **diske** yazılıyor, hedef (günlük/defter) başına ayrı tutuluyor. Uygulamayı kapatıp açmak sınırı atlatmıyor.
+- **`services/securityService.js`:** `PIN_FREE_ATTEMPTS`, `PIN_LOCKOUT_LADDER_MS`, saf `getLockoutDurationMs()` ve `computeAttemptState()` fonksiyonları; servis üzerinde `getAttemptState`, `registerFailedAttempt`, `clearAttempts`. Sayaç yazılamazsa sessiz kalınmıyor, `console.error` ile bildiriliyor.
+- **`components/security/PinAuthModal.js`:** Modal açılınca disk durumu yükleniyor; kilitliyken tuş takımı `pointerEvents="none"` ile devre dışı ve soluk, `handlePressDigit` erken dönüyor; saniyede bir geri sayım (unmount'ta temizleniyor). Yanlış denemede kalan hak, kilitliyken kalan süre yazılıyor. `verify`, `remove` ve `change` (1. aşama) dallarının üçü de sayaca bağlandı.
+- **Biyometri bilerek engellenmedi:** PIN gecikmesi sürerken biyometrik kısayol çalışmaya devam ediyor. Saldırgan cihaz sahibinin parmak izine/yüzüne zaten sahip değil; engellemek yalnızca gerçek kullanıcıyı cezalandırırdı.
+
+### 🔒 B3 — Arka Plana Geçince Oturum Kilidini Düşürme
+- **Doğrulama:** Projede hiç `AppState` dinleyicisi olmadığı taramayla teyit edildi (0 eşleşme). Açık kilitler `biometricService` içinde bellekteki bir `Set`'te tutuluyor ve yalnızca süreç ölünce temizleniyordu.
+- **`inactive` / `background` ayrımı:** Yalnızca gerçek `background` geçişi kilitleme sayılıyor. `inactive` durumunda **kilitlenmiyor**, çünkü iOS'ta bildirim çubuğu, uygulama değiştirici, gelen arama ve **Face ID isteminin kendisi** uygulamayı `inactive` yapar; `inactive` kilitlenseydi kullanıcı Face ID ile açarken uygulama anında yeniden kilitlenir ve sonsuz döngü oluşurdu.
+- **Tolerans (kullanıcı kararı): 30 saniye.** Arka plana geçişte zaman damgası alınıyor, öne dönüşte süre aşıldıysa kilitler düşürülüyor. Kısa kaçamaklar (bildirime bakma, PDF paylaşım sayfasından dönüş — Android'de paylaşım uygulamayı arka plana atıyor) PIN sormuyor.
+- **`services/biometricService.js`:** `BACKGROUND_LOCK_GRACE_MS`, `startSessionAutoLock()`, `addSessionLockListener()`; `clearAllUnlockedSessions()` artık dinleyicileri bilgilendiriyor.
+- **`app/_layout.js`:** Otomatik kilit uygulama kökünde başlatılıyor, unmount'ta kaldırılıyor.
+- **`components/notebook/NotebookPagesView.js`:** Bu ekran kendi `isUnlocked` state'ini tuttuğu için `Set`'in boşalmasını kendiliğinden fark edemiyordu; dinleyiciye abone edildi. `NotebookCoverView` ve `NotebookLockGate` durumu anlık olarak `isSessionUnlocked` ile okuduğu için ek değişiklik gerekmedi.
+
+### 🌐 Çeviri
+- Üç yeni anahtar beş dile eklendi: `security.attemptsRemaining`, `security.lockedSeconds`, `security.lockedMinutes`. Dosyalar 404 anahtarla tam paritede.
+
+### 🧪 Eklenen Test
+- **`tests/securityLockout.test.js`** [NEW] — 12 doğrulama. Gerçek fonksiyonlar kaynak dosyalardan okunup çalıştırılıyor; `startSessionAutoLock` sahte `AppState` ve sahte saatle sınanıyor.
+  - Test 8 asıl tuzağı kapatıyor: `inactive` durumu kilitlemiyor (Face ID döngüsü koruması).
+  - Test 9/10: 30 sn toleransının altında kilitlenmiyor, üstünde kilitleniyor.
+  - Test 11: arka plana geçmeden gelen `active` olayı kilitlemiyor.
+
+### 📁 Değiştirilen Dosyalar
+- [`services/securityService.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/services/securityService.js)
+- [`services/biometricService.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/services/biometricService.js)
+- [`components/security/PinAuthModal.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/security/PinAuthModal.js)
+- [`app/_layout.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/_layout.js)
+- [`components/notebook/NotebookPagesView.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/notebook/NotebookPagesView.js)
+- [`locales/tr.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/tr.json) ve diğer dört dil dosyası
+- [`tests/securityLockout.test.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/tests/securityLockout.test.js) [NEW]
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- `tests/` altındaki **11 test dosyasının tamamı** geçti.
+- 104 kaynak dosya `babel-preset-expo` ile sözdizimi denetiminden geçti; kırık relative import yok.
+- **Cihazda doğrulanmadı:** Gecikme merdiveninin ve arka plan kilidinin gerçek cihazdaki davranışı test edilmelidir.
+
+### 📝 Kapsam Notu
+- B1 (PIN'in AsyncStorage'a düz metin yazılabilmesi) bu turda **ele alınmadı**; ayrı bir karar olarak bekliyor.
+
+---
+
 ## 📅 [2026-09-27] - Sesli Not Terminoloji Birliği ve Dil Dosyası Bütünlük Testi
 
 ### 🔤 1. `audio.notesPill` Terminolojisi Hizalandı

@@ -47,6 +47,7 @@ import AudioRecorderModal from '../audio/AudioRecorderModal';
 import AudioNotesDeck from '../audio/AudioNotesDeck';
 import IndexFlagsRail from '../stationery/IndexFlagsRail';
 import { AudioService } from '../../services/audioService';
+import { addSessionLockListener } from '../../services/biometricService';
 import { StorageService } from '../../services/storageService';
 import { isSameDay, formatFilterDate } from '../../components/ui/GlobalFilterHeader';
 import { SecurityService } from '../../services/securityService';
@@ -108,6 +109,10 @@ export default function NotebookPagesView({
   const [notebook, setNotebook] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUnlocked, setIsUnlocked] = useState(() => SecurityService.isSessionUnlocked('diary'));
+
+  // Uygulama arka plandan tolerans suresini asarak dondugunde oturum kilitleri
+  // temizlenir; bu ekran kendi isUnlocked state'ini tuttugu icin ayrica bildirilir.
+  useEffect(() => addSessionLockListener(() => setIsUnlocked(false)), []);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
 
   // Araç Çubuğu Aktif Mod: 'none' | 'drawing' | 'text'

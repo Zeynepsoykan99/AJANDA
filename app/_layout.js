@@ -13,6 +13,7 @@ import {
   setupNotificationChannel,
   addNotificationListeners,
 } from '../services/notificationService';
+import { startSessionAutoLock } from '../services/biometricService';
 
 /**
  * GlobalErrorBoundary - React Render Ağacındaki Tüm Ölümcül Hataları Yakalayan Kalkan
@@ -120,6 +121,10 @@ function ThemedApp() {
     message: '',
     data: null,
   });
+
+  // Kilitli günlük/defterler: uygulama arka plana alınınca oturum kilitlerini
+  // düşür ki öne dönüldüğünde PIN/biyometri tekrar istensin.
+  useEffect(() => startSessionAutoLock(), []);
 
   // Bildirim altyapısını ve dinleyicilerini başlat (Web ortamında güvenli)
   useEffect(() => {

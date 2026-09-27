@@ -299,7 +299,10 @@
     "confirmNewPinTitle": "Confirmar Nuevo PIN",
     "confirmNewPinDesc": "Vuelve a introducir tu nuevo PIN para confirmar",
     "pinChangedTitle": "Éxito",
-    "pinChangedSuccess": "Tu PIN ha sido actualizado con éxito."
+    "pinChangedSuccess": "Tu PIN ha sido actualizado con éxito.",
+    "attemptsRemaining": "Quedan {{count}} intentos.",
+    "lockedSeconds": "Inténtalo de nuevo en {{count}} segundos.",
+    "lockedMinutes": "Inténtalo de nuevo en {{count}} minutos."
   },
   "reminder": {
     "title": "Configurar Recordatorio",

@@ -52,6 +52,42 @@ export default function PinAuthModal({
   const [errorMessage, setErrorMessage] = useState('');
   const [biometricInfo, setBiometricInfo] = useState({ type: 'none', icon: 'fingerprint' });
 
+  // Kademeli deneme sınırı durumu
+  const [lockoutRemainingMs, setLockoutRemainingMs] = useState(0);
+  const [attemptsRemaining, setAttemptsRemaining] = useState(null);
+  const countdownRef = useRef(null);
+
+  // PIN doğrulaması yapılan modlar (setup'ta doğrulanacak mevcut bir PIN yoktur)
+  const isVerifyingMode = mode === 'verify' || mode === 'remove' || mode === 'change';
+  const isLockedOut = lockoutRemainingMs > 0;
+
+  /** Kalan süreyi kullanıcıya okunur biçimde yazar */
+  const formatLockoutMessage = useCallback(
+    (ms) => {
+      const totalSeconds = Math.ceil(ms / 1000);
+      if (totalSeconds >= 60) {
+        const minutes = Math.ceil(totalSeconds / 60);
+        return t('security.lockedMinutes', {
+          count: minutes,
+          defaultValue: `${minutes} dakika sonra tekrar deneyin`,
+        });
+      }
+      return t('security.lockedSeconds', {
+        count: totalSeconds,
+        defaultValue: `${totalSeconds} saniye sonra tekrar deneyin`,
+      });
+    },
+    [t]
+  );
+
+  /** Servis durumunu bileşen state'ine uygular */
+  const applyAttemptState = useCallback((state) => {
+    setLockoutRemainingMs(state?.remainingMs || 0);
+    setAttemptsRemaining(
+      state && !state.isLocked && state.failedCount > 0 ? state.remainingAttempts : null
+    );
+  }, []);
+
   // Sallantı (Shake) Animasyonu
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
@@ -79,6 +115,66 @@ export default function PinAuthModal({
       setErrorMessage('');
     }
   }, [visible, mode]);
+
+  // Modal açıldığında diskteki deneme/kilit durumunu yükle.
+  // Sayaç kalıcı olduğu için modalı kapatıp açmak veya uygulamayı yeniden
+  // başlatmak sınırı sıfırlamaz.
+  useEffect(() => {
+    if (!visible || !isVerifyingMode) {
+      setLockoutRemainingMs(0);
+      setAttemptsRemaining(null);
+      return;
+    }
+    let isActive = true;
+    (async () => {
+      try {
+        const state = await SecurityService.getAttemptState(targetId);
+        if (isActive) applyAttemptState(state);
+      } catch (e) {
+        console.warn('[PinAuthModal] deneme durumu okunamadı:', e);
+      }
+    })();
+    return () => {
+      isActive = false;
+    };
+  }, [visible, isVerifyingMode, targetId, applyAttemptState]);
+
+  // Kilitliyken geri sayım (saniyede bir); süre dolunca giriş tekrar açılır
+  useEffect(() => {
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+      countdownRef.current = null;
+    }
+    if (lockoutRemainingMs <= 0) return undefined;
+
+    const endsAt = Date.now() + lockoutRemainingMs;
+    countdownRef.current = setInterval(() => {
+      const left = endsAt - Date.now();
+      if (left <= 0) {
+        clearInterval(countdownRef.current);
+        countdownRef.current = null;
+        setLockoutRemainingMs(0);
+        setErrorMessage('');
+      } else {
+        setLockoutRemainingMs(left);
+      }
+    }, 1000);
+
+    return () => {
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current);
+        countdownRef.current = null;
+      }
+    };
+  }, [lockoutRemainingMs > 0]);
+
+  // Bileşen kaldırılırsa geri sayım arkada çalışmasın
+  useEffect(
+    () => () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    },
+    []
+  );
 
   // Hata sallantı animasyonu
   const triggerShake = useCallback(() => {
@@ -116,6 +212,59 @@ export default function PinAuthModal({
       console.warn('[PinAuthModal] Biyometri hatası:', err);
     }
   }, [targetId, onSuccess, onClose, t]);
+
+  /**
+   * Yanlış PIN denemesini kaydeder, kademeli gecikmeyi uygular ve kullanıcıya
+   * kalan hak / bekleme süresini bildirir.
+   * @param {string} fallbackMessage - Henüz sınıra gelinmediyse gösterilecek metin
+   */
+  const handleWrongAttempt = useCallback(
+    async (fallbackMessage) => {
+      triggerShake();
+      setPin('');
+
+      let state = null;
+      try {
+        state = await SecurityService.registerFailedAttempt(targetId);
+      } catch (e) {
+        console.warn('[PinAuthModal] deneme kaydedilemedi:', e);
+      }
+
+      if (!state) {
+        setErrorMessage(fallbackMessage);
+        return;
+      }
+
+      applyAttemptState(state);
+
+      if (state.isLocked) {
+        setErrorMessage(formatLockoutMessage(state.remainingMs));
+      } else if (state.remainingAttempts > 0) {
+        setErrorMessage(
+          fallbackMessage +
+            ' ' +
+            t('security.attemptsRemaining', {
+              count: state.remainingAttempts,
+              defaultValue: `${state.remainingAttempts} deneme hakkınız kaldı.`,
+            })
+        );
+      } else {
+        setErrorMessage(fallbackMessage);
+      }
+    },
+    [targetId, triggerShake, applyAttemptState, formatLockoutMessage, t]
+  );
+
+  /** Doğru PIN girildiğinde sayacı sıfırlar */
+  const resetAttempts = useCallback(async () => {
+    try {
+      await SecurityService.clearAttempts(targetId);
+    } catch (e) {
+      console.warn('[PinAuthModal] deneme sayacı sıfırlanamadı:', e);
+    }
+    setLockoutRemainingMs(0);
+    setAttemptsRemaining(null);
+  }, [targetId]);
 
   // PIN Girişini Değerlendir (4 hane tamamlandığında otomatik tetiklenir)
   const handleCompletePin = useCallback(
@@ -162,13 +311,12 @@ export default function PinAuthModal({
           try {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           } catch {}
+          await resetAttempts();
           SecurityService.unlockSession(targetId);
           onSuccess && onSuccess();
           onClose && onClose();
         } else {
-          setErrorMessage(t('security.incorrectPin', 'Hatalı PIN kodu. Tekrar deneyin.'));
-          triggerShake();
-          setPin('');
+          await handleWrongAttempt(t('security.incorrectPin', 'Hatalı PIN kodu. Tekrar deneyin.'));
         }
       } else if (mode === 'remove') {
         // Kilidi Kaldırma Modu (Mevcut PIN doğrulanır ve silinir)
@@ -178,12 +326,11 @@ export default function PinAuthModal({
           try {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           } catch {}
+          await resetAttempts();
           onSuccess && onSuccess(false);
           onClose && onClose();
         } else {
-          setErrorMessage(t('security.incorrectPin', 'Hatalı PIN kodu. Tekrar deneyin.'));
-          triggerShake();
-          setPin('');
+          await handleWrongAttempt(t('security.incorrectPin', 'Hatalı PIN kodu. Tekrar deneyin.'));
         }
       } else if (mode === 'change') {
         // Şifre Değiştirme Modu (3 Aşamalı Akış: Mevcut PIN -> Yeni PIN -> Yeni PIN Onayla)
@@ -194,13 +341,14 @@ export default function PinAuthModal({
             try {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             } catch {}
+            await resetAttempts();
             setChangeStep(2);
             setPin('');
             setErrorMessage('');
           } else {
-            setErrorMessage(t('security.incorrectCurrentPin', 'Mevcut PIN kodu hatalı. Tekrar deneyin.'));
-            triggerShake();
-            setPin('');
+            await handleWrongAttempt(
+              t('security.incorrectCurrentPin', 'Mevcut PIN kodu hatalı. Tekrar deneyin.')
+            );
           }
         } else if (changeStep === 2) {
           // 2. Aşama: Yeni PIN'i Al
@@ -243,6 +391,8 @@ export default function PinAuthModal({
   // Sayı Tuşuna Dokunulduğunda
   const handlePressDigit = useCallback(
     (digit) => {
+      // Kademeli gecikme sürerken giriş kabul edilmez
+      if (isLockedOut) return;
       if (pin.length >= 4) return;
       try {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -257,7 +407,7 @@ export default function PinAuthModal({
         }, 60);
       }
     },
-    [pin, handleCompletePin]
+    [pin, handleCompletePin, isLockedOut]
   );
 
   // Silme (Backspace)
@@ -448,8 +598,11 @@ export default function PinAuthModal({
                 ) : null}
               </View>
 
-              {/* Sayısal Tuş Takımı (Numpad) */}
-              <View style={styles.numpad}>
+              {/* Sayısal Tuş Takımı (Numpad) - kademeli gecikme sürerken devre dışı */}
+              <View
+                style={[styles.numpad, isLockedOut && { opacity: 0.4 }]}
+                pointerEvents={isLockedOut ? 'none' : 'auto'}
+              >
                 {/* 1, 2, 3 */}
                 <View style={styles.numRow}>
                   {['1', '2', '3'].map((d) => (

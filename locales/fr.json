@@ -299,7 +299,10 @@
     "confirmNewPinTitle": "Confirmer le Nouveau PIN",
     "confirmNewPinDesc": "Entrez à nouveau votre nouveau PIN pour confirmer",
     "pinChangedTitle": "Succès",
-    "pinChangedSuccess": "Votre code PIN a été mis à jour avec succès."
+    "pinChangedSuccess": "Votre code PIN a été mis à jour avec succès.",
+    "attemptsRemaining": "Il reste {{count}} tentatives.",
+    "lockedSeconds": "Réessayez dans {{count}} secondes.",
+    "lockedMinutes": "Réessayez dans {{count}} minutes."
   },
   "reminder": {
     "title": "Définir un Rappel",

@@ -299,7 +299,10 @@
     "confirmNewPinTitle": "Yeni PIN'i Onaylayın",
     "confirmNewPinDesc": "Yeni PIN kodunuzu doğrulamak için tekrar girin",
     "pinChangedTitle": "Başarılı",
-    "pinChangedSuccess": "Şifreniz başarıyla güncellendi."
+    "pinChangedSuccess": "Şifreniz başarıyla güncellendi.",
+    "attemptsRemaining": "{{count}} deneme hakkınız kaldı.",
+    "lockedSeconds": "{{count}} saniye sonra tekrar deneyin.",
+    "lockedMinutes": "{{count}} dakika sonra tekrar deneyin."
   },
   "reminder": {
     "title": "Hatırlatıcı Kur",

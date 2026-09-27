@@ -10,6 +10,72 @@ import {
 const SECURE_STORE_PIN_KEY = 'ajanda_diary_pin_v1';
 const ASYNC_FALLBACK_PIN_KEY = '@ajanda_diary_pin_secure_v1';
 
+// ─── PIN Deneme Sınırı (Kademeli Gecikme) ──────────────────────────
+// 4 haneli PIN yalnızca 10.000 kombinasyon demektir; sınırsız deneme kaba kuvvet
+// saldırısını mümkün kılar. İlk birkaç deneme serbest bırakılır (kullanıcı kendi
+// şifresini karıştırabilir), sonrasında bekleme süresi katlanarak artar.
+const PIN_ATTEMPTS_KEY = '@ajanda_pin_attempts_v1';
+
+/** Gecikme başlamadan önce serbest bırakılan yanlış deneme sayısı */
+export const PIN_FREE_ATTEMPTS = 3;
+
+/** 4., 5., 6., 7. ve 8+ hatalı denemede uygulanacak bekleme süreleri (ms) */
+export const PIN_LOCKOUT_LADDER_MS = [30000, 60000, 120000, 300000, 900000];
+
+/**
+ * Toplam yanlış deneme sayısına karşılık gelen bekleme süresini döndürür.
+ * Saf fonksiyon: zamandan ve depodan bağımsızdır, doğrudan test edilebilir.
+ *
+ * @param {number} failedCount - Ardışık yanlış deneme sayısı
+ * @returns {number} Bekleme süresi (ms). Serbest aralıktaysa 0.
+ */
+export const getLockoutDurationMs = (failedCount) => {
+  const count = Number(failedCount) || 0;
+  if (count <= PIN_FREE_ATTEMPTS) return 0;
+  const index = Math.min(count - PIN_FREE_ATTEMPTS - 1, PIN_LOCKOUT_LADDER_MS.length - 1);
+  return PIN_LOCKOUT_LADDER_MS[index];
+};
+
+/**
+ * Kayıttan o anki kilit durumunu hesaplar. Saf fonksiyon.
+ *
+ * @param {{ failedCount?: number, lockedUntil?: number }} record
+ * @param {number} now - Date.now()
+ * @returns {{ failedCount: number, isLocked: boolean, remainingMs: number, remainingAttempts: number }}
+ */
+export const computeAttemptState = (record, now) => {
+  const failedCount = Number(record?.failedCount) || 0;
+  const lockedUntil = Number(record?.lockedUntil) || 0;
+  const remainingMs = Math.max(0, lockedUntil - now);
+  return {
+    failedCount,
+    isLocked: remainingMs > 0,
+    remainingMs,
+    remainingAttempts: Math.max(0, PIN_FREE_ATTEMPTS - failedCount),
+  };
+};
+
+const readAttemptMap = async () => {
+  try {
+    const raw = await AsyncStorage.getItem(PIN_ATTEMPTS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (error) {
+    console.warn('[SecurityService] deneme kaydı okunamadı:', error);
+    return {};
+  }
+};
+
+const writeAttemptMap = async (map) => {
+  try {
+    await AsyncStorage.setItem(PIN_ATTEMPTS_KEY, JSON.stringify(map));
+  } catch (error) {
+    // Sessiz kalmamalı: yazılamazsa sınır uygulama yeniden başlayınca sıfırlanır
+    console.error('[SecurityService] deneme kaydı yazılamadı, sınır kalıcı olmayacak:', error);
+  }
+};
+
 /**
  * Standardizes target ID across all screens and storage records.
  * 'my_diary', 'diary', null, or undefined will always map to 'diary'.
@@ -189,6 +255,54 @@ export const SecurityService = {
       } catch {
         return false;
       }
+    }
+  },
+
+  // ─── PIN Deneme Sınırı ───────────────────────────────────────────
+  getLockoutDurationMs,
+  computeAttemptState,
+
+  /**
+   * Hedefin o anki deneme/kilit durumunu döndürür.
+   * @param {string} [targetId='diary']
+   */
+  async getAttemptState(targetId = 'diary') {
+    const normId = normalizeTargetId(targetId);
+    const map = await readAttemptMap();
+    return computeAttemptState(map[normId], Date.now());
+  },
+
+  /**
+   * Yanlış denemeyi kaydeder ve gerekiyorsa kilit başlatır.
+   * Sayaç diske yazılır; uygulamayı kapatıp açmak sınırı atlatmaz.
+   * @param {string} [targetId='diary']
+   */
+  async registerFailedAttempt(targetId = 'diary') {
+    const normId = normalizeTargetId(targetId);
+    const map = await readAttemptMap();
+    const failedCount = (Number(map[normId]?.failedCount) || 0) + 1;
+    const lockoutMs = getLockoutDurationMs(failedCount);
+    const now = Date.now();
+
+    map[normId] = {
+      failedCount,
+      lockedUntil: lockoutMs > 0 ? now + lockoutMs : 0,
+    };
+    await writeAttemptMap(map);
+
+    return computeAttemptState(map[normId], now);
+  },
+
+  /**
+   * Doğru PIN girildiğinde sayacı sıfırlar.
+   * @param {string} [targetId='diary']
+   */
+  async clearAttempts(targetId = 'diary') {
+    const normId = normalizeTargetId(targetId);
+    const map = await readAttemptMap();
+    if (map[normId]) {
+      delete map[normId];
+      await writeAttemptMap(map);
     }
   },
 

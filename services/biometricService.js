@@ -4,10 +4,21 @@
  */
 
 import * as LocalAuthentication from 'expo-local-authentication';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 // Oturum bazlı açık kilitler (sayfa geçişlerinde tekrar tekrar sormamak için in-memory tutulur)
 const unlockedSessions = new Set();
+
+// Kilitler temizlendiğinde haberdar olmak isteyen ekranlar (kendi yerel `isUnlocked`
+// state'ini tutan bileşenler, Set'in boşalmasını kendiliğinden fark edemez)
+const sessionLockListeners = new Set();
+
+/**
+ * Uygulama arka plandayken kilitlerin korunacağı tolerans süresi.
+ * Kısa kaçamaklar (bildirime bakma, paylaşım sayfasından dönme, başka uygulamaya
+ * geçip hemen dönme) tekrar PIN sormasın diye vardır.
+ */
+export const BACKGROUND_LOCK_GRACE_MS = 30000;
 
 /**
  * Cihazın biyometrik veya PIN/parola güvenliği destekleyip desteklemediğini kontrol eder.
@@ -159,8 +170,75 @@ export const isSessionUnlocked = (targetId) => {
 };
 
 /**
- * Tüm oturum kilitlerini sıfırlar.
+ * Tüm oturum kilitlerini sıfırlar ve dinleyicileri haberdar eder.
  */
 export const clearAllUnlockedSessions = () => {
   unlockedSessions.clear();
+  sessionLockListeners.forEach((listener) => {
+    try {
+      listener();
+    } catch (error) {
+      console.warn('[BiometricService] oturum kilidi dinleyicisi hatası:', error);
+    }
+  });
+};
+
+/**
+ * Oturum kilitleri sıfırlandığında çağrılacak bir dinleyici kaydeder.
+ *
+ * Kendi `isUnlocked` state'ini tutan ekranlar (ör. NotebookPagesView) Set'in
+ * boşalmasını kendiliğinden fark edemez; bu yüzden bildirilmeleri gerekir.
+ *
+ * @param {function} listener
+ * @returns {function} Aboneliği sonlandıran fonksiyon
+ */
+export const addSessionLockListener = (listener) => {
+  if (typeof listener !== 'function') return () => {};
+  sessionLockListeners.add(listener);
+  return () => {
+    sessionLockListeners.delete(listener);
+  };
+};
+
+// ─── Arka Plana Geçişte Otomatik Kilitleme ───────────────────────────
+
+let backgroundedAt = null;
+
+/**
+ * Uygulama gerçekten arka plana alındığında (ve tolerans süresi aşıldığında)
+ * açık kilitleri temizler; böylece öne dönüldüğünde PIN/biyometri tekrar istenir.
+ *
+ * ÖNEMLİ - `inactive` durumunda KİLİTLENMEZ: iOS'ta bildirim çubuğunu indirme,
+ * uygulama değiştirici, gelen arama ve **Face ID istemi** uygulamayı `inactive`
+ * yapar. `inactive` durumunda kilitlenseydi, kullanıcı Face ID ile açarken
+ * uygulama anında yeniden kilitlenir ve sonsuz bir döngü oluşurdu.
+ * Yalnızca gerçek `background` geçişi kilitleme sayılır.
+ *
+ * @param {number} [graceMs] - Tolerans süresi (ms)
+ * @returns {function} Dinleyiciyi kaldıran fonksiyon
+ */
+export const startSessionAutoLock = (graceMs = BACKGROUND_LOCK_GRACE_MS) => {
+  const handleAppStateChange = (nextState) => {
+    if (nextState === 'background') {
+      // Kilit hemen kaldırılmaz; tolerans kararı öne dönüşte verilir
+      backgroundedAt = Date.now();
+      return;
+    }
+
+    if (nextState === 'active') {
+      if (backgroundedAt !== null && Date.now() - backgroundedAt > graceMs) {
+        clearAllUnlockedSessions();
+      }
+      backgroundedAt = null;
+    }
+
+    // 'inactive': geçici odak kaybı, hiçbir şey yapılmaz
+  };
+
+  const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+  return () => {
+    backgroundedAt = null;
+    subscription?.remove?.();
+  };
 };
