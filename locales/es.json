@@ -13,7 +13,10 @@
     "confirm": "Confirmar",
     "back": "Volver",
     "today": "Hoy",
-    "emptyItem": "Elemento eliminado"
+    "emptyItem": "Elemento eliminado",
+    "error": "Error",
+    "share": "Compartir",
+    "ok": "Aceptar"
   },
   "home": {
     "appTitle": "AJANDA",
@@ -233,7 +236,7 @@
     "noEntryForDate": "No se encontró ninguna página para el {{date}}."
   },
   "notebooks": {
-    "addNotebook": "Añadir Cuaderno",
+    "addNotebook": "Agregar Cuaderno",
     "nameLabel": "Nombre del Cuaderno",
     "namePlaceholder": "Ponle un nombre a tu cuaderno",
     "coverLabel": "Portada",
@@ -245,7 +248,6 @@
     "emptyDesc": "Crea tu primer cuaderno con el botón + de arriba a la derecha.",
     "emptyFilterTitle": "No se encontraron cuadernos",
     "emptyFilterDesc": "No hay cuadernos modificados el {{date}}.",
-
     "singlePageWarning": "El cuaderno debe contener al menos una página.",
     "notFound": "Cuaderno no encontrado",
     "search": "Buscar en el Cuaderno",
@@ -254,7 +256,9 @@
     "noResults": "No se encontraron resultados",
     "resultCount": "Coincidencias en {{count}} páginas",
     "matchCount": "{{count}} coincidencias",
-    "inlinePlaceholder": "Comienza a escribir aquí..."
+    "inlinePlaceholder": "Comienza a escribir aquí...",
+    "pinToTop": "Fijar al principio",
+    "unpin": "Desfijar"
   },
   "security": {
     "lockNotebook": "Bloquear este cuaderno",
@@ -325,13 +329,20 @@
     "tapToRecord": "Toca el micrófono para comenzar a grabar",
     "readyToSave": "Grabación lista",
     "reRecord": "Re-grabar",
-    "saveToPage": "Añadir a la Página",
+    "saveToPage": "Agregar a la Página",
     "notesPill": "{{count}} Nota de Voz",
     "notesDeckTitle": "Notas de Voz ({{count}})",
     "deleteConfirmTitle": "Eliminar Nota de Voz",
-    "deleteConfirmMessage": "¿Estás seguro de que deseas eliminar esta nota de voz? Esta acción no se puede deshacer.",
-    "micPermissionTitle": "Permiso de Micrófono Requerido",
-    "micPermissionMessage": "Por favor, active los permisos de micrófono en los Ajustes."
+    "deleteConfirmMessage": "¿Está seguro de que desea eliminar esta nota de voz? Esta acción no se puede deshacer.",
+    "micPermissionTitle": "Permiso de Micrófono Necesario",
+    "micPermissionMessage": "Por favor conceda acceso al micrófono en los ajustes para grabar notas de voz.",
+    "recordHint": "Toque el micrófono para iniciar la grabación",
+    "recordingHint": "Grabando... Toque de nuevo para detener",
+    "recordedHint": "Puede escuchar, descartar o agregar a la página",
+    "resetRecord": "Grabar de Nuevo",
+    "discardConfirmTitle": "Descartar Grabación",
+    "discardConfirmMessage": "¿Está seguro de que desea descartar esta grabación?",
+    "collapsedBadge": "{{count}} Notas de Voz"
   },
   "export": {
     "button": "Exportar como PDF",
@@ -341,11 +352,11 @@
     "errorDesc": "Ocurrió un error al exportar la página a PDF. Por favor, intenta de nuevo."
   },
   "transcript": {
-    "pending": "Transcribiendo audio...",
+    "pending": "Transcribiendo...",
     "completed": "Transcripción",
-    "failed": "Transcripción fallida",
+    "failed": "Error en la transcripción",
     "retry": "Reintentar",
-    "copied": "Copiado al portapapeles",
+    "copied": "Texto copiado",
     "notAvailable": "El reconocimiento de voz no es compatible con este dispositivo",
     "badge": "Nota de Voz"
   },
@@ -440,39 +451,6 @@
       "generalDayDesc": "Tus momentos {{mood}} brillaron con mayor fuerza los {{day}} ({{count}} veces)."
     }
   },
-  "audio": {
-    "micPermissionTitle": "Permiso de Micrófono Necesario",
-    "micPermissionMessage": "Por favor conceda acceso al micrófono en los ajustes para grabar notas de voz.",
-    "recordTitle": "Grabar Nota de Voz",
-    "recordHint": "Toque el micrófono para iniciar la grabación",
-    "recordingHint": "Grabando... Toque de nuevo para detener",
-    "recordedHint": "Puede escuchar, descartar o agregar a la página",
-    "resetRecord": "Grabar de Nuevo",
-    "saveToPage": "Agregar a la Página",
-    "defaultTitle": "Nota de Voz",
-    "discardConfirmTitle": "Descartar Grabación",
-    "discardConfirmMessage": "¿Está seguro de que desea descartar esta grabación?",
-    "notesDeckTitle": "Notas de Voz ({{count}})",
-    "collapsedBadge": "{{count}} Notas de Voz",
-    "deleteConfirmTitle": "Eliminar Nota de Voz",
-    "deleteConfirmMessage": "¿Está seguro de que desea eliminar esta nota de voz? Esta acción no se puede deshacer."
-  },
-  "transcript": {
-    "pending": "Transcribiendo...",
-    "completed": "Transcripción",
-    "failed": "Error en la transcripción",
-    "retry": "Reintentar",
-    "copied": "Texto copiado",
-    "badge": "Nota de Voz"
-  },
-  "notebooks": {
-    "pinToTop": "Fijar al principio",
-    "unpin": "Desfijar",
-    "rename": "Renombrar",
-    "addNotebook": "Agregar Cuaderno",
-    "emptyTitle": "Aún no hay cuadernos",
-    "emptyDesc": "Crea tu primer cuaderno con el botón + de arriba a la derecha."
-  },
   "indexFlags": {
     "newTitle": "Nuevo Marcador Post-it",
     "editTitle": "Editar Marcador",
@@ -489,4 +467,3 @@
     "suggestionUrgent": "Urgente"
   }
 }
-

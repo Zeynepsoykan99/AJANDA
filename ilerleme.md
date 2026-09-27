@@ -4,6 +4,47 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-27] - Dil Dosyalarındaki Mükerrer Bölümlerin Birleştirilmesi (Kaybolan Çeviriler)
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Denetim raporundaki F1 bulgusu. Kodda kullanılan 26 çeviri anahtarı hiçbir dilde çözümlenmiyor, Türkçe varsayılan metne düşüyordu.
+
+### 🧬 Kök Neden: Eksik Anahtar Değil, Mükerrer JSON Bölümü
+- Beş dil dosyasının **hepsinde** üç üst düzey bölüm iki kez tanımlanmıştı: `audio` (satır 319 ve 443), `transcript` (343 ve 460), `notebooks` (235 ve 468).
+- `JSON.parse` aynı anahtarın **son** tanımını alır, öncekini sessizce atar. Bu yüzden her dosyada birinci blok — yaklaşık 52 satır, **25 anahtar** — hiç yüklenmiyordu.
+- Kaybolan 25 anahtarın **23'ü kodda kullanılıyordu**; "eksik" sanılan anahtarlar bunlardı. Çevirileri zaten yazılmıştı, yalnızca okunamıyordu.
+- Kodda kullanılıp gerçekten hiçbir blokta bulunmayan yalnızca 3 anahtar vardı: `common.error`, `common.share`, `common.ok`.
+
+### 🛠️ Çözüm
+1. **Mükerrer bölümler birleştirildi.** Her bölümün iki bloğu tek blokta toplandı; bölümlerin dosyadaki ilk görülme sırası korundu.
+2. **Çakışma politikası (kullanıcı kararı): ikinci blok kazanır.** Her iki blokta farklı metinle bulunan anahtarlarda bugüne kadar ekranda görünen (ikinci bloğun) metni korundu; böylece kullanıcının alıştığı hiçbir metin değişmedi. Çözülen çakışma: tr 2, en 10, de 5, es 8, fr 6.
+3. **Kodda kullanılmayan iki anahtar da geri getirildi** (kullanıcı kararı): `audio.startRecord`, `transcript.notAvailable`.
+4. **Gerçekten eksik olan üç anahtar eklendi:** `common.error`, `common.share`, `common.ok` — beş dilde, mevcut `common.*` çeviri üslubuna uygun.
+
+### 📊 Sonuç
+- Beş dosya da **401 anahtar** (önce 373), birbiriyle **tam paritede**: eksik 0, fazla 0.
+- Mükerrer anahtar taraması: beş dosyada da **0**.
+- Kodda kullanılan **279 `t()` anahtarının tamamı** beş dilin hepsinde çözümleniyor (önce 26'sı hiçbirinde yoktu).
+
+### 📁 Değiştirilen Dosyalar
+- [`locales/tr.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/tr.json)
+- [`locales/en.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/en.json)
+- [`locales/de.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/de.json)
+- [`locales/es.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/es.json)
+- [`locales/fr.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales/fr.json)
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- Beş dosya da geçerli JSON; mükerrer anahtar kalmadı.
+- Geri gelen anahtarların beş dilde de gerçekten çevrilmiş olduğu örneklemeyle doğrulandı (Türkçe metin sızıntısı yok).
+- `tests/` altındaki 9 test dosyasının tamamı geçti; 104 kaynak dosya sözdizimi denetiminden geçti.
+- **Cihazda doğrulanmadı:** Uygulamayı İngilizce/Almanca/İspanyolca/Fransızca'ya alıp Notlarım ve sesli not ekranlarındaki metinlerin doğru dilde çıktığı test edilmelidir.
+
+### 📝 Açık Kalan Küçük Tutarsızlık
+- `audio.notesPill` geri gelen bloktan "{{count}} Audio Note" ifadesiyle döndü; aynı bölümdeki diğer anahtarlar "Voice Note" diyor (`defaultTitle`, `recordTitle`, `notesDeckTitle`, `collapsedBadge`). Bu anahtarın iki blokta çakışması olmadığı için çakışma politikası kapsamına girmedi; terminoloji birliği ayrı bir karar olduğundan değiştirilmedi.
+
+---
+
 ## 📅 [2026-09-27] - Sayfa Yazmalarının Atomik Hale Getirilmesi (Kayıp Güncelleme Düzeltmesi)
 
 ### 🔍 Kapsam ve İhtiyaç

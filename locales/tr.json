@@ -13,7 +13,10 @@
     "confirm": "Onayla",
     "back": "Geri",
     "today": "Bugün",
-    "emptyItem": "Öğe silindi"
+    "emptyItem": "Öğe silindi",
+    "error": "Hata",
+    "share": "Paylaş",
+    "ok": "Tamam"
   },
   "home": {
     "appTitle": "AJANDA",
@@ -245,7 +248,6 @@
     "emptyDesc": "Sağ üstteki + butonuyla ilk defterini oluştur.",
     "emptyFilterTitle": "Defter bulunamadı",
     "emptyFilterDesc": "{{date}} tarihinde düzenlenmiş defter yok.",
-
     "singlePageWarning": "Defterde en az bir sayfa bulunmalıdır.",
     "notFound": "Defter bulunamadı",
     "search": "Defterde Ara",
@@ -254,7 +256,9 @@
     "noResults": "Sonuç bulunamadı",
     "resultCount": "{{count}} sayfada eşleşme",
     "matchCount": "{{count}} eşleşme",
-    "inlinePlaceholder": "Buraya yazmaya başlayın..."
+    "inlinePlaceholder": "Buraya yazmaya başlayın...",
+    "pinToTop": "Başa Sabitle",
+    "unpin": "Sabitlemeyi Kaldır"
   },
   "security": {
     "lockNotebook": "Bu Defteri Kilitle",
@@ -328,10 +332,17 @@
     "saveToPage": "Sayfaya Ekle",
     "notesPill": "{{count}} Sesli Not",
     "notesDeckTitle": "Sesli Notlar ({{count}})",
-    "deleteConfirmTitle": "Ses Kaydını Sil",
+    "deleteConfirmTitle": "Sesli Notu Sil",
     "deleteConfirmMessage": "Bu ses kaydını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
     "micPermissionTitle": "Mikrofon İzni Gerekli",
-    "micPermissionMessage": "Ses kaydı alabilmek için lütfen ayarlardan mikrofon erişimine izin verin."
+    "micPermissionMessage": "Ses kaydı alabilmek için lütfen ayarlardan mikrofon erişimine izin verin.",
+    "recordHint": "Kaydı başlatmak için mikrofona dokunun",
+    "recordingHint": "Kayıt yapılıyor... Durdurmak için tekrar dokunun",
+    "recordedHint": "Kaydı dinleyebilir, silebilir veya sayfaya ekleyebilirsiniz",
+    "resetRecord": "Baştan Kaydet",
+    "discardConfirmTitle": "Kaydı Sil",
+    "discardConfirmMessage": "Bu ses kaydını silmek istediğinize emin misiniz?",
+    "collapsedBadge": "{{count}} Sesli Not"
   },
   "export": {
     "button": "PDF Olarak Dışa Aktar",
@@ -345,7 +356,7 @@
     "completed": "Transkripsiyon",
     "failed": "Metne dönüştürülemedi",
     "retry": "Yeniden Dene",
-    "copied": "Metin panoya kopyalandı",
+    "copied": "Metin kopyalandı",
     "notAvailable": "Ses tanıma bu cihazda desteklenmiyor",
     "badge": "Sesli Not"
   },
@@ -440,39 +451,6 @@
       "generalDayDesc": "Bu ay {{mood}} hislerin en çok {{day}} günlerinde ({{count}} kez) parıldamış."
     }
   },
-  "audio": {
-    "micPermissionTitle": "Mikrofon İzni Gerekli",
-    "micPermissionMessage": "Ses kaydı alabilmek için lütfen ayarlardan mikrofon erişimine izin verin.",
-    "recordTitle": "Sesli Not Kaydet",
-    "recordHint": "Kaydı başlatmak için mikrofona dokunun",
-    "recordingHint": "Kayıt yapılıyor... Durdurmak için tekrar dokunun",
-    "recordedHint": "Kaydı dinleyebilir, silebilir veya sayfaya ekleyebilirsiniz",
-    "resetRecord": "Baştan Kaydet",
-    "saveToPage": "Sayfaya Ekle",
-    "defaultTitle": "Sesli Not",
-    "discardConfirmTitle": "Kaydı Sil",
-    "discardConfirmMessage": "Bu ses kaydını silmek istediğinize emin misiniz?",
-    "notesDeckTitle": "Sesli Notlar ({{count}})",
-    "collapsedBadge": "{{count}} Sesli Not",
-    "deleteConfirmTitle": "Sesli Notu Sil",
-    "deleteConfirmMessage": "Bu ses kaydını silmek istediğinize emin misiniz? Bu işlem geri alınamaz."
-  },
-  "transcript": {
-    "pending": "Metne dönüştürülüyor...",
-    "completed": "Transkripsiyon",
-    "failed": "Metne dönüştürülemedi",
-    "retry": "Yeniden Dene",
-    "copied": "Metin kopyalandı",
-    "badge": "Sesli Not"
-  },
-  "notebooks": {
-    "pinToTop": "Başa Sabitle",
-    "unpin": "Sabitlemeyi Kaldır",
-    "rename": "Yeniden Adlandır",
-    "addNotebook": "Defter Ekle",
-    "emptyTitle": "Henüz defter yok",
-    "emptyDesc": "Sağ üstteki + butonuyla ilk defterini oluştur."
-  },
   "indexFlags": {
     "newTitle": "Yeni Post-it Sayfa İşareti",
     "editTitle": "Sayfa İşaretini Düzenle",
@@ -489,4 +467,3 @@
     "suggestionUrgent": "Acil"
   }
 }
-

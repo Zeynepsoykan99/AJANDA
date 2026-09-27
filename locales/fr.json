@@ -13,7 +13,10 @@
     "confirm": "Confirmer",
     "back": "Retour",
     "today": "Aujourd'hui",
-    "emptyItem": "Élément supprimé"
+    "emptyItem": "Élément supprimé",
+    "error": "Erreur",
+    "share": "Partager",
+    "ok": "OK"
   },
   "home": {
     "appTitle": "AJANDA",
@@ -233,7 +236,7 @@
     "noEntryForDate": "Aucune page trouvée pour le {{date}}."
   },
   "notebooks": {
-    "addNotebook": "Ajouter un Carnet",
+    "addNotebook": "Ajouter un carnet",
     "nameLabel": "Nom du Carnet",
     "namePlaceholder": "Donnez un nom à votre carnet",
     "coverLabel": "Couverture",
@@ -241,11 +244,10 @@
     "rename": "Renommer",
     "renameTitle": "Renommer le Carnet",
     "deleted": "\"{{title}}\" supprimé",
-    "emptyTitle": "Aucun carnet pour le moment",
+    "emptyTitle": "Pas encore de carnet",
     "emptyDesc": "Créez votre premier carnet avec le bouton + en haut à droite.",
     "emptyFilterTitle": "Aucun carnet trouvé",
     "emptyFilterDesc": "Aucun carnet modifié le {{date}}.",
-
     "singlePageWarning": "Le carnet doit contenir au moins une page.",
     "notFound": "Carnet introuvable",
     "search": "Rechercher dans le Carnet",
@@ -254,7 +256,9 @@
     "noResults": "Aucun résultat",
     "resultCount": "Correspondances sur {{count}} pages",
     "matchCount": "{{count}} correspondances",
-    "inlinePlaceholder": "Commencez à écrire ici..."
+    "inlinePlaceholder": "Commencez à écrire ici...",
+    "pinToTop": "Épingler en haut",
+    "unpin": "Désépingler"
   },
   "security": {
     "lockNotebook": "Verrouiller ce carnet",
@@ -329,9 +333,16 @@
     "notesPill": "{{count}} Note Vocale",
     "notesDeckTitle": "Notes Vocales ({{count}})",
     "deleteConfirmTitle": "Supprimer la Note Vocale",
-    "deleteConfirmMessage": "Voulez-vous vraiment supprimer cette note vocale ? Cette action est irréversible.",
+    "deleteConfirmMessage": "Êtes-vous sûr de vouloir supprimer cette note vocale ? Cette action est irréversible.",
     "micPermissionTitle": "Autorisation du Microphone Requise",
-    "micPermissionMessage": "Veuillez autoriser l'accès au microphone dans les Paramètres."
+    "micPermissionMessage": "Veuillez autoriser l'accès au microphone dans les paramètres pour enregistrer des notes vocales.",
+    "recordHint": "Appuyez sur le microphone pour commencer l'enregistrement",
+    "recordingHint": "Enregistrement en cours... Appuyez à nouveau pour arrêter",
+    "recordedHint": "Vous pouvez écouter, supprimer ou ajouter à la page",
+    "resetRecord": "Réenregistrer",
+    "discardConfirmTitle": "Supprimer l'Enregistrement",
+    "discardConfirmMessage": "Êtes-vous sûr de vouloir supprimer cet enregistrement ?",
+    "collapsedBadge": "{{count}} Notes Vocales"
   },
   "export": {
     "button": "Exporter en PDF",
@@ -341,11 +352,11 @@
     "errorDesc": "Une erreur est survenue lors de l'exportation de la page en PDF. Veuillez réessayer."
   },
   "transcript": {
-    "pending": "Transcription audio en cours...",
+    "pending": "Transcription en cours...",
     "completed": "Transcription",
     "failed": "Échec de la transcription",
     "retry": "Réessayer",
-    "copied": "Copié dans le presse-papiers",
+    "copied": "Texte copié",
     "notAvailable": "La reconnaissance vocale n'est pas prise en charge sur cet appareil",
     "badge": "Note Vocale"
   },
@@ -440,39 +451,6 @@
       "generalDayDesc": "Vos moments {{mood}}s ont brillé avec le plus d'éclat les {{day}}s ({{count}} fois)."
     }
   },
-  "audio": {
-    "micPermissionTitle": "Autorisation du Microphone Requise",
-    "micPermissionMessage": "Veuillez autoriser l'accès au microphone dans les paramètres pour enregistrer des notes vocales.",
-    "recordTitle": "Enregistrer une Note Vocale",
-    "recordHint": "Appuyez sur le microphone pour commencer l'enregistrement",
-    "recordingHint": "Enregistrement en cours... Appuyez à nouveau pour arrêter",
-    "recordedHint": "Vous pouvez écouter, supprimer ou ajouter à la page",
-    "resetRecord": "Réenregistrer",
-    "saveToPage": "Ajouter à la Page",
-    "defaultTitle": "Note Vocale",
-    "discardConfirmTitle": "Supprimer l'Enregistrement",
-    "discardConfirmMessage": "Êtes-vous sûr de vouloir supprimer cet enregistrement ?",
-    "notesDeckTitle": "Notes Vocales ({{count}})",
-    "collapsedBadge": "{{count}} Notes Vocales",
-    "deleteConfirmTitle": "Supprimer la Note Vocale",
-    "deleteConfirmMessage": "Êtes-vous sûr de vouloir supprimer cette note vocale ? Cette action est irréversible."
-  },
-  "transcript": {
-    "pending": "Transcription en cours...",
-    "completed": "Transcription",
-    "failed": "Échec de la transcription",
-    "retry": "Réessayer",
-    "copied": "Texte copié",
-    "badge": "Note Vocale"
-  },
-  "notebooks": {
-    "pinToTop": "Épingler en haut",
-    "unpin": "Désépingler",
-    "rename": "Renommer",
-    "addNotebook": "Ajouter un carnet",
-    "emptyTitle": "Pas encore de carnet",
-    "emptyDesc": "Créez votre premier carnet avec le bouton + en haut à droite."
-  },
   "indexFlags": {
     "newTitle": "Nouveau Marque-page Post-it",
     "editTitle": "Modifier le Marque-page",
@@ -489,4 +467,3 @@
     "suggestionUrgent": "Urgent"
   }
 }
-
