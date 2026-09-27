@@ -4,6 +4,42 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-27] - Sesli Notların Kalıcı Saklanması (Legacy expo-file-system Düzeltmesi)
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Sesli notların önbellek (cache) dizininde tutulması nedeniyle işletim sistemi önbelleği boşalttığında kayıtların kaybolması ve eski notların açılamaması. Kapsam üç değişiklikle sınırlı tutuldu.
+
+### 🧬 Kök Neden
+- SDK 54'te `expo-file-system` ana girişi yeni `File`/`Directory` API'sini yayıyor; `documentDirectory` sabiti bu girişten **hiç export edilmiyor** ve eski metotlar çalışma anında hata fırlatıyor.
+- Sonuç zinciri: `AUDIO_DIR` değeri `"undefinedaudio_notes/"` oluyordu → `ensureAudioDirectory()` ve `copyAsync()` hata fırlatıyordu → `saveAudioPermanently` `catch` bloğuna düşüp **geçici URI'yi olduğu gibi döndürüyordu** → her sesli not bir önbellek dosyasını işaret ediyordu.
+- Android canlı tanıma yolunda dosyayı `expo-speech-recognition` yazıyor ve `recordingOptions` içinde `outputDirectory` verilmediği için varsayılan olarak yine **önbellek dizini** kullanılıyordu.
+
+### 🛠️ Yapılan Üç Değişiklik
+1. **Legacy girişe geçiş (`services/audioService.js`):** `import * as FileSystem from 'expo-file-system/legacy'`. Bu giriş SDK 54'te mevcut (`node_modules/expo-file-system/legacy.ts`) ve native `FileSystemLegacyModule` paketle birlikte geliyor. `documentDirectory`, `getInfoAsync`, `makeDirectoryAsync`, `copyAsync`, `deleteAsync` artık gerçekten çalışıyor. PDF dışa aktarmada da aynı giriş doğrulanmıştı.
+2. **Uzantı kaynak dosyadan türetiliyor (`services/audioService.js`):** `saveAudioPermanently` içindeki sabit `.m4a` kaldırıldı; yeni `getFileExtension()` yardımcısı URI'den gerçek uzantıyı çıkarıyor (sorgu parametresi ve fragment yok sayılıyor, bulunamazsa `.m4a` varsayılıyor). Kayıtlar platforma göre artık `.wav` da olabildiği için sabit uzantı dosyayı yanlış etiketliyordu.
+3. **Canlı tanıma kalıcı dizine yazıyor:** `startLiveRecognition` yeni bir `outputDirectory` seçeneği kabul ediyor (`services/transcriptionService.js`) ve `AudioRecorderModal` bunu `AUDIO_DIR` olarak geçiriyor. Kayıttan önce `ensureAudioDirectory()` çağrılarak dizinin var olması garantileniyor. Kütüphanenin native tarafı hem `file://` şemalı hem şemasız yolu kabul ediyor (Android `removePrefix("file://")`, iOS `resolveOutputDirectoryURL`).
+
+### ➕ Zorunlu Ek Düzeltme
+- `saveAudioPermanently`, kaynak dosya zaten `AUDIO_DIR` içindeyse kopyalamayı atlıyor. Canlı tanıma dosyayı doğrudan kalıcı dizine yazdığı için bu kontrol olmadan her kayıt **ikinci bir kopya** bırakacak ve orijinal dosya sahipsiz kalacaktı.
+
+### 📁 Değiştirilen Dosyalar
+- [`services/audioService.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/services/audioService.js)
+- [`services/transcriptionService.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/services/transcriptionService.js)
+- [`components/audio/AudioRecorderModal.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/audio/AudioRecorderModal.js)
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- `expo-file-system/legacy` girişinin varlığı ve gerekli beş metodu dışa verdiği doğrulandı.
+- `getFileExtension` yardımcısı **dosyadan okunarak** yedi senaryoda çalıştırıldı (`.wav`, büyük harfli `.M4A`, sorgu parametreli `.caf`, uzantısız, noktasız, boş dize, `null`); tamamı beklenen sonucu verdi.
+- 104 kaynak dosya `babel-preset-expo` ile sözdizimi denetiminden geçti; kırık relative import yok.
+- `tests/` altındaki 6 test dosyasının tamamı geçti.
+- **Cihazda doğrulanmadı:** Yeni kayıtların kalıcı dizine yazıldığı ve uygulama yeniden başlatıldıktan sonra da açıldığı cihazda test edilmelidir.
+
+### ⚠️ Not
+- Bu düzeltme **geçmişte kaybolmuş ses dosyalarını geri getirmez**; yalnızca bundan sonraki kayıtları güvenceye alır. Önbellekten silinmiş eski notların transkript metni AsyncStorage'da durmaya devam eder, sesi ise kurtarılamaz.
+
+---
+
 ## 📅 [2026-09-26] - Sesin Döngüye Girmesi (Çözüldü) ve Eski Sesli Notların Açılamaması (Teşhis)
 
 ### 🔍 Kapsam ve İhtiyaç

@@ -299,6 +299,8 @@ export const supportsLiveRecording = () => {
  * @param {object} [options]
  * @param {string} [options.language='tr-TR'] - i18n dil kodu veya BCP-47 kodu
  * @param {string} [options.outputFileName] - Kaydedilecek dosya adı (ör. 'note_123.wav')
+ * @param {string} [options.outputDirectory] - Kaydin yazilacagi dizin. Verilmezse kutuphane
+ *   onbellek (cache) dizinini kullanir ve dosya isletim sistemi tarafindan silinebilir.
  * @param {function} [options.onPartialTranscript] - (text) => void, canlı ara sonuçlar
  * @param {function} [options.onAutoStop] - Motor kendiliğinden durursa çağrılır
  * @returns {Promise<{ success: boolean, stop?: function, abort?: function, error?: string, isUnavailable?: boolean }>}
@@ -306,6 +308,7 @@ export const supportsLiveRecording = () => {
 export const startLiveRecognition = async ({
   language = 'tr-TR',
   outputFileName,
+  outputDirectory,
   onPartialTranscript,
   onAutoStop,
 } = {}) => {
@@ -435,6 +438,8 @@ export const startLiveRecognition = async ({
       requiresOnDeviceRecognition: Platform.OS === 'ios',
       recordingOptions: {
         persist: true,
+        // Dizin verilmezse kutuphane onbellege yazar ve dosya sonradan silinebilir
+        ...(outputDirectory ? { outputDirectory } : {}),
         ...(outputFileName ? { outputFileName } : {}),
         // Aşağıdaki iki alan yalnızca iOS'ta geçerli; Android zaten 16 kHz mono PCM üretiyor
         outputSampleRate: SPEECH_SAMPLE_RATE,

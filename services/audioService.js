@@ -1,5 +1,9 @@
 import { Audio } from 'expo-av';
-import * as FileSystem from 'expo-file-system';
+// SDK 54'te 'expo-file-system' ana girisi yeni File/Directory API'sini yayiyor;
+// documentDirectory sabiti export EDILMIYOR ve eski metotlar calisma aninda hata
+// firlatiyor. Legacy giris bu metotlari saglar ve native FileSystemLegacyModule
+// SDK 54 ile birlikte paketlenir.
+import * as FileSystem from 'expo-file-system/legacy';
 import { Alert, Linking, Platform } from 'react-native';
 
 /**
@@ -13,7 +17,7 @@ import { Alert, Linking, Platform } from 'react-native';
  * - Süre formatlama (MM:SS)
  */
 
-const AUDIO_DIR = `${FileSystem.documentDirectory}audio_notes/`;
+export const AUDIO_DIR = `${FileSystem.documentDirectory}audio_notes/`;
 
 /**
  * Konuşma tanıma (STT) ile uyumlu kayıt ayarları.
@@ -210,6 +214,17 @@ export const stopRecording = async (recording) => {
 };
 
 /**
+ * Bir dosya URI'sinden uzantiyi (nokta dahil) cikarir.
+ * Sorgu parametresi veya fragment varsa yok sayilir. Bulunamazsa .m4a varsayilir.
+ * @param {string} uri
+ * @returns {string}
+ */
+const getFileExtension = (uri) => {
+  const match = /\.([a-zA-Z0-9]+)(?:[?#].*)?$/.exec(String(uri || ''));
+  return match ? `.${match[1].toLowerCase()}` : '.m4a';
+};
+
+/**
  * Geçici önbellekteki ses dosyasını kalıcı doküman dizinine kopyalar
  * @param {string} tempUri - Geçici kayıt URI'si
  * @param {string} [pageId='page'] - İlgili sayfa kimliği
@@ -218,12 +233,20 @@ export const stopRecording = async (recording) => {
 export const saveAudioPermanently = async (tempUri, pageId = 'page') => {
   if (!tempUri) return null;
 
+  // Canli tanima yolunda dosya zaten dogrudan kalici dizine yaziliyor.
+  // Yeniden kopyalamak ayni sesin ikinci bir kopyasini birakirdi.
+  if (String(tempUri).startsWith(AUDIO_DIR)) {
+    return tempUri;
+  }
+
   try {
     await ensureAudioDirectory();
 
     const cleanPageId = String(pageId).replace(/[^a-zA-Z0-9_-]/g, '_');
     const randomSuffix = Math.random().toString(36).substring(2, 6);
-    const fileName = `${cleanPageId}_${Date.now()}_${randomSuffix}.m4a`;
+    // Uzanti kaynak dosyadan turetilir: kayitlar artik platforma gore .wav da
+    // olabiliyor, sabit .m4a yazmak dosyayi yanlis etiketliyordu.
+    const fileName = `${cleanPageId}_${Date.now()}_${randomSuffix}${getFileExtension(tempUri)}`;
     const destUri = `${AUDIO_DIR}${fileName}`;
 
     await FileSystem.copyAsync({

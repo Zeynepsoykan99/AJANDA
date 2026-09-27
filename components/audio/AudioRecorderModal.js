@@ -27,6 +27,8 @@ import {
   saveAudioPermanently,
   deleteAudioFile,
   formatDuration,
+  ensureAudioDirectory,
+  AUDIO_DIR,
 } from '../../services/audioService';
 import {
   transcribeAudioFile,
@@ -192,8 +194,12 @@ export default function AudioRecorderModal({
 
       // Android: kayıt + tanıma tek geçişte, tanıma motorunun kendi kayıt yoluyla
       if (shouldUseLiveRecognition()) {
+        // Kalici dizin hazir olmazsa kutuphane onbellege yazar ve kayit sonradan kaybolur
+        await ensureAudioDirectory();
+
         const session = await startLiveRecognition({
           language: i18n.language,
+          outputDirectory: AUDIO_DIR,
           outputFileName: `note_${Date.now()}.wav`,
           onAutoStop: handleLiveAutoStop,
         });
