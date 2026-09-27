@@ -393,10 +393,7 @@ export default function AudioRecorderModal({
       }
 
       // Dosyayı kalıcı doküman alanına taşı
-      const permanentUri = await saveAudioPermanently(
-        tempUriRef.current,
-        pageId || 'page'
-      );
+      const saved = await saveAudioPermanently(tempUriRef.current, pageId || 'page');
 
       const isAvailable = isTranscriptionAvailable();
 
@@ -406,7 +403,14 @@ export default function AudioRecorderModal({
 
       const newAudioNote = {
         id: `audio_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-        uri: permanentUri,
+        // Veri modeli: yalnizca dosya adi saklanir; tam yol okuma aninda
+        // AudioService.resolveAudioUri ile o anki AUDIO_DIR uzerinden kurulur.
+        // Boylece iOS'ta uygulama guncellemesi container yolunu degistirse bile
+        // kayit bulunabilir kalir.
+        fileName: saved?.fileName || null,
+        // Kalici tasima basarisiz olduysa dosya onbellekte kalir; tek erisim yolu
+        // mutlak URI oldugu icin yalnizca o durumda saklanir.
+        uri: saved?.isPersistent ? null : saved?.uri || null,
         durationMs: durationMsRef.current || elapsedMs || 1000,
         createdAt: new Date().toISOString(),
         title: t('audio.defaultTitle', 'Sesli Not'),

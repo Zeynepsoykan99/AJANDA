@@ -13,7 +13,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../context/ThemeContext';
-import { formatDuration } from '../../services/audioService';
+import { formatDuration, resolveAudioUri } from '../../services/audioService';
 import { copyTextToClipboard } from '../../services/transcriptionService';
 
 /**
@@ -70,7 +70,9 @@ export default function AudioNotePlayer({
 
   // Ses dosyasını yükle
   const loadSound = useCallback(async () => {
-    if (!audioNote?.uri) return null;
+    // Tam yol her zaman o anki AUDIO_DIR uzerinden yeniden kurulur
+    const resolvedUri = resolveAudioUri(audioNote);
+    if (!resolvedUri) return null;
 
     // Yukleme suruyorsa ayni sozu dondur; aksi halde her basis yeni bir
     // Audio.Sound olusturur, ilki unload edilir ve calan ses yarida kesilir.
@@ -86,11 +88,31 @@ export default function AudioNotePlayer({
           playsInSilentModeIOS: true,
         });
 
-        const { sound: newSound, status } = await Audio.Sound.createAsync(
-          { uri: audioNote.uri },
-          { shouldPlay: false, progressUpdateIntervalMillis: 100 },
-          onPlaybackStatusUpdate
-        );
+        let created;
+        try {
+          created = await Audio.Sound.createAsync(
+            { uri: resolvedUri },
+            { shouldPlay: false, progressUpdateIntervalMillis: 100 },
+            onPlaybackStatusUpdate
+          );
+        } catch (resolveError) {
+          // Kalici tasima basarisiz olmus kayitlarda dosya onbellekte durur ve
+          // yalnizca mutlak URI ile acilabilir. Bu yedek yol sadece o durum icin.
+          const fallbackUri = audioNote?.uri;
+          if (!fallbackUri || fallbackUri === resolvedUri) throw resolveError;
+
+          console.warn(
+            'Ses kalıcı dizinde bulunamadı, geçici URI ile deneniyor:',
+            { resolvedUri, fallbackUri }
+          );
+          created = await Audio.Sound.createAsync(
+            { uri: fallbackUri },
+            { shouldPlay: false, progressUpdateIntervalMillis: 100 },
+            onPlaybackStatusUpdate
+          );
+        }
+
+        const { sound: newSound, status } = created;
 
         soundRef.current = newSound;
         setSound(newSound);
@@ -111,7 +133,7 @@ export default function AudioNotePlayer({
 
     loadPromiseRef.current = task;
     return task;
-  }, [audioNote?.uri]);
+  }, [audioNote?.fileName, audioNote?.uri]);
 
   // Oynatma durum güncellemeleri
   const onPlaybackStatusUpdate = (status) => {

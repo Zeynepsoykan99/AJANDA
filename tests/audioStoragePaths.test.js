@@ -68,7 +68,9 @@ console.log(`✔ Test 3: getFileExtension ${extensionCases.length} senaryoda do�
 
 // 4. Kalıcı dizindeki dosya yeniden kopyalanmamalı (canlı tanıma zaten oraya yazıyor)
 assert.ok(
-  /if \(String\(tempUri\)\.startsWith\(AUDIO_DIR\)\) \{\s*\n\s*return tempUri;/.test(source),
+  /if \(String\(tempUri\)\.startsWith\(AUDIO_DIR\)\) \{\s*\n\s*return \{ fileName: getAudioFileName\(tempUri\), uri: tempUri, isPersistent: true \};/.test(
+    source
+  ),
   'saveAudioPermanently, kaynak zaten AUDIO_DIR içindeyse kopyalamayı atlamalı'
 );
 console.log('✔ Test 4: kalıcı dizindeki dosya için mükerrer kopya oluşturulmuyor');
@@ -78,7 +80,16 @@ assert.ok(
   /\$\{cleanPageId\}_\$\{Date\.now\(\)\}_\$\{randomSuffix\}\$\{getFileExtension\(tempUri\)\}/.test(source),
   'Hedef dosya adı pageId + zaman damgası + rastgele son ek + türetilmiş uzantı içermeli'
 );
-console.log('✔ Test 5: hedef dosya adı çakışmaya karşı korumalı ve uzantısı türetilmiş');
+// 5b. Dönüş sözleşmesi: çağıran, kaydın gerçekten kalıcı olup olmadığını bilmeli
+assert.ok(
+  /return \{ fileName, uri: destUri, isPersistent: true \};/.test(source),
+  'Başarılı taşımada { fileName, uri, isPersistent: true } dönmeli'
+);
+assert.ok(
+  /return \{ fileName: null, uri: tempUri, isPersistent: false \};/.test(source),
+  'Başarısız taşımada isPersistent: false dönmeli ki çağıran geçici URI sakladığını bilsin'
+);
+console.log('✔ Test 5: hedef dosya adı çakışmaya karşı korumalı, uzantı türetilmiş, dönüş sözleşmesi doğru');
 
 // 6. Kopyalama hedefi kalıcı dizin olmalı
 assert.ok(

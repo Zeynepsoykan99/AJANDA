@@ -47,6 +47,43 @@ export const SPEECH_RECORDING_OPTIONS = {
 };
 
 /**
+ * Bir deger (mutlak URI veya dosya adi) icinden yalnizca dosya adini cikarir.
+ * Sorgu parametresi ve fragment yok sayilir.
+ * @param {string} value
+ * @returns {string}
+ */
+export const getAudioFileName = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const withoutQuery = raw.split('?')[0].split('#')[0];
+  const segments = withoutQuery.split('/');
+  return segments[segments.length - 1] || '';
+};
+
+/**
+ * Sesli notun O ANKI cihazdaki tam dosya yolunu uretir.
+ *
+ * Veri modelinde yalnizca `fileName` saklanir. Tam yol her okumada
+ * `AUDIO_DIR` (yani o anki `documentDirectory`) ile yeniden kurulur.
+ * iOS'ta uygulama guncellemesinde container UUID'si degisse bile dogru yol
+ * olusur; mutlak URI saklansaydi eski UUID'ye isaret edip bozulurdu.
+ *
+ * Eski kayitlar mutlak `uri` tuttugu icin geriye donuk olarak onun dosya adi
+ * kullanilir.
+ *
+ * @param {{ fileName?: string, uri?: string }|string} audioNote
+ * @returns {string|null}
+ */
+export const resolveAudioUri = (audioNote) => {
+  if (!audioNote) return null;
+  const source =
+    typeof audioNote === 'string' ? audioNote : audioNote.fileName || audioNote.uri;
+  const fileName = getAudioFileName(source);
+  if (!fileName) return null;
+  return `${AUDIO_DIR}${fileName}`;
+};
+
+/**
  * Kalıcı ses dizininin varlığını garanti eder
  */
 export const ensureAudioDirectory = async () => {
@@ -229,15 +266,15 @@ const getFileExtension = (uri) => {
  * Geçici önbellekteki ses dosyasını kalıcı doküman dizinine kopyalar
  * @param {string} tempUri - Geçici kayıt URI'si
  * @param {string} [pageId='page'] - İlgili sayfa kimliği
- * @returns {Promise<string>} Kalıcı dosya URI'si
+ * @returns {Promise<{ fileName: string|null, uri: string|null, isPersistent: boolean }>}
  */
 export const saveAudioPermanently = async (tempUri, pageId = 'page') => {
-  if (!tempUri) return null;
+  if (!tempUri) return { fileName: null, uri: null, isPersistent: false };
 
   // Canli tanima yolunda dosya zaten dogrudan kalici dizine yaziliyor.
   // Yeniden kopyalamak ayni sesin ikinci bir kopyasini birakirdi.
   if (String(tempUri).startsWith(AUDIO_DIR)) {
-    return tempUri;
+    return { fileName: getAudioFileName(tempUri), uri: tempUri, isPersistent: true };
   }
 
   try {
@@ -255,7 +292,7 @@ export const saveAudioPermanently = async (tempUri, pageId = 'page') => {
       to: destUri,
     });
 
-    return destUri;
+    return { fileName, uri: destUri, isPersistent: true };
   } catch (error) {
     // KRITIK: Buraya dusuldugunde kayit kalici dizine TASINAMAMIS demektir ve
     // donen URI gecici (cache) bir dosyayi isaret eder. Isletim sistemi onbellegi
@@ -264,7 +301,9 @@ export const saveAudioPermanently = async (tempUri, pageId = 'page') => {
       'saveAudioPermanently BASARISIZ: ses kalıcı dizine taşınamadı, geçici URI kullanılıyor.',
       { tempUri, audioDir: AUDIO_DIR, error }
     );
-    return tempUri; // Hata durumunda geçici URI fallback olarak korunur
+    // isPersistent=false: cagiran taraf mutlak URI'yi yedek olarak saklar,
+    // cunku dosya kalici dizinde DEGIL, gecici onbellekte duruyor.
+    return { fileName: null, uri: tempUri, isPersistent: false };
   }
 };
 
@@ -301,7 +340,7 @@ export const deleteAudioFiles = async (audioNotes = []) => {
 
   let deletedCount = 0;
   for (const item of audioNotes) {
-    const uri = typeof item === 'string' ? item : item?.uri;
+    const uri = typeof item === 'string' ? item : resolveAudioUri(item);
     if (uri) {
       const ok = await deleteAudioFile(uri);
       if (ok) deletedCount++;
@@ -336,6 +375,8 @@ export const AudioService = {
   startRecording,
   stopRecording,
   saveAudioPermanently,
+  getAudioFileName,
+  resolveAudioUri,
   deleteAudioFile,
   deleteAudioFiles,
   formatDuration,

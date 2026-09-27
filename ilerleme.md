@@ -4,6 +4,58 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-27] - Sesli Not Veri Modeli: Mutlak URI Yerine Dosya Adı (iOS Güncelleme Dayanıklılığı)
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Sesli notun tam yolu AsyncStorage'a mutlak URI olarak yazılıyordu. iOS'ta uygulama güncellemesinde konteyner UUID'si (`/var/mobile/Containers/Data/Application/<UUID>/`) değiştiği için bu yol geçersiz kalıyor ve dosya diskte dursa bile bulunamıyordu. Yayına çıkmadan önce kapatılması gereken bir risk.
+
+### 🧬 Veri Modeli Değişikliği
+- Sesli not kaydında artık **yalnızca `fileName`** saklanıyor. Tam yol hiçbir yerde kalıcı değil; her okumada `AudioService.resolveAudioUri()` ile o anki `AUDIO_DIR` (yani o anki `documentDirectory`) üzerinden yeniden kuruluyor.
+- **Neden çalışıyor:** `AUDIO_DIR` modül yüklenirken güncel `documentDirectory`'den türetiliyor; dosya adı ise platformdan ve kurulumdan bağımsız sabit. Güncelleme sonrası UUID değişse bile `AUDIO_DIR + fileName` doğru yolu verir.
+- `uri` alanı yalnızca **tek bir durumda** yazılıyor: kalıcı dizine taşıma başarısız olduysa (`isPersistent: false`). O durumda dosya önbellekte kalır ve tek erişim yolu mutlak URI'dir.
+
+### 🔄 Göç Stratejisi: Tembel (Lazy), Toplu Değil
+- **Seçim gerekçesi:** `storageService` içinde zaten `normalizeNotebook` adında, okuma anında şekil düzelten ve `changed` bayrağıyla çağırana diske yazdıran bir desen vardı. Göç bu mevcut desene takıldı; yeni bir AsyncStorage anahtarı, uygulama açılışında ek bir asenkron görev ve "yarım kalmış göç" hata durumu oluşmadı.
+- Üç okuma girişinin tamamı kapsandı: `getPages` (ajanda + to-do), `normalizeNotebook` üzerinden `readDiary` (günlüğüm) ve `readNotebooks` (notlarım).
+- Göç kalıcılaşmamış olsa bile davranış doğru: `resolveAudioUri` eski `uri` alanından da dosya adını çıkarabiliyor. Yani göç bir optimizasyon, doğruluk koşulu değil.
+
+### 🛠️ Değişen Noktalar
+- **`services/audioService.js`:** `getAudioFileName()` ve `resolveAudioUri()` eklendi. `saveAudioPermanently` artık `{ fileName, uri, isPersistent }` döndürüyor. `deleteAudioFiles` çözümleyiciyi kullanıyor.
+- **`services/storageService.js`:** `migrateAudioNotes()` ve `migrateAudioNotesInPages()` eklendi; `normalizeNotebook` ve `getPages` içine bağlandı.
+- **`components/audio/AudioRecorderModal.js`:** Kayıt artık `fileName` yazıyor; `uri` yalnızca taşıma başarısızsa saklanıyor.
+- **`components/audio/AudioNotePlayer.js`:** Yükleme `resolveAudioUri` ile yapılıyor. Kalıcı yolda dosya açılamazsa, yalnızca o durumda kayıtlı mutlak `uri` ile yedek deneme yapılıyor ve durum loglanıyor.
+- **`app/ajandam/[pageId].js`, `app/todolist/[pageId].js`, `components/notebook/NotebookPagesView.js`:** Silme ve yeniden transkripsiyon çağrıları `AudioService.resolveAudioUri(audioNote)` kullanıyor.
+- `services/searchService.js` yalnızca `note.transcript` okuduğu için değişmedi.
+
+### 🧪 Eklenen Test
+- **`tests/audioNoteMigration.test.js`** [NEW] — 8 doğrulama. Mantık kopyalanmadı: `getAudioFileName`, `resolveAudioUri`, `migrateAudioNotes` ve `migrateAudioNotesInPages` fonksiyonları kaynak dosyalardan okunup çalıştırıldı.
+  - Test 4 asıl senaryoyu kanıtlıyor: aynı kayıt, iki farklı iOS konteyner UUID'si altında iki farklı ama **doğru** yola çözümleniyor; eski modelde saklanan mutlak URI'nin güncelleme sonrası geçersiz kalacağı da ayrıca doğrulanıyor.
+  - Eski format, yeni format, karışık sayfa dizisi ve boş/geçersiz girdiler ayrı ayrı sınandı.
+- **`tests/audioStoragePaths.test.js`** güncellendi: `saveAudioPermanently`'nin yeni dönüş sözleşmesi doğrulanıyor. Bu test, sözleşme değişikliğini kendiliğinden yakaladı.
+- Her iki testin de gerçekten hata yakaladığı kasıtlı bozma denemeleriyle kanıtlandı (`resolveAudioUri`'nin mutlak URI'ye geri dönmesi, legacy import'un geri alınması, uzantı regex'inin bozulması).
+
+### 📁 Değiştirilen Dosyalar
+- [`services/audioService.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/services/audioService.js)
+- [`services/storageService.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/services/storageService.js)
+- [`components/audio/AudioRecorderModal.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/audio/AudioRecorderModal.js)
+- [`components/audio/AudioNotePlayer.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/audio/AudioNotePlayer.js)
+- [`app/ajandam/[pageId].js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/ajandam/[pageId].js)
+- [`app/todolist/[pageId].js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/todolist/[pageId].js)
+- [`components/notebook/NotebookPagesView.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/notebook/NotebookPagesView.js)
+- [`tests/audioNoteMigration.test.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/tests/audioNoteMigration.test.js) [NEW]
+- [`tests/audioStoragePaths.test.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/tests/audioStoragePaths.test.js)
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- `tests/` altındaki **8 test dosyasının tamamı** geçti.
+- 104 kaynak dosya `babel-preset-expo` ile sözdizimi denetiminden geçti; kırık relative import yok.
+- **Cihazda doğrulanmadı:** Gerçek cihazda kayıt, yeniden başlatma ve göç davranışı test edilmelidir.
+
+### 📝 Not
+- Android'de bu risk zaten yoktu (`context.filesDir` sabit), ancak veri modeli tek ve platformdan bağımsız tutulması için Android de aynı dosya-adı modeline geçirildi. Android tarafında yol üretimi değişmediği için davranış farkı oluşmuyor.
+
+---
+
 ## 📅 [2026-09-27] - Kalıcı Ses Saklamanın Uçtan Uca Doğrulanması ve Uç Durumların Kapatılması
 
 ### 🔍 Kapsam ve İhtiyaç

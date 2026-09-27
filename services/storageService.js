@@ -56,6 +56,62 @@ const isUnrenderableSticker = (sticker) =>
  * Defter kaydını okunabilir hale getirir.
  * @returns {{ notebook: object, changed: boolean }} changed: kalıcı olarak yazılması gereken bir düzeltme yapıldı mı
  */
+/**
+ * Sesli notlari yeni veri modeline tasir: mutlak `uri` yerine yalnizca `fileName`.
+ *
+ * Neden: mutlak yol iOS'ta uygulama guncellemesinde gecersiz kalir (container
+ * UUID'si degisir). Dosya adi platformdan ve kurulumdan bagimsiz sabittir; tam yol
+ * okuma aninda AudioService.resolveAudioUri ile yeniden kurulur.
+ *
+ * Gocun kendisi tembeldir: kayit okundugunda donusturulur ve cagiran taraf
+ * `changed` bayragini gorup ayni anda diske yazar.
+ *
+ * @param {Array<object>} audioNotes
+ * @returns {{ audioNotes: Array<object>, changed: boolean }}
+ */
+const migrateAudioNotes = (audioNotes) => {
+  if (!Array.isArray(audioNotes) || audioNotes.length === 0) {
+    return { audioNotes: audioNotes || [], changed: false };
+  }
+
+  let changed = false;
+  const migrated = audioNotes.map((note) => {
+    if (!note || typeof note !== 'object') return note;
+    if (note.fileName) return note;
+
+    const fileName = AudioService.getAudioFileName(note.uri);
+    if (!fileName) return note;
+
+    changed = true;
+    // uri artik saklanmaz; tam yol her okumada AUDIO_DIR ile yeniden kurulur
+    return { ...note, fileName, uri: null };
+  });
+
+  return { audioNotes: changed ? migrated : audioNotes, changed };
+};
+
+/**
+ * Bir sayfa dizisindeki tum sesli notlari yeni modele tasir.
+ * @param {Array<object>} pages
+ * @returns {{ pages: Array<object>, changed: boolean }}
+ */
+const migrateAudioNotesInPages = (pages) => {
+  if (!Array.isArray(pages) || pages.length === 0) {
+    return { pages: pages || [], changed: false };
+  }
+
+  let changed = false;
+  const migrated = pages.map((page) => {
+    if (!page || typeof page !== 'object') return page;
+    const result = migrateAudioNotes(page.audioNotes);
+    if (!result.changed) return page;
+    changed = true;
+    return { ...page, audioNotes: result.audioNotes };
+  });
+
+  return { pages: changed ? migrated : pages, changed };
+};
+
 const normalizeNotebook = (source) => {
   const notebook = { ...source };
   let changed = false;
@@ -93,6 +149,13 @@ const normalizeNotebook = (source) => {
         ? { ...p, stickers: p.stickers.filter((s) => !isUnrenderableSticker(s)) }
         : p
     );
+    changed = true;
+  }
+
+  // Sesli notlari yeni dosya-adi modeline tasi (gunluk ve defterler icin)
+  const audioMigration = migrateAudioNotesInPages(notebook.pages);
+  if (audioMigration.changed) {
+    notebook.pages = audioMigration.pages;
     changed = true;
   }
 
@@ -363,7 +426,17 @@ export const StorageService = {
   getPages: async () => {
     try {
       const data = await AsyncStorage.getItem(KEYS.PAGES);
-      return data ? JSON.parse(data) : [];
+      if (!data) return [];
+
+      const parsed = JSON.parse(data);
+      if (!Array.isArray(parsed)) return [];
+
+      // Sesli notlari yeni dosya-adi modeline tasi ve donusum olduysa diske yaz
+      const { pages, changed } = migrateAudioNotesInPages(parsed);
+      if (changed) {
+        await AsyncStorage.setItem(KEYS.PAGES, JSON.stringify(pages));
+      }
+      return pages;
     } catch (error) {
       console.warn('StorageService.getPages hata:', error);
       return [];

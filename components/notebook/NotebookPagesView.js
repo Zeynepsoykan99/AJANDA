@@ -304,7 +304,7 @@ export default function NotebookPagesView({
   // Sesli Not Sil
   const handleDeleteAudioNote = useCallback(async (audioNote) => {
     if (!activePage) return;
-    await AudioService.deleteAudioFile(audioNote.uri);
+    await AudioService.deleteAudioFile(AudioService.resolveAudioUri(audioNote));
     const updatedAudioNotes = (activePage.audioNotes || []).filter((n) => n.id !== audioNote.id);
     const updatedNotebook = await storageRef.current.updatePage(activePage.pageId, {
       audioNotes: updatedAudioNotes,
@@ -357,7 +357,9 @@ export default function NotebookPagesView({
       handleTranscriptReady(audioNote.id, null, 'pending');
       try {
         const lang = i18n?.language || 'tr';
-        const res = await transcribeAudioFile(audioNote.uri, { language: lang });
+        const res = await transcribeAudioFile(AudioService.resolveAudioUri(audioNote), {
+          language: lang,
+        });
         if (res.success && res.transcript) {
           handleTranscriptReady(audioNote.id, res.transcript, 'completed');
         } else {
