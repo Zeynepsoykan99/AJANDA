@@ -4,6 +4,50 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-27] - Sesli Not Kaydedicide Yeniden Giriş Korumaları (C1, C2)
+
+### 🔍 Kapsam ve İhtiyaç
+- Denetim raporundaki iki bulgu: kayda başlama (C1) ve sayfaya kaydetme (C2) akışlarında hızlı çift basışa karşı koruma bulunmaması. Her ikisi de `AudioNotePlayer`'da düzeltilen hatanın aynı ailesinden.
+
+### 🎙️ C1 — `handleStartRecording` Yeniden Giriş Koruması
+- **Sorun:** `recordState` ancak `ensureAudioDirectory()` ve `startLiveRecognition()` tamamlandıktan sonra `'recording'` oluyordu. Bu aradaki ikinci basış **ikinci bir canlı tanıma oturumu** başlatıp `liveSessionRef.current`'ın üzerine yazıyor, birinci oturum sahipsiz kalıyor ve mikrofon açık kalabiliyordu.
+- **Çözüm:** `startPendingRef` bayrağı eklendi; hazırlık boyunca gelen basışlar yok sayılıyor. Bayrak **`finally` bloğunda** serbest bırakılıyor — başlatma hata verse bile buton kalıcı kilitlenmiyor ve kullanıcı tekrar deneyebiliyor.
+- **Görsel geri bildirim:** Hazırlık sırasında mikrofon butonu `disabled`, soluk ve içinde `ActivityIndicator` gösteriyor; `accessibilityState={{ busy }}` bildiriliyor.
+
+### 💾 C2 — `handleSaveToPage` Çift Kayıt Koruması
+- **Sorun:** `tempUriRef.current = null` ataması iki `await`'ten sonra yapıldığı için, "Sayfaya Ekle"ye hızlı çift basış aynı kayıttan **iki sesli not** oluşturabiliyordu.
+- **Çözüm:** İki katmanlı koruma. `savePendingRef` bayrağı ve `tempUriRef.current = null` ataması artık **herhangi bir `await`'ten önce, senkron olarak** yapılıyor; kaynak URI yerel bir değişkene alınıp öyle kullanılıyor. İkinci basış ne bayrağı ne de kaydedecek bir kayıt buluyor.
+- **Hata durumunda kayıt kaybolmuyor:** Not henüz sayfaya teslim edilmediyse (`didHandOff` false) geçici URI geri yazılıyor, böylece kullanıcı tekrar deneyebiliyor. Teslimden sonra oluşan hatada geri yazılmıyor (mükerrer not oluşmasın diye).
+- **Görsel geri bildirim:** Kaydetme sırasında buton `disabled`, soluk ve göstergeli.
+- `cleanup()` her iki bayrağı da sıfırlıyor; yarıda kalmış bir işlem modalın bir sonraki açılışında butonları kilitli bırakmıyor.
+
+### 🐞 Bonus: Giderilen Gerileme
+- Aynı fonksiyonda **tanımsız bir `permanentUri` değişkeni** kullanıldığı görüldü (`transcribeAudioFile(permanentUri, ...)`). Bu, sesli not veri modeli göçünde (`3588d806`) değişken `saved` olarak yeniden adlandırılırken gözden kaçmıştı ve çalışma anında `ReferenceError` üretiyordu.
+- Etki: not kaydediliyor ve modal kapanıyordu, ancak **arka plan transkripsiyonu hiç başlamıyordu**; not kalıcı olarak `pending` durumunda kalıyordu (iOS / expo-av yolu). `saved?.uri` ile düzeltildi.
+
+### 🧪 Eklenen Test
+- **`tests/audioRecorderReentrancy.test.js`** [NEW] — 11 doğrulama.
+  - **Test 1 ve 4 korumasız hâlin gerçekten hatalı olduğunu kanıtlıyor** (iki oturum açılıyor / iki not oluşuyor), böylece korumalı testlerin geçmesi anlam taşıyor.
+  - Test 2/5: aynı senaryoda üç eşzamanlı basıştan yalnızca biri iş yapıyor.
+  - Test 3: başarısız başlatma sonrası buton tekrar kullanılabiliyor.
+  - Test 6: kaydetme hatasında geçici URI geri yazılıyor, kayıt kaybolmuyor.
+  - Test 7-11: korumaların kaynakta doğru yerde olduğu (özellikle C2'nin **ilk `await` öncesinde**), `finally` ile serbest bırakıldığı, butonlarda görsel geri bildirim bulunduğu ve `permanentUri` gerilemesinin giderildiği.
+
+### 📁 Değiştirilen Dosyalar
+- [`components/audio/AudioRecorderModal.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/audio/AudioRecorderModal.js)
+- [`tests/audioRecorderReentrancy.test.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/tests/audioRecorderReentrancy.test.js) [NEW]
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- `tests/` altındaki **12 test dosyasının tamamı** geçti.
+- 104 kaynak dosya `babel-preset-expo` ile sözdizimi denetiminden geçti; kırık relative import yok.
+- **Cihazda doğrulanmadı:** Gerçek dokunma zamanlaması ve mikrofon davranışı cihazda test edilmelidir.
+
+### 📝 Kapsam Notu
+- C3 (diğer korumasız async `onPress` işleyicileri: `handleSeekTouch`, `handleCopyTranscript`, `handleTogglePreview`, `handleResetRecording`, `handleShare`, `handleToggleLock`, `handleOpenNotebook`) bu turda **ele alınmadı**.
+
+---
+
 ## 📅 [2026-09-27] - PIN Deneme Sınırı (B2) ve Arka Plandan Dönüşte Kilit (B3)
 
 ### 🔍 Kapsam ve İhtiyaç

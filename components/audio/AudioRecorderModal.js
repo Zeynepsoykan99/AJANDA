@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -68,6 +69,15 @@ export default function AudioRecorderModal({
   const recordingRef = useRef(null);
   const tempUriRef = useRef(null);
   const durationMsRef = useRef(0);
+
+  // Hazırlık/kaydetme sırasında butonlara görsel geri bildirim
+  const [isPreparingRecording, setIsPreparingRecording] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Yeniden giriş koruması: bir işlem sürerken gelen ikinci basışlar yok sayılır.
+  // State bir render geride kalabildiği için bayraklar ref'te tutulur.
+  const startPendingRef = useRef(false);
+  const savePendingRef = useRef(false);
 
   // Android canlı tanıma oturumu (expo-speech-recognition kendi kayıt motoruyla)
   const liveSessionRef = useRef(null);
@@ -145,6 +155,13 @@ export default function AudioRecorderModal({
   const cleanup = async () => {
     stopElapsedTimer();
 
+    // Modal kapanırken koruma bayrakları serbest bırakılır; aksi halde yarıda
+    // kalmış bir işlem bir sonraki açılışta butonları kilitli bırakabilir.
+    startPendingRef.current = false;
+    savePendingRef.current = false;
+    setIsPreparingRecording(false);
+    setIsSaving(false);
+
     // Aktif canlı tanıma oturumu varsa iptal et
     if (liveSessionRef.current) {
       try {
@@ -187,6 +204,14 @@ export default function AudioRecorderModal({
 
   // Kayda Başla
   const handleStartRecording = async () => {
+    // Hazırlık (izin, dizin, tanıma motoru) bitmeden recordState 'recording' olmaz.
+    // Bu arada gelen ikinci basış yeni bir canlı tanıma oturumu başlatıp
+    // liveSessionRef'in üzerine yazar, ilk oturum sahipsiz kalır ve mikrofon
+    // açık kalabilirdi. Bu yüzden hazırlık boyunca yeni basışlar yok sayılır.
+    if (startPendingRef.current) return;
+    startPendingRef.current = true;
+    setIsPreparingRecording(true);
+
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
@@ -237,6 +262,11 @@ export default function AudioRecorderModal({
       }
     } catch (error) {
       console.warn('handleStartRecording hatası:', error);
+    } finally {
+      // `finally`: başlatma hata verse bile koruma serbest bırakılır,
+      // aksi halde buton kalıcı olarak kilitli kalır ve kullanıcı tekrar deneyemez.
+      startPendingRef.current = false;
+      setIsPreparingRecording(false);
     }
   };
 
@@ -381,7 +411,20 @@ export default function AudioRecorderModal({
 
   // Sayfaya Kaydet & Kapat
   const handleSaveToPage = async () => {
-    if (!tempUriRef.current) return;
+    // Çift kayıt koruması: önceki kaydetme sürerken gelen basış yok sayılır.
+    if (savePendingRef.current) return;
+
+    const sourceUri = tempUriRef.current;
+    if (!sourceUri) return;
+
+    // Ref, HERHANGİ BİR await'ten ÖNCE senkron olarak boşaltılır; böylece hızlı
+    // ikinci basış (bayrağı bir şekilde geçse bile) kaydedecek bir kayıt bulamaz.
+    savePendingRef.current = true;
+    tempUriRef.current = null;
+    setIsSaving(true);
+
+    // Not sayfaya teslim edildikten sonra hata olursa geçici URI geri yazılmamalı
+    let didHandOff = false;
 
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -393,7 +436,7 @@ export default function AudioRecorderModal({
       }
 
       // Dosyayı kalıcı doküman alanına taşı
-      const saved = await saveAudioPermanently(tempUriRef.current, pageId || 'page');
+      const saved = await saveAudioPermanently(sourceUri, pageId || 'page');
 
       const isAvailable = isTranscriptionAvailable();
 
@@ -423,19 +466,19 @@ export default function AudioRecorderModal({
           : null,
       };
 
-      // Geçici URI ref'ini sıfırla ki cleanup silmesin
-      tempUriRef.current = null;
+      // tempUriRef zaten en başta boşaltıldı (çift kayıt koruması)
       liveTranscriptRef.current = null;
 
       if (onSave) {
         onSave(newAudioNote);
       }
+      didHandOff = true;
 
       onClose && onClose();
 
       // Arka planda asenkron transkripsiyonu başlat (UI bloklanmaz)
       if (!hasLiveTranscript && isAvailable && onTranscriptReady) {
-        transcribeAudioFile(permanentUri, { language: i18n.language })
+        transcribeAudioFile(saved?.uri, { language: i18n.language })
           .then((res) => {
             if (res.success && res.transcript) {
               onTranscriptReady(newAudioNote.id, res.transcript, 'completed');
@@ -450,6 +493,14 @@ export default function AudioRecorderModal({
       }
     } catch (error) {
       console.warn('handleSaveToPage hatası:', error);
+      // Not henüz sayfaya teslim edilmediyse geçici URI geri yazılır ki
+      // kullanıcı kaydı kaybetmeden tekrar deneyebilsin.
+      if (!didHandOff) {
+        tempUriRef.current = sourceUri;
+      }
+    } finally {
+      savePendingRef.current = false;
+      setIsSaving(false);
     }
   };
 
@@ -524,12 +575,21 @@ export default function AudioRecorderModal({
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={handleStartRecording}
+                    disabled={isPreparingRecording}
+                    accessibilityState={{ busy: isPreparingRecording }}
                     style={[
                       styles.micBigButton,
                       { backgroundColor: colors.accent },
+                      isPreparingRecording && { opacity: 0.6 },
                     ]}
                   >
-                    <MaterialCommunityIcons name="microphone" size={44} color="#FFFFFF" />
+                    {isPreparingRecording ? (
+                      // İzin / dizin / tanıma motoru hazırlanırken "tepki vermiyor"
+                      // hissini önleyen gösterge
+                      <ActivityIndicator size="large" color="#FFFFFF" />
+                    ) : (
+                      <MaterialCommunityIcons name="microphone" size={44} color="#FFFFFF" />
+                    )}
                   </TouchableOpacity>
                 )}
 
@@ -616,13 +676,23 @@ export default function AudioRecorderModal({
                     <TouchableOpacity
                       activeOpacity={0.8}
                       onPress={handleSaveToPage}
-                      style={[styles.primaryBtn, { backgroundColor: colors.accent }]}
+                      disabled={isSaving}
+                      accessibilityState={{ busy: isSaving }}
+                      style={[
+                        styles.primaryBtn,
+                        { backgroundColor: colors.accent },
+                        isSaving && { opacity: 0.6 },
+                      ]}
                     >
-                      <MaterialCommunityIcons
-                        name="check-circle"
-                        size={20}
-                        color="#FFFFFF"
-                      />
+                      {isSaving ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <MaterialCommunityIcons
+                          name="check-circle"
+                          size={20}
+                          color="#FFFFFF"
+                        />
+                      )}
                       <Text style={styles.primaryBtnText}>
                         {t('audio.saveToPage', 'Sayfaya Ekle')}
                       </Text>
