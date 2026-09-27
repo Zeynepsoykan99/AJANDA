@@ -28,6 +28,22 @@ const withJournalLock = (task) => {
   return run;
 };
 
+// ─── Sayfa (Ajandam / Yapılacaklar) Yazma Kuyruğu ──────────────────
+// Ajandam ve Yapılacaklar aynı @ajanda_pages anahtarını paylaşır ve tüm yazmalar
+// "oku -> değiştir -> yaz" biçimindedir. Aynı ekranda birbirinden bağımsız
+// zamanlayıcılar (çizim kaydı, el yazısı tanıma sonucu, sesli not, sticker) ayrı ayrı
+// yazma tetikleyebildiği için bu işlemler iç içe geçerse biri diğerinin değişikliğini
+// ezer. Bu yüzden sayfa yazmaları da tek kuyrukta sırayla çalışır.
+//
+// Defter kuyruğundan AYRI tutulur: iki depo birbirinden bağımsızdır, tek kuyruk
+// paylaşsalardı ilgisiz yazmalar gereksiz yere birbirini bekletirdi.
+let pagesQueue = Promise.resolve();
+const withPagesLock = (task) => {
+  const run = pagesQueue.then(task, task);
+  pagesQueue = run.catch(() => {});
+  return run;
+};
+
 // Kapak ekranının yazabileceği üst düzey defter alanları (pages asla buradan yazılmaz)
 const NOTEBOOK_META_FIELDS = ['title', 'coverTemplateId', 'paperTemplateId', 'coverDrawings', 'coverTextBlocks', 'lastPageIndex', 'isLocked', 'isPinned'];
 
@@ -110,6 +126,35 @@ const migrateAudioNotesInPages = (pages) => {
   });
 
   return { pages: changed ? migrated : pages, changed };
+};
+
+/**
+ * Sayfalari diskten okur ve gerekiyorsa sesli not gocunu uygular.
+ *
+ * ÖNEMLİ: Bu fonksiyon kilidi KENDİSİ ALMAZ. Yalnızca `withPagesLock` içinden
+ * çağrılmalıdır; aksi halde yazma fonksiyonları kilidi ikinci kez almaya çalışıp
+ * kuyruğu kilitlerdi (deadlock). Dışarıya açık okuma yolu `StorageService.getPages`.
+ *
+ * @returns {Promise<Array<object>>}
+ */
+const readPagesUnlocked = async () => {
+  try {
+    const data = await AsyncStorage.getItem(KEYS.PAGES);
+    if (!data) return [];
+
+    const parsed = JSON.parse(data);
+    if (!Array.isArray(parsed)) return [];
+
+    // Sesli notlari yeni dosya-adi modeline tasi ve donusum olduysa diske yaz
+    const { pages, changed } = migrateAudioNotesInPages(parsed);
+    if (changed) {
+      await AsyncStorage.setItem(KEYS.PAGES, JSON.stringify(pages));
+    }
+    return pages;
+  } catch (error) {
+    console.warn('StorageService.getPages hata:', error);
+    return [];
+  }
 };
 
 const normalizeNotebook = (source) => {
@@ -423,88 +468,76 @@ export const StorageService = {
   },
 
   // ─── Sayfalar ─────────────────────────────────────────
-  getPages: async () => {
-    try {
-      const data = await AsyncStorage.getItem(KEYS.PAGES);
-      if (!data) return [];
+  // Tüm sayfa işlemleri withPagesLock kuyruğunda sırayla çalışır; böylece
+  // "oku -> değiştir -> yaz" adımlarının arasına başka bir yazma giremez.
+  getPages: async () => withPagesLock(readPagesUnlocked),
 
-      const parsed = JSON.parse(data);
-      if (!Array.isArray(parsed)) return [];
-
-      // Sesli notlari yeni dosya-adi modeline tasi ve donusum olduysa diske yaz
-      const { pages, changed } = migrateAudioNotesInPages(parsed);
-      if (changed) {
+  addPage: async (page) =>
+    withPagesLock(async () => {
+      try {
+        const pages = await readPagesUnlocked();
+        pages.push(page);
         await AsyncStorage.setItem(KEYS.PAGES, JSON.stringify(pages));
+        return pages;
+      } catch (error) {
+        console.warn('StorageService.addPage hata:', error);
+        return null;
       }
-      return pages;
-    } catch (error) {
-      console.warn('StorageService.getPages hata:', error);
-      return [];
-    }
-  },
+    }),
 
-  addPage: async (page) => {
-    try {
-      const pages = await StorageService.getPages();
-      pages.push(page);
-      await AsyncStorage.setItem(KEYS.PAGES, JSON.stringify(pages));
-      return pages;
-    } catch (error) {
-      console.warn('StorageService.addPage hata:', error);
-      return null;
-    }
-  },
-
-  updatePage: async (pageId, updates) => {
-    try {
-      const pages = await StorageService.getPages();
-      const index = pages.findIndex((p) => p.id === pageId);
-      if (index !== -1) {
-        pages[index] = { ...pages[index], ...updates };
-        await AsyncStorage.setItem(KEYS.PAGES, JSON.stringify(pages));
+  updatePage: async (pageId, updates) =>
+    withPagesLock(async () => {
+      try {
+        const pages = await readPagesUnlocked();
+        const index = pages.findIndex((p) => p.id === pageId);
+        if (index !== -1) {
+          pages[index] = { ...pages[index], ...updates };
+          await AsyncStorage.setItem(KEYS.PAGES, JSON.stringify(pages));
+        }
+        return pages;
+      } catch (error) {
+        console.warn('StorageService.updatePage hata:', error);
+        return null;
       }
-      return pages;
-    } catch (error) {
-      console.warn('StorageService.updatePage hata:', error);
-      return null;
-    }
-  },
+    }),
 
-  deletePage: async (pageId) => {
-    try {
-      const pages = await StorageService.getPages();
-      const pageToDelete = pages.find((p) => p.id === pageId);
-      if (pageToDelete?.reminder?.notificationId) {
-        NotificationService.cancelScheduledNotification(pageToDelete.reminder.notificationId).catch(() => {});
+  deletePage: async (pageId) =>
+    withPagesLock(async () => {
+      try {
+        const pages = await readPagesUnlocked();
+        const pageToDelete = pages.find((p) => p.id === pageId);
+        if (pageToDelete?.reminder?.notificationId) {
+          NotificationService.cancelScheduledNotification(pageToDelete.reminder.notificationId).catch(() => {});
+        }
+        if (pageToDelete?.audioNotes && pageToDelete.audioNotes.length > 0) {
+          AudioService.deleteAudioFiles(pageToDelete.audioNotes).catch(() => {});
+        }
+        const filtered = pages.filter((p) => p.id !== pageId);
+        await AsyncStorage.setItem(KEYS.PAGES, JSON.stringify(filtered));
+        return filtered;
+      } catch (error) {
+        console.warn('StorageService.deletePage hata:', error);
+        return null;
       }
-      if (pageToDelete?.audioNotes && pageToDelete.audioNotes.length > 0) {
-        AudioService.deleteAudioFiles(pageToDelete.audioNotes).catch(() => {});
-      }
-      const filtered = pages.filter((p) => p.id !== pageId);
-      await AsyncStorage.setItem(KEYS.PAGES, JSON.stringify(filtered));
-      return filtered;
-    } catch (error) {
-      console.warn('StorageService.deletePage hata:', error);
-      return null;
-    }
-  },
+    }),
 
-  reorderPages: async (orderedIds) => {
-    try {
-      const pages = await StorageService.getPages();
-      const reordered = orderedIds
-        .map((id, index) => {
-          const page = pages.find((p) => p.id === id);
-          return page ? { ...page, order: index } : null;
-        })
-        .filter(Boolean);
-      await AsyncStorage.setItem(KEYS.PAGES, JSON.stringify(reordered));
-      return reordered;
-    } catch (error) {
-      console.warn('StorageService.reorderPages hata:', error);
-      return null;
-    }
-  },
+  reorderPages: async (orderedIds) =>
+    withPagesLock(async () => {
+      try {
+        const pages = await readPagesUnlocked();
+        const reordered = orderedIds
+          .map((id, index) => {
+            const page = pages.find((p) => p.id === id);
+            return page ? { ...page, order: index } : null;
+          })
+          .filter(Boolean);
+        await AsyncStorage.setItem(KEYS.PAGES, JSON.stringify(reordered));
+        return reordered;
+      } catch (error) {
+        console.warn('StorageService.reorderPages hata:', error);
+        return null;
+      }
+    }),
 
   // ─── Günlüğüm (My Diary - Çoklu Sayfa) ─────────────────
   // Tüm defter işlemleri withJournalLock kuyruğunda sırayla çalışır.

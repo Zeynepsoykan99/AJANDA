@@ -4,6 +4,44 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-27] - Sayfa Yazmalarının Atomik Hale Getirilmesi (Kayıp Güncelleme Düzeltmesi)
+
+### 🔍 Kapsam ve İhtiyaç
+- **İhtiyaç:** Denetim raporundaki A1 bulgusu. `@ajanda_pages` üzerindeki tüm yazmalar (`addPage`, `updatePage`, `deletePage`, `reorderPages`) senkronize edilmemiş "oku → değiştir → yaz" yapıyordu; çakışan iki çağrıda ikincisi birincinin değişikliğini siliyordu.
+
+### 🧬 Kök Neden
+- Projede bu iş için bir kilit **zaten vardı**: `withJournalLock` (22 kullanım), ama yalnızca günlük ve defterler için. Ajandam ve Yapılacaklar'ın paylaştığı sayfa deposunda hiçbir koruma yoktu.
+- Aynı ekranda birbirinden bağımsız zamanlayıcılar yazma tetikliyor: çizim kaydı (500 ms), el yazısı tanıma sonucu (1000 ms), sesli not ekleme, sticker silme. Bunlardan ikisi çakıştığında veri kaybı oluşuyordu.
+
+### 🛠️ Çözüm
+1. **Ayrı kuyruk:** `withJournalLock` ile aynı desende `withPagesLock` eklendi. Bilerek ayrı bir kuyruk: iki depo birbirinden bağımsız olduğu için tek kuyruk paylaşsalardı ilgisiz yazmalar gereksiz yere birbirini bekletirdi.
+2. **Kilitsiz okuyucu:** `readPagesUnlocked()` eklendi (eski `getPages` gövdesi: okuma + sesli not göçü). Kilit altındaki yazma fonksiyonları bunu kullanıyor; `StorageService.getPages()` çağırsalardı kuyruk kendini bekler ve **deadlock** oluşurdu.
+3. **Beş fonksiyon da kilit altına alındı:** `getPages` (göç yazması yaptığı için o da dahil), `addPage`, `updatePage`, `deletePage`, `reorderPages`.
+
+### 🧪 Eklenen Test
+- **`tests/pagesWriteLock.test.js`** [NEW] — 7 doğrulama. `withPagesLock` kaynaktan okunup gerçek hâliyle çalıştırılıyor; gecikmeli sahte bir depo ile yarış penceresi oluşturuluyor.
+  - **Test 1 kilitsiz hâlin gerçekten veri kaybettiğini kanıtlıyor** (çizim kayboldu: `drawings=[]`), böylece Test 2'nin anlamlı olduğu garanti altına alınıyor.
+  - Test 2: aynı senaryo kilit altında — iki yazmanın ikisi de korunuyor.
+  - Test 3: 20 çakışan artırmanın tamamı kayıpsız uygulanıyor.
+  - Test 4: bir görev hata fırlatsa da kuyruk kilitlenmiyor.
+  - Test 5-7: beş fonksiyonun kilit altında olduğu, deadlock korumasının yerinde olduğu ve iki kuyruğun bağımsız kaldığı kaynak denetimiyle doğrulanıyor.
+
+### 📁 Değiştirilen Dosyalar
+- [`services/storageService.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/services/storageService.js)
+- [`tests/pagesWriteLock.test.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/tests/pagesWriteLock.test.js) [NEW]
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- `tests/` altındaki **9 test dosyasının tamamı** geçti.
+- 104 kaynak dosya `babel-preset-expo` ile sözdizimi denetiminden geçti; kırık relative import yok.
+- Kaynakta `StorageService.getPages()` iç çağrısı kalmadığı doğrulandı (deadlock riski yok).
+- **Cihazda doğrulanmadı:** Gerçek kullanımda veri kaybının bittiği cihazda test edilmelidir.
+
+### 📝 Kapsam Notu
+- Denetim raporundaki A2 (debounce flush) ve A3 (saf olmayan state updater) bu turda **bilerek ele alınmadı**; aynı aileden olsalar da ayrı tutulmaları istendi.
+
+---
+
 ## 📅 [2026-09-27] - Sesli Not Veri Modeli: Mutlak URI Yerine Dosya Adı (iOS Güncelleme Dayanıklılığı)
 
 ### 🔍 Kapsam ve İhtiyaç
