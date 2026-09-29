@@ -84,6 +84,8 @@ export default function TodoViewScreen() {
   const [undoToast, setUndoToast] = useState({ visible: false, message: '' });
   const pendingStickerDeleteRef = useRef(null);
   const saveTimeoutRef = useRef(null);
+  // Bilesen kaldirildiktan sonra ag istegi donerse setPage cagrilmasin diye
+  const isMountedRef = useRef(true);
   const recognitionTimeoutRef = useRef(null);
 
   // Kement (Lasso) Seçim Durumu — tek obje ile 3 ayrı re-render'ı 1'e indiriyoruz
@@ -177,16 +179,20 @@ export default function TodoViewScreen() {
           recognitionTimeoutRef.current = setTimeout(async () => {
             const result = await recognizeHandwriting(newDrawings, { language: i18n.language || 'tr' });
             if (result.success && !result.aborted && !result.stale) {
-              setPage((current) => {
-                if (current && current.id === prev.id) {
-                  return {
-                    ...current,
-                    recognizedText: result.text,
-                    recognizedWords: result.words,
-                  };
-                }
-                return current;
-              });
+              // Ekran kapandiysa state guncellenmez; depolama yazmasi yine de
+              // yapilir ki taninan metin arama indeksinde kaybolmasin.
+              if (isMountedRef.current) {
+                setPage((current) => {
+                  if (current && current.id === prev.id) {
+                    return {
+                      ...current,
+                      recognizedText: result.text,
+                      recognizedWords: result.words,
+                    };
+                  }
+                  return current;
+                });
+              }
               await StorageService.updatePage(prev.id, {
                 recognizedText: result.text,
                 recognizedWords: result.words,
@@ -701,6 +707,7 @@ export default function TodoViewScreen() {
 
   useEffect(() => {
     return () => {
+      isMountedRef.current = false;
       if (pendingStickerDeleteRef.current) {
         clearTimeout(pendingStickerDeleteRef.current.timer);
       }

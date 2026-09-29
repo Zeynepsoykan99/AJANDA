@@ -59,6 +59,8 @@ export default function AudioNotePlayer({
   // gordugu icin oradaki `sound` state'i her zaman null kaliyordu. Ses nesnesine
   // guncel erisim icin ref kullaniliyor.
   const soundRef = useRef(null);
+  // "Kopyalandi" rozetini kapatan zamanlayici; bilesen kaldirilirsa temizlenir
+  const copiedTimerRef = useRef(null);
 
   // Başka bir ses çalmaya başladıysa bu sesi duraklat
   useEffect(() => {
@@ -186,6 +188,14 @@ export default function AudioNotePlayer({
       }
     };
   }, [sound]);
+
+  // Kopyalama rozeti zamanlayicisi bilesen kaldirildiginda arkada kalmasin
+  useEffect(
+    () => () => {
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+    },
+    []
+  );
 
   // Oynat / Duraklat
   const handleTogglePlay = async () => {
@@ -322,7 +332,11 @@ export default function AudioNotePlayer({
     const ok = await copyTextToClipboard(audioNote.transcript);
     if (ok) {
       setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+      copiedTimerRef.current = setTimeout(() => {
+        copiedTimerRef.current = null;
+        setIsCopied(false);
+      }, 2000);
     }
   };
 

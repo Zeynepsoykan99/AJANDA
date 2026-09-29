@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -50,6 +50,8 @@ export default function NotebooksScreen() {
   const [renameTarget, setRenameTarget] = useState(null);
   const [undoToast, setUndoToast] = useState({ visible: false, message: '' });
   const undoActionRef = useRef(null);
+  // Bir sheet kapanip digeri acilirken kullanilan gecis zamanlayicisi
+  const sheetSwitchTimerRef = useRef(null);
 
   const numColumns = isTablet ? 4 : 2;
 
@@ -72,6 +74,14 @@ export default function NotebooksScreen() {
   }, []);
 
   // Ekran her odaklandığında güncel listeyi oku (defter içinde yapılan düzenlemeler sıralamaya yansır)
+  // Gecis zamanlayicisi ekran kaldirildiginda arkada kalmasin
+  useEffect(
+    () => () => {
+      if (sheetSwitchTimerRef.current) clearTimeout(sheetSwitchTimerRef.current);
+    },
+    []
+  );
+
   useFocusEffect(
     useCallback(() => {
       loadNotebooks();
@@ -90,7 +100,11 @@ export default function NotebooksScreen() {
   const handleOpenRename = useCallback(() => {
     const target = actionTarget;
     setActionTarget(null);
-    setTimeout(() => setRenameTarget(target), SHEET_SWITCH_DELAY);
+    if (sheetSwitchTimerRef.current) clearTimeout(sheetSwitchTimerRef.current);
+    sheetSwitchTimerRef.current = setTimeout(() => {
+      sheetSwitchTimerRef.current = null;
+      setRenameTarget(target);
+    }, SHEET_SWITCH_DELAY);
   }, [actionTarget]);
 
   const handleRename = useCallback(

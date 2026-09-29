@@ -4,6 +4,57 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-29] - Kalan Bulguların Yeniden Doğrulanması ve Düşük Öncelikli Temizlikler (H1-H6)
+
+### 🔎 1. Kalan 13 Bulgunun Yeniden Doğrulanması (kod değiştirilmeden)
+`handleOpenNotebook` örneğinde olduğu gibi yanlış pozitif olup olmadığını görmek için kalan bulguların hepsi kaynak üzerinde tekrar kontrol edildi.
+
+| Bulgu | Durum |
+| --- | --- |
+| A2 — debounced kayıtlar unmount/arka planda flush edilmiyor | **Geçerli** (`saveTimeoutRef` yalnızca işleyicilerde temizleniyor, unmount'ta değil) |
+| A3 — `setPage` güncelleyicisi içinde yan etki | **Geçerli** (22 kullanım) |
+| B1 — PIN düz metin AsyncStorage yedeği | **Geçerli** (`securityService.js:134,140`) |
+| E2 — el yazısı verisi Google'a gidiyor | **Geçerli** |
+| E3 — üretimde tanıma hataları `__DEV__` ardında sessiz | **Geçerli** |
+| G1 — `searchTimeoutRef` unmount'ta temizlenmiyor | **Geçerli** |
+| G2 — eski arama sonucu yarışı (request-id yok) | **Geçerli** |
+| H1 — PDF butonunda `disabled` yok | **Geçerli** |
+| H2 — `withSpring` doğrudan `useAnimatedStyle` içinde | **GEÇERSİZ / teorik** |
+| H3 — tanıma zamanlayıcısı unmount sonrası `setPage` | **Geçerli** ama etkisi düşük |
+| H4 — kopyalama rozeti zamanlayıcısı temizlenmiyor | **Geçerli**, etkisi ihmal edilebilir |
+| H5 — sheet geçiş zamanlayıcısı temizlenmiyor | **Geçerli**, etkisi ihmal edilebilir |
+| H6 — "iş mantığı içeren boş catch'ler" | **Büyük ölçüde GEÇERSİZ** |
+
+- **H2 neden geçersiz:** `withSpring` hedef değeri `isDragging.value ? 1.05 : 1` — yalnızca iki ayrık değer. Reanimated `useAnimatedStyle` içinde başlatılan animasyonların durumunu özellik bazında koruyor ve hedef değişmediği sürece yayı yeniden başlatmıyor. Sürükleme sırasında `translateX/Y` her karede değişse de yay hedefi sabit kaldığı için titreme oluşmuyor. Desen tavsiye edilmese de desteklenen bir kullanım; yeniden yapılandırmak gerçek bir kazanç sağlamadan gerileme riski getirirdi.
+- **H6 neden geçersiz:** Denetim raporunda "iş mantığı içeriyor" diye gösterilen üç örnek (`NotebookCoverView.js:220,263`, `NotebookPagesView.js:1129`) kontrol edildiğinde **üçü de `Haptics` çağrısı** çıktı, yani zararsız kategoride. 52 boş `catch` bloğu sınıflandırıldı: **44'ü** Haptics/animasyon/oynatma, **8'i** veri/kaynak işlemi içeriyor — ama o sekizin tamamı **idempotent teardown** (`sub.remove()`, `session.abort()`, `sound.stopAsync()/unloadAsync()`). Bunlarda hata "zaten yapılmıştı" anlamına geliyor; veri kaybı veya tutarsızlık riski taşıyan tek bir örnek bulunamadı. Log eklemek normal çalışmada gürültü üretirdi, bu yüzden dokunulmadı.
+
+### 🛠️ 2. Uygulanan Düzeltmeler
+
+- **H1 — PDF dışa aktarma butonu:** `disabled={isExportLoading}` eklendi, soluk gösterim ve `accessibilityState={{ busy }}` ile birlikte. `ExportLoadingModal` görünene kadar geçen karede ikinci basışın ikinci bir yakalama + PDF üretimi başlatması engellendi.
+- **H3 — tanıma geri çağrısında unmount koruması:** `app/ajandam/[pageId].js` ve `app/todolist/[pageId].js` içine `isMountedRef` eklendi. Ekran kapandıysa `setPage` çağrılmıyor, ancak `StorageService.updatePage` **yine de** çalışıyor — böylece tanınan metin arama indeksinde kaybolmuyor.
+- **H4 — kopyalama rozeti zamanlayıcısı:** `copiedTimerRef` ile izleniyor, yeni kopyalamada önceki temizleniyor ve unmount'ta iptal ediliyor.
+- **H5 — sheet geçiş zamanlayıcısı:** `sheetSwitchTimerRef` ile izleniyor ve unmount'ta iptal ediliyor (`app/defterlerim/index.js` içinde daha önce hiç unmount temizliği yoktu).
+
+### 🔁 3. Aynı Desenin Diğer Yerleri (tarandı, kapsam dışı bırakıldı)
+- "Bir yerde bulup başka yerde unutma" riskine karşı, bir değişkene atanmadığı için temizlenemeyen tüm zamanlayıcılar tarandı: **26 adet**. H4 ve H5 düzeltildikten sonra geriye **23** kalıyor.
+- Kalanların tamamı kısa süreli (150-500 ms) arayüz geçiş zamanlayıcıları; geri çağrıları ya gezinme yapıyor ya da React 18'de unmount sonrası etkisiz olan `setState` çağırıyor. Hepsini tek tek ref'e bağlamak bu turun kapsamını aşacağı için listelendi, dokunulmadı.
+
+### 📁 Değiştirilen Dosyalar
+- [`components/notebook/NotebookPagesView.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/notebook/NotebookPagesView.js) — H1
+- [`app/ajandam/[pageId].js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/ajandam/[pageId].js) — H3
+- [`app/todolist/[pageId].js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/todolist/[pageId].js) — H3
+- [`components/audio/AudioNotePlayer.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/audio/AudioNotePlayer.js) — H4
+- [`app/defterlerim/index.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/defterlerim/index.js) — H5
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- `tests/` altındaki **15 test dosyasının tamamı** geçti.
+- 104 kaynak dosya `babel-preset-expo` ile sözdizimi denetiminden geçti; kırık relative import ve ölü referans yok.
+- Bu tur **mekanik temizlik** olduğu için yeni test eklenmedi; H6'da gerçek bir iş mantığı hatası bulunamadığından önce-sonra kanıtı gerektiren bir madde çıkmadı.
+- **Cihazda doğrulanmadı:** PDF butonunun çift basışta tek kez tetiklendiği cihazda test edilmelidir.
+
+---
+
 ## 📅 [2026-09-29] - Kalan Async Basış İşleyicilerinin İncelenmesi (C3)
 
 ### 🔍 Kapsam ve İhtiyaç

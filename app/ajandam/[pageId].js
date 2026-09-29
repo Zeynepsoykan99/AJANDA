@@ -125,6 +125,8 @@ export default function PageViewScreen() {
 
   // Auto-save timer ref
   const saveTimeoutRef = useRef(null);
+  // Bilesen kaldirildiktan sonra ag istegi donerse setPage cagrilmasin diye
+  const isMountedRef = useRef(true);
   const recognitionTimeoutRef = useRef(null);
 
   // Canvas ref ve sayfa geçişinde zoom sıfırlama
@@ -196,16 +198,20 @@ export default function PageViewScreen() {
           recognitionTimeoutRef.current = setTimeout(async () => {
             const result = await recognizeHandwriting(newDrawings, { language: 'tr' });
             if (result.success && !result.aborted && !result.stale) {
-              setPage((current) => {
-                if (current && current.id === prev.id) {
-                  return {
-                    ...current,
-                    recognizedText: result.text,
-                    recognizedWords: result.words,
-                  };
-                }
-                return current;
-              });
+              // Ekran kapandiysa state guncellenmez; depolama yazmasi yine de
+              // yapilir ki taninan metin arama indeksinde kaybolmasin.
+              if (isMountedRef.current) {
+                setPage((current) => {
+                  if (current && current.id === prev.id) {
+                    return {
+                      ...current,
+                      recognizedText: result.text,
+                      recognizedWords: result.words,
+                    };
+                  }
+                  return current;
+                });
+              }
               await StorageService.updatePage(prev.id, {
                 recognizedText: result.text,
                 recognizedWords: result.words,
@@ -744,6 +750,7 @@ export default function PageViewScreen() {
 
   useEffect(() => {
     return () => {
+      isMountedRef.current = false;
       if (pendingStickerDeleteRef.current) {
         clearTimeout(pendingStickerDeleteRef.current.timer);
       }

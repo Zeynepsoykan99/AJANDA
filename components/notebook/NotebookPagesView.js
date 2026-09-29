@@ -1356,7 +1356,16 @@ export default function NotebookPagesView({
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={handleExportPageToPdf}
-            style={[styles.headerButton, compactHeader && styles.headerButtonCompact, { backgroundColor: colors.card, borderColor: colors.border }]}
+            // ExportLoadingModal görünene kadar geçen karede ikinci basış ikinci
+            // bir yakalama + PDF üretimi başlatabiliyordu
+            disabled={isExportLoading}
+            accessibilityState={{ busy: isExportLoading }}
+            style={[
+              styles.headerButton,
+              compactHeader && styles.headerButtonCompact,
+              { backgroundColor: colors.card, borderColor: colors.border },
+              isExportLoading && { opacity: 0.5 },
+            ]}
             accessibilityLabel={t('export.button', 'PDF Olarak Dışa Aktar')}
           >
             <MaterialCommunityIcons name="share-variant-outline" size={19} color={colors.textSecondary} />
