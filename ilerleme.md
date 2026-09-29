@@ -4,6 +4,44 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-29] - Global Aramada Yarış Koruması ve Zamanlayıcı Temizliği (G1, G2)
+
+### 🔍 Kapsam ve İhtiyaç
+- Denetim raporundaki iki bulgu: arama debounce zamanlayıcısının unmount'ta temizlenmemesi (G1) ve geç biten eski bir aramanın daha yeni sonucun üzerine yazabilmesi (G2).
+
+### 🐛 G2 — Eski Sonuç Yarışı (asıl düzeltme)
+- **Sorun:** `executeSearch` asenkron; hiçbir istek kimliği yoktu. Kullanıcı "eski" yazıp hemen "yeni" yazdığında iki arama birlikte uçuyor ve **hangisi geç biterse onun sonucu ekranda kalıyordu**. Arama bellek içi olduğu için çoğu zaman hızlı biter, ancak sayfa/defter sayısı arttıkça ve 300 ms'lik debounce penceresi içinde arka arkaya yazıldıkça yarış gerçekleşebiliyordu.
+- **Çözüm:** `searchRequestIdRef` eklendi. Her `executeSearch` çağrısı en başta kimliği artırıyor, `await` sonrasında kendi kimliğini güncel kimlikle karşılaştırıyor; eşleşmiyorsa sonucu yazmadan çıkıyor.
+- **Kimlik artışı bilerek boş metin dalından ÖNCE yapılıyor.** Aksi halde kullanıcı arama alanını temizledikten sonra, hâlâ uçmakta olan eski bir arama boş ekranın üzerine sonuç yazardı. Test 3 tam olarak bu senaryoyu kapsıyor.
+- Modal her açıldığında da kimlik artırılıyor; önceki açılıştan kalan bir arama yeni oturuma sızamıyor.
+
+### 🧹 G1 — Unmount Temizliği
+- `searchTimeoutRef` için unmount temizliği eklendi (H4/H5'te kullanılan desenle aynı). Modal 300 ms'lik debounce penceresi içinde kapanırsa arama artık arkada tetiklenmiyor.
+
+### 🧪 Eklenen Test
+- **`tests/searchRaceGuard.test.js`** [NEW] — 7 doğrulama. Gerçek `executeSearch` fonksiyonu kaynaktan çıkarılıp sahte bir arama motoruyla çalıştırılıyor ("eski" sorgusu 60 ms, "yeni" sorgusu 10 ms sürüyor).
+  - **Test 1 korumasız hâlin gerçekten yanlış sonucu ekranda bıraktığını kanıtlıyor.**
+  - Test 2: düzeltilmiş kodda en son aramanın sonucu kalıyor.
+  - Test 3: alan temizlendikten sonra eski sonuç geri gelmiyor.
+  - Test 4: tek arama normal çalışıyor (koruma fazla agresif değil).
+  - Test 5: kimlik artışının boş metin kontrolünden **önce** olduğu kaynak üzerinde doğrulanıyor.
+  - Test 6-7: unmount temizliği ve modal açılışındaki kimlik artışı.
+
+### 📁 Değiştirilen Dosyalar
+- [`components/ui/GlobalSearchModal.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/ui/GlobalSearchModal.js)
+- [`tests/searchRaceGuard.test.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/tests/searchRaceGuard.test.js) [NEW]
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- `tests/` altındaki **16 test dosyasının tamamı** geçti.
+- 104 kaynak dosya `babel-preset-expo` ile sözdizimi denetiminden geçti; kırık relative import ve ölü referans yok.
+- **Cihazda doğrulanmadı:** Hızlı yazım sırasında sonuçların doğru kaldığı cihazda test edilmelidir.
+
+### 📝 Kapsam Notu
+- Aynı dosyadaki `handleResultPress` içindeki 150 ms'lik gezinme zamanlayıcısı, önceki turda listelenen 23 izlenmeyen zamanlayıcıdan biri; bu turun kapsamı dışında bırakıldı.
+
+---
+
 ## 📅 [2026-09-29] - Kalan Bulguların Yeniden Doğrulanması ve Düşük Öncelikli Temizlikler (H1-H6)
 
 ### 🔎 1. Kalan 13 Bulgunun Yeniden Doğrulanması (kod değiştirilmeden)

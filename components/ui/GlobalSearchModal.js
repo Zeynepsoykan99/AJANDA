@@ -67,10 +67,16 @@ export default function GlobalSearchModal({
   const cachedDiaryRef = useRef(null);
   const cachedNotebooksRef = useRef(null);
   const searchTimeoutRef = useRef(null);
+  // Her aramaya artan bir kimlik verilir; yalnizca EN SON baslatilan aramanin
+  // sonucu state'e yazilir. Aksi halde yavas biten eski bir arama, daha yeni
+  // ve dogru sonucun uzerine yazabiliyordu.
+  const searchRequestIdRef = useRef(0);
 
   // Modal her açıldığında verileri belleğe yükle
   useEffect(() => {
     if (visible) {
+      // Onceki acilistan kalan bir arama hala uctaysa sonucu bu oturuma yazmasin
+      searchRequestIdRef.current += 1;
       setQuery('');
       setResults([]);
       setHasSearched(false);
@@ -96,9 +102,23 @@ export default function GlobalSearchModal({
     }
   }, [visible, initialCategory]);
 
+  // Debounce zamanlayıcısı bileşen kaldırıldığında arkada çalışmaya devam etmesin
+  useEffect(
+    () => () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    },
+    []
+  );
+
   // Arama motorunu çalıştır
   const executeSearch = useCallback(
     async (text, cat) => {
+      // Kimlik EN BASTA artirilir: boylece bu cagri, halihazirda ucmakta olan
+      // tum eski aramalari gecersiz kilar. Bos metin dali da dahildir; aksi
+      // halde kullanici alani temizledikten sonra eski bir arama sonucu
+      // bos ekranin uzerine yazardi.
+      const requestId = ++searchRequestIdRef.current;
+
       const trimmed = text.trim();
       if (!trimmed) {
         setResults([]);
@@ -115,6 +135,10 @@ export default function GlobalSearchModal({
         cachedDiaryRef.current,
         cachedNotebooksRef.current
       );
+
+      // Bu arama tamamlanana kadar yenisi baslatildiysa sonucu yok say
+      if (requestId !== searchRequestIdRef.current) return;
+
       setResults(searchResults);
     },
     []
