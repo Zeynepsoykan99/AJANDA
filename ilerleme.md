@@ -4,6 +4,40 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-29] - Ölü Referans Taraması ve Bildirim Handler'ının SDK 54'e Uyarlanması (D1)
+
+### 🧪 1. Tanımsız Tanımlayıcı (Ölü Referans) Taraması
+- **`tests/undefinedIdentifiers.test.js`** [NEW] — Her kaynak dosyayı Babel ile ayrıştırıp kapsam (scope) analizi yapıyor ve hiçbir kapsamda tanımlı olmayan tanımlayıcıları buluyor.
+- **Neden eklendi:** Sesli not veri modeli göçünde `permanentUri` değişkeni `saved` olarak yeniden adlandırılırken bir kullanım yeri gözden kaçmıştı. Sözdizimi geçerli olduğu için derleme denetimi yakalamadı; hata ancak çalışma anında `ReferenceError` olarak ortaya çıktı ve arka plan transkripsiyonunu sessizce durdurdu.
+- **Kapsam:** 104 kaynak dosya, 8 dizin. Gerçek çalışma ortamı global'leri (`console`, `setTimeout`, `fetch`, `__DEV__`, `window`, `document` vb.) açık bir izin listesinde tutuluyor; listeye ekleme yapmak bilinçli bir karar gerektiriyor.
+- **Sonuç: temiz** — mevcut kod tabanında yeni bir ölü referans bulunmadı.
+- **Testin gerçekten yakaladığı kanıtlandı:** `permanentUri` gerilemesi geçici olarak geri konulduğunda test dosya ve satır numarasıyla başarısız oldu (`permanentUri -> components/audio/AudioRecorderModal.js:481`).
+
+### 🔔 2. D1 — Bildirim Handler'ının Zorunlu Alanları
+- **Durum:** `setNotificationHandler` yalnızca `shouldShowAlert: false` gönderiyordu. SDK 54'te bu alan kullanımdan kaldırıldı ve `NotificationBehavior` tipinde `shouldShowBanner` ile `shouldShowList` **zorunlu** alanlar olarak tanımlı.
+- **Düzeltme:** Deprecated alan kaldırıldı; niyet korunarak `shouldShowBanner: false` ve `shouldShowList: false` açıkça gönderiliyor. `shouldPlaySound: true` ve `shouldSetBadge: false` değişmedi. `trigger: { type: 'date', date }` kullanımına dokunulmadı.
+- **Dürüst değerlendirme — bu canlı bir hata değildi.** Denetim raporunda 🟠 olarak işaretlenmişti; native kaynak okunduğunda durum netleşti:
+  - Android `NotificationBehaviorRecord.kt:11-13`: üç alan da `= false` varsayılanına sahip, `shouldPresentAlert = shouldShowBanner || shouldShowList || shouldShowAlert` → hepsi false → sistem banner'ı zaten gösterilmiyordu.
+  - iOS `HandlerModule.swift:70-88`: aynı şekilde üçü de `false` varsayılanlı, `presentationOptions` yalnızca `true` olanları ekliyor → yalnızca `.sound` kalıyordu.
+  - `NotificationsHandler.js:65` deprecation uyarısını yalnızca `shouldShowAlert` **truthy** olduğunda yazıyor; değer `false` olduğu için konsolda uyarı da görünmüyordu.
+  - Yani amaçlanan davranış native varsayılanlar sayesinde zaten elde ediliyordu. Düzeltmenin değeri: tipin zorunlu alan sözleşmesini karşılamak, kullanımdan kaldırılmış alana bağımlılığı bitirmek ve niyeti kodda açık hale getirmek.
+- **Çift gösterim riski kontrol edildi, yok:**
+  - Ön planda: handler sistem sunumunu bastırıyor, `addNotificationReceivedListener` uygulama içi banner'ı gösteriyor → tek gösterim.
+  - Arka planda/kapalıyken: handler sunuma karışmıyor, sistem bildirimi gösteriyor; uygulama görünmediği için uygulama içi banner çizilmiyor → tek gösterim.
+  - Düzeltme bu riski ayrıca azaltıyor: alanlar artık native varsayılana bırakılmıyor, açıkça `false` veriliyor.
+
+### 📁 Değiştirilen Dosyalar
+- [`services/notificationService.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/services/notificationService.js)
+- [`tests/undefinedIdentifiers.test.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/tests/undefinedIdentifiers.test.js) [NEW]
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- `tests/` altındaki **13 test dosyasının tamamı** geçti.
+- 104 kaynak dosya `babel-preset-expo` ile sözdizimi denetiminden geçti; kırık relative import yok.
+- **Cihazda doğrulanmadı:** Hatırlatıcının ön planda ve arka planda nasıl göründüğü cihazda test edilmelidir.
+
+---
+
 ## 📅 [2026-09-27] - Sesli Not Kaydedicide Yeniden Giriş Korumaları (C1, C2)
 
 ### 🔍 Kapsam ve İhtiyaç

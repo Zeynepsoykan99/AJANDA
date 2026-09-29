@@ -11,12 +11,24 @@ import { Platform, Alert, Linking } from 'react-native';
 // Uygulama açıkken (foreground) bildirim davranışı:
 // Sistem bildirimini bastırıyoruz; onun yerine projenin tema renklerine uyumlu
 // özel InAppNotificationBanner bileşeni ekranda belirecek.
+//
+// SDK 54 notu: `shouldShowAlert` artık kullanımdan kaldırıldı (deprecated) ve
+// yerine `shouldShowBanner` ile `shouldShowList` ZORUNLU alanlar olarak geldi
+// (bkz. expo-notifications `NotificationBehavior` tipi). İkisi de gönderilmediğinde
+// ön plandaki sunum davranışı tanımsız kalıyordu. Eski `shouldShowAlert: false`
+// hem açılır banner'ı hem bildirim listesini bastırıyordu; aynı davranışı
+// korumak için ikisi de `false` veriliyor.
 export const configureNotificationHandler = () => {
   if (Platform.OS === 'web') return;
   try {
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
-        shouldShowAlert: false, // Foreground'da yerel banner devrede
+        // Ön planda sistem banner'ı gösterilmez; uygulama kendi banner'ını çizer.
+        // Böylece aynı hatırlatıcı iki kez görünmez.
+        shouldShowBanner: false,
+        // Ön planda yakalanan bildirim sistem bildirim listesine de düşmez;
+        // uygulama zaten ekranda olduğu için kullanıcı hatırlatıcıyı görmüştür.
+        shouldShowList: false,
         shouldPlaySound: true,
         shouldSetBadge: false,
       }),
