@@ -4,6 +4,63 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-29] - Bekleyen Kayıtların Arka Planda Yazılması ve Güncelleyicilerin Saflaştırılması (A2, A3)
+
+### 🔍 Kapsam ve İhtiyaç
+- Denetim raporundaki iki bulgu, aynı aileden: debounce'lu kayıtların uygulama arka plana geçerken diske yazılmaması (A2) ve `setPage` güncelleyicilerinin içinde yan etki (depolama yazması, `setTimeout` kurulumu) bulunması (A3).
+- Etkilenen ekranlar: `app/ajandam/[pageId].js` ve `app/todolist/[pageId].js`.
+
+### 🐛 Çalışma Sırasında Ortaya Çıkan ÜÇÜNCÜ Hata (veri kaybı)
+- Düzeltmeye başlarken fark edildi: `data`, `drawings` ve `textBlocks` **tek bir `saveTimeoutRef` paylaşıyordu** ve her biri kurulmadan önce `clearTimeout` ile öncekini iptal ediyordu.
+- Sonuç: kullanıcı metin yazıp **500 ms dolmadan** çizim yaparsa, yazdığı metnin kaydı iptal ediliyor ve **diske hiç gitmiyordu**. Yalnızca son alan yazılıyordu.
+- Bu, A2 ile aynı mekanizmayı ilgilendirdiği için birlikte çözüldü (kullanıcı onayıyla).
+
+### ✅ Yapılan Düzeltme
+- **`pendingSaveRef`** eklendi: bekleyen değişiklikler **tek bir yükte birikir** (`{ ...öncekiler, ...yeniler }`), üzerine yazılmaz. Artık hiçbir alan diğerinin kaydını iptal etmiyor.
+- **`flushPendingSave()`**: zamanlayıcıyı iptal eder, bekleyen yükü boşaltır ve `StorageService.updatePage` ile **hemen** yazar. Hata yutulmuyor, `console.error` ile bildiriliyor.
+- **`scheduleSave(updates, delay = 500)`**: tüm debounce'lu yazmaların tek girişi.
+- **A2 — AppState:** yalnızca `'background'` geçişinde flush ediliyor. **`'inactive'` bilinçli olarak kapsam dışı** (bildirim çubuğu, uygulama değiştirici, Face ID istemi); B3'teki oturum kilidi kararıyla aynı gerekçe. Ayrıca ekrandan ayrılırken (unmount / `pageId` değişimi) de flush ediliyor.
+- **A3 — güncelleyiciler saflaştırıldı:** `handleDataChange`, `handleDrawingsChange`, `handleTextBlocksChange` artık `setPage` içinde yalnızca yeni state'i döndürüyor; yazma ve zamanlayıcı kurulumu güncelleyicinin **dışına** alındı. `prev.id` yerine doğrudan `pageId` kullanılıyor.
+- El yazısı tanıma zamanlayıcısı da güncelleyicinin dışına taşındı; ayrıca çalıştıktan sonra `recognitionTimeoutRef` `null`'a çekiliyor.
+- **Sticker silme onayı:** `setPage((prev) => { StorageService.updatePage(...); return prev; })` deseni kaldırıldı — güncelleyici yalnızca state okumak için kullanılıyordu. Güncel sayfa artık `pageRef.current` üzerinden okunuyor.
+
+### 🔄 Bilinçli Davranış Değişikliği
+- Çizimler tamamen silindiğinde `recognizedText`/`recognizedWords` temizliği eskiden **anında**, `drawings` yazması ise **500 ms gecikmeli** yapılıyordu; iki yazma birbiriyle yarışabiliyordu. Artık ikisi **aynı yükte, tek yazmada** gidiyor.
+
+### 🔗 A1 ile Uyum
+- Tüm flush yazmaları yine `StorageService.updatePage` üzerinden, yani `withPagesLock` sırası altında gidiyor. Ekran tarafında paralel yazma üretilmiyor; çakışma yok (Test 8 bunu kaynakta doğruluyor).
+
+### 🧪 Eklenen Test
+- **`tests/pendingSaveFlush.test.js`** [NEW] — 8 doğrulama. Gerçek `flushPendingSave` ve `scheduleSave` fonksiyonları **kaynak dosyalardan okunarak** çalıştırılıyor (mantık kopyalanmıyor).
+  - **Test 1 eski paylaşılan zamanlayıcının metni gerçekten kaybettiğini kanıtlıyor.**
+  - Test 2: yeni mekanizmada her iki alan da yazılıyor.
+  - Test 3: flush bekleyen değişikliği beklemeden diske yazıyor, ref'leri temizliyor.
+  - Test 4: boş bekleyen yükte ikinci flush gereksiz yazma yapmıyor.
+  - Test 5: flush eski zamanlayıcıyı iptal ettiği için mükerrer yazma olmuyor.
+  - Test 6: `todolist` ekranı da aynı mekanizmayı kullanıyor.
+  - Test 7: `'background'` kurulu / `'inactive'` yok, unmount flush'ı var, üç güncelleyici saf, sticker silme `pageRef` üzerinden.
+  - Test 8: `updatePage` hâlâ `withPagesLock` altında.
+- **Testin dişi olduğu kanıtlandı:** dört ayrı kasıtlı kırılma (birikim yerine üzerine yazma, flush'taki `clearTimeout`'un kaldırılması, `background` → `inactive`, sticker yazmasının güncelleyiciye geri alınması) denendi; **dördü de yakalandı**, ardından kod geri alındı.
+
+### 📁 Değiştirilen Dosyalar
+- [`app/ajandam/[pageId].js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/ajandam/%5BpageId%5D.js)
+- [`app/todolist/[pageId].js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/todolist/%5BpageId%5D.js)
+- [`tests/pendingSaveFlush.test.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/tests/pendingSaveFlush.test.js) [NEW]
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- `tests/` altındaki **17 test dosyasının tamamı** geçti.
+- 104 kaynak dosya `babel-preset-expo` ile sözdizimi denetiminden geçti; kırık relative import yok.
+- `tests/undefinedIdentifiers.test.js`: çözümlenemeyen tanımlayıcı yok.
+- **Cihazda doğrulanmadı:** Yazı yazıp 500 ms dolmadan uygulamayı arka plana alma ve geri dönme senaryosu cihazda test edilmelidir.
+
+### 📝 Kapsam Notları (düzeltilmedi, kayda geçti)
+- Her iki dosyada **18'er adet** (toplam 36) `setPage` güncelleyicisi hâlâ içinde **anında** `StorageService.updatePage` çağırıyor (sticker/metin/ses notu/index flag işlemleri). Bunlar debounce'suz ve idempotent; `withPagesLock` sırası altında gittikleri için veri bozulmuyor. Kullanıcı kararıyla bu turun dışında bırakıldı.
+- `recognitionTimeoutRef` unmount'ta hâlâ temizlenmiyor — önceki turda listelenen 23 izlenmeyen zamanlayıcıdan biri; bu turun kapsamı dışında.
+- B1 (PIN düz metin yedeği) ve E2 (el yazısı vuruşlarının Google'a gönderilmesi) kullanıcı kararı bekliyor.
+
+---
+
 ## 📅 [2026-09-29] - Global Aramada Yarış Koruması ve Zamanlayıcı Temizliği (G1, G2)
 
 ### 🔍 Kapsam ve İhtiyaç

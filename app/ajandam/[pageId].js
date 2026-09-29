@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
+  AppState,
   View,
   Text,
   StyleSheet,
@@ -125,6 +126,13 @@ export default function PageViewScreen() {
 
   // Auto-save timer ref
   const saveTimeoutRef = useRef(null);
+  // Henuz diske yazilmamis degisiklikler TEK bir yukte birikir.
+  // Onceden her alan (data / drawings / textBlocks) ayni zamanlayiciyi
+  // paylasip birbirinin kaydini clearTimeout ile iptal ediyordu; 500 ms
+  // icinde farkli bir alan degisirse onceki alanin yazmasi kayboluyordu.
+  const pendingSaveRef = useRef(null);
+  // Guncel sayfa state'ine guncelleyici disindan erismek icin (saf kalmak adina)
+  const pageRef = useRef(null);
   // Bilesen kaldirildiktan sonra ag istegi donerse setPage cagrilmasin diye
   const isMountedRef = useRef(true);
   const recognitionTimeoutRef = useRef(null);
@@ -156,91 +164,120 @@ export default function PageViewScreen() {
     })();
   }, [pageId]);
 
+  // Guncel sayfayi ref'te tut: guncelleyici disindan okumak icin
+  useEffect(() => {
+    pageRef.current = page;
+  }, [page]);
+
+  /**
+   * Bekleyen tum degisiklikleri HEMEN diske yazar.
+   * Zamanlayici beklemez; arka plana gecis ve ekrandan ayrilmada cagrilir.
+   */
+  const flushPendingSave = useCallback(async () => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    const pending = pendingSaveRef.current;
+    pendingSaveRef.current = null;
+    if (!pending || !pageId) return;
+    try {
+      await StorageService.updatePage(pageId, pending);
+    } catch (error) {
+      console.error('Bekleyen sayfa degisikligi yazilamadi:', error);
+    }
+  }, [pageId]);
+
+  /**
+   * Degisikligi bekleyen yuke EKLER (uzerine yazmaz) ve debounce zamanlayicisini kurar.
+   * Farkli alanlar ayni yukte biriktigi icin biri digerinin kaydini iptal etmez.
+   */
+  const scheduleSave = useCallback(
+    (updates, delay = 500) => {
+      pendingSaveRef.current = { ...(pendingSaveRef.current || {}), ...updates };
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(() => {
+        saveTimeoutRef.current = null;
+        flushPendingSave();
+      }, delay);
+    },
+    [flushPendingSave]
+  );
+
+  // A2: uygulama GERCEKTEN arka plana alindiginda bekleyen degisikligi hemen yaz.
+  // 'inactive' (bildirim cubugu, uygulama degistirici, Face ID istemi) sayilmaz;
+  // her gecici odak kaybinda diske yazmak gereksiz olurdu.
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'background') {
+        flushPendingSave();
+      }
+    });
+    return () => subscription?.remove?.();
+  }, [flushPendingSave]);
+
+  // Ekrandan ayrilirken de bekleyen degisiklik diske yazilir
+  useEffect(() => () => { flushPendingSave(); }, [flushPendingSave]);
+
   // Sayfa verilerini güncelle (debounced auto-save)
   const handleDataChange = useCallback(
     (newData) => {
-      setPage((prev) => {
-        const updated = { ...prev, data: newData };
-
-        // Debounced kaydetme
-        if (saveTimeoutRef.current) {
-          clearTimeout(saveTimeoutRef.current);
-        }
-        saveTimeoutRef.current = setTimeout(async () => {
-          await StorageService.updatePage(prev.id, { data: newData });
-        }, 500);
-
-        return updated;
-      });
+      // Guncelleyici SAF: yalnizca yeni state'i dondurur, yan etki icermez
+      setPage((prev) => (prev ? { ...prev, data: newData } : prev));
+      scheduleSave({ data: newData });
     },
-    []
+    [scheduleSave]
   );
 
   // Çizimleri güncelle (debounced auto-save & digital ink recognition)
   const handleDrawingsChange = useCallback(
     (newDrawings) => {
-      setPage((prev) => {
-        const updated = { ...prev, drawings: newDrawings };
-        if (saveTimeoutRef.current) {
-          clearTimeout(saveTimeoutRef.current);
-        }
-        saveTimeoutRef.current = setTimeout(async () => {
-          await StorageService.updatePage(prev.id, { drawings: newDrawings });
-        }, 500);
+      // Guncelleyici SAF
+      setPage((prev) => (prev ? { ...prev, drawings: newDrawings } : prev));
+      scheduleSave({ drawings: newDrawings });
 
-        // El Yazısı Tanıma (Debounced 1000ms - Çizim akışını asla yavaşlatmaz)
-        if (recognitionTimeoutRef.current) {
-          clearTimeout(recognitionTimeoutRef.current);
-        }
-        if (!newDrawings || newDrawings.length === 0) {
-          StorageService.updatePage(prev.id, { recognizedText: '', recognizedWords: [] });
-        } else {
-          recognitionTimeoutRef.current = setTimeout(async () => {
-            const result = await recognizeHandwriting(newDrawings, { language: 'tr' });
-            if (result.success && !result.aborted && !result.stale) {
-              // Ekran kapandiysa state guncellenmez; depolama yazmasi yine de
-              // yapilir ki taninan metin arama indeksinde kaybolmasin.
-              if (isMountedRef.current) {
-                setPage((current) => {
-                  if (current && current.id === prev.id) {
-                    return {
-                      ...current,
-                      recognizedText: result.text,
-                      recognizedWords: result.words,
-                    };
-                  }
-                  return current;
-                });
-              }
-              await StorageService.updatePage(prev.id, {
-                recognizedText: result.text,
-                recognizedWords: result.words,
-              });
-            }
-          }, 1000);
-        }
+      // El Yazisi Tanima (debounce 1000 ms) - guncelleyici disinda kurulur
+      if (recognitionTimeoutRef.current) {
+        clearTimeout(recognitionTimeoutRef.current);
+        recognitionTimeoutRef.current = null;
+      }
 
-        return updated;
-      });
+      if (!newDrawings || newDrawings.length === 0) {
+        scheduleSave({ recognizedText: '', recognizedWords: [] });
+        return;
+      }
+
+      recognitionTimeoutRef.current = setTimeout(async () => {
+        recognitionTimeoutRef.current = null;
+        const result = await recognizeHandwriting(newDrawings, { language: 'tr' });
+        if (!result.success || result.aborted || result.stale) return;
+
+        // Ekran kapandiysa state guncellenmez; depolama yazmasi yine de yapilir
+        // ki taninan metin arama indeksinde kaybolmasin.
+        if (isMountedRef.current) {
+          setPage((current) =>
+            current && current.id === pageId
+              ? { ...current, recognizedText: result.text, recognizedWords: result.words }
+              : current
+          );
+        }
+        await StorageService.updatePage(pageId, {
+          recognizedText: result.text,
+          recognizedWords: result.words,
+        });
+      }, 1000);
     },
-    []
+    [scheduleSave, pageId]
   );
 
   // Serbest metin kutularını güncelle (debounced auto-save)
   const handleTextBlocksChange = useCallback(
     (newTextBlocks) => {
-      setPage((prev) => {
-        const updated = { ...prev, textBlocks: newTextBlocks };
-        if (saveTimeoutRef.current) {
-          clearTimeout(saveTimeoutRef.current);
-        }
-        saveTimeoutRef.current = setTimeout(async () => {
-          await StorageService.updatePage(prev.id, { textBlocks: newTextBlocks });
-        }, 400);
-        return updated;
-      });
+      // Guncelleyici SAF
+      setPage((prev) => (prev ? { ...prev, textBlocks: newTextBlocks } : prev));
+      scheduleSave({ textBlocks: newTextBlocks }, 400);
     },
-    []
+    [scheduleSave]
   );
 
   // Son çizgiyi geri al
@@ -739,14 +776,13 @@ export default function PageViewScreen() {
       const pending = pendingStickerDeleteRef.current;
       pendingStickerDeleteRef.current = null;
       if (pending.type === 'sticker_delete' && pending.sticker) {
-        setPage((prev) => {
-          StorageService.updatePage(prev.id, { stickers: prev.stickers || [] });
-          return prev;
-        });
+        // Guncelleyici yalnizca state OKUMAK icin kullaniliyordu ve icinde yan
+        // etki vardi. Guncel sayfa artik pageRef uzerinden okunuyor.
+        StorageService.updatePage(pageId, { stickers: pageRef.current?.stickers || [] });
       }
       setUndoToast({ visible: false, message: '' });
     }
-  }, []);
+  }, [pageId]);
 
   useEffect(() => {
     return () => {
