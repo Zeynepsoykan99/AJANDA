@@ -4,6 +4,48 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-29] - El Yazısı Tanımada İstek Yalıtımı (E1)
+
+### 🔍 Kapsam ve İhtiyaç
+- Denetim raporundaki E1 bulgusu: zaman aşımı zamanlayıcısının kendi isteğini değil, o an modül düzeyinde tutulan **başka bir isteği** iptal etmesi.
+
+### 🧬 Kök Neden (koddan kanıtlandı)
+- `services/handwritingService.js` modül düzeyinde tek bir `activeAbortController` paylaşıyordu.
+- Zincir: A isteği başlar (`activeAbortController = A`) → B isteği başlar ve değişkenin üzerine yazar (`activeAbortController = B`) → A'nın 8 saniyelik zamanlayıcısı tetiklenir ve `activeAbortController`'ı, yani artık **B'yi** iptal eder.
+- İkinci kusur: `clearTimeout(timeoutId)` yalnızca **başarı yolundaydı**. A yeni bir istek yüzünden iptal edilip `catch`'e düştüğünde zamanlayıcısı hiç temizlenmiyor, hayatta kalıp sonraki isteği vurabiliyordu.
+- Kullanıcıya yansıması: hızlı ardışık çizimlerde el yazısı tanıma rastgele başarısız oluyor, aramada el yazısı bulunamıyordu.
+
+### 🛠️ Çözüm
+- Modül düzeyindeki `activeAbortController` **tamamen kaldırıldı**. Her çağrı kendi `controller` ve `timeoutId` değişkenlerini yerel olarak oluşturuyor; zaman aşımı yalnızca `controller.abort()` çağırıyor ve `fetch` yalnızca `controller.signal` kullanıyor.
+- `clearTimeout` bir **`finally`** bloğuna taşındı; istek iptal edilse de ağ hatası olsa da zamanlayıcı her yolda temizleniyor.
+- İstekler artık birbirini iptal etmiyor. Eski sonuçların arayüze uygulanmasını engelleyen `currentRequestId` bayat sonuç (stale) koruması aynen korundu; yani eşzamanlı istekler güvenle uçabiliyor, yalnızca en güncel olanın sonucu kullanılıyor.
+- `currentRequestId` sayacı yorumuyla birlikte korundu; artık tek görevi bayat sonuç denetimi.
+
+### 🐞 Test, Düzeltmenin İçindeki Bir Hatayı Yakaladı
+- İlk yazdığım `finally` bloğu `if (timeoutId) clearTimeout(timeoutId);` şeklindeydi. Zamanlayıcı kimliği **`0`** olduğunda bu koşul yanlış (falsy) olduğu için temizleme atlanıyordu. Test bunu doğrudan yakaladı; `if (timeoutId !== null)` olarak düzeltildi.
+
+### 🧪 Eklenen Test
+- **`tests/handwritingRequestIsolation.test.js`** [NEW] — 7 doğrulama. Elle tetiklenebilen sahte zamanlayıcı ve istek başına kontrol edilebilen sahte `fetch` kullanılıyor; gerçek `recognizeHandwriting` fonksiyonu kaynaktan çıkarılıp çalıştırılıyor.
+  - **Test 1 eski davranışın gerçekten hatalı olduğunu kanıtlıyor:** A'nın zamanlayıcısı tetiklendiğinde B iptal oluyor.
+  - Test 2-3: düzeltilmiş kodda eşzamanlı istekler birbirini iptal etmiyor; bir isteğin zamanlayıcısı yalnızca kendi isteğini iptal ediyor.
+  - Test 4-5: iptal edilen istek doğru sonuç dönüyor, zamanlayıcılar hem iptal hem başarı yolunda temizleniyor.
+  - Test 6: bayat sonuç koruması hâlâ çalışıyor (geç tamamlanan eski istek `stale: true` dönüyor).
+
+### 📁 Değiştirilen Dosyalar
+- [`services/handwritingService.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/services/handwritingService.js)
+- [`tests/handwritingRequestIsolation.test.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/tests/handwritingRequestIsolation.test.js) [NEW]
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- `tests/` altındaki **14 test dosyasının tamamı** geçti.
+- 104 kaynak dosya `babel-preset-expo` ile sözdizimi denetiminden geçti; kırık relative import ve ölü referans yok.
+- **Cihazda doğrulanmadı:** Hızlı ardışık el yazısı girişinde tanımanın kesintisiz çalıştığı cihazda test edilmelidir.
+
+### 📝 Kapsam Notu
+- Aynı dosyadaki `recognizeSelectedStrokes` fonksiyonu **zaten yerel bir denetleyici** kullanıyor; çapraz iptal hatası orada yok. Yalnızca `clearTimeout`'u başarı yolunda; ağ hatasında zamanlayıcı 10 saniye boyunca hayatta kalıyor ama tetiklendiğinde çoktan tamamlanmış bir isteği iptal etmeye çalıştığı için etkisiz. Kapsam dışı bırakıldı, rapora not düşüldü.
+
+---
+
 ## 📅 [2026-09-29] - Ölü Referans Taraması ve Bildirim Handler'ının SDK 54'e Uyarlanması (D1)
 
 ### 🧪 1. Tanımsız Tanımlayıcı (Ölü Referans) Taraması

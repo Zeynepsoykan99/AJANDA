@@ -4,8 +4,10 @@
  * orijinal çizimi değiştirmeden arka planda metne dönüştürür.
  */
 
-// Aktif devam eden istekleri iptal etmek için kontrolcü referansı
-let activeAbortController = null;
+// Yalnızca "bayat sonuç" (stale response) denetimi için artan istek sayacı.
+// İstek iptal denetleyicileri MODÜL DÜZEYİNDE TUTULMAZ: her çağrı kendi
+// AbortController'ını ve zamanlayıcısını yerel olarak oluşturur, böylece
+// eşzamanlı istekler birbirini iptal edemez.
 let currentRequestId = 0;
 
 /**
@@ -110,20 +112,26 @@ export async function recognizeHandwriting(drawings, options = { language: 'tr' 
     return { text: '', words: [], success: true };
   }
 
-  // Önceki isteği iptal et (Race Condition Koruması)
-  if (activeAbortController) {
-    activeAbortController.abort();
-  }
-  activeAbortController = new AbortController();
+  // Her istek KENDİ denetleyicisini ve KENDİ zamanlayıcısını taşır.
+  //
+  // Önceden modül düzeyinde tek bir `activeAbortController` paylaşılıyordu:
+  // A isteği başlar, B başlayınca değişkenin üzerine yazar ve A'nın zaman aşımı
+  // tetiklendiğinde `activeAbortController`'ı (artık B'yi) iptal ederdi. Üstelik
+  // A iptal edilip `catch`'e düştüğünde `clearTimeout` hiç çalışmadığı için
+  // A'nın zamanlayıcısı hayatta kalıp sonraki isteği de vurabiliyordu.
+  // Yerel değişkenlerle istekler birbirinden tamamen yalıtıldı.
+  const controller = new AbortController();
   const requestId = ++currentRequestId;
+  let timeoutId = null;
 
   const area = calculateWritingArea(drawings);
   const lang = options.language || 'tr';
   const itc = lang === 'tr' ? 'tr-t-i0-handwrit' : 'en-t-i0-handwrit';
 
   try {
-    const timeoutId = setTimeout(() => {
-      if (activeAbortController) activeAbortController.abort();
+    // Yalnızca bu isteğin denetleyicisini iptal eder
+    timeoutId = setTimeout(() => {
+      controller.abort();
     }, 8000); // 8 saniye zaman aşımı
 
     const response = await fetch(
@@ -150,11 +158,9 @@ export async function recognizeHandwriting(drawings, options = { language: 'tr' 
             },
           ],
         }),
-        signal: activeAbortController.signal,
+        signal: controller.signal,
       }
     );
-
-    clearTimeout(timeoutId);
 
     // Eğer yeni bir istek başladıysa bu eski sonucu yok say (stale response protection)
     if (requestId !== currentRequestId) {
@@ -202,6 +208,13 @@ export async function recognizeHandwriting(drawings, options = { language: 'tr' 
       console.warn('[HandwritingService] Tanıma ağ hatası veya çevrimdışı:', error.message);
     }
     return { text: '', words: [], success: false, error: error.message };
+  } finally {
+    // Zamanlayıcı HER yolda temizlenir: istek iptal edilse veya ağ hatası olsa bile.
+    // Önceden clearTimeout yalnızca başarı yolundaydı; iptal edilen isteğin
+    // zamanlayıcısı hayatta kalıp bir sonraki isteği vuruyordu.
+    // NOT: `!== null` ile karşılaştırılır; zamanlayıcı kimliği 0 olabilir ve
+    // doğruluk (truthiness) kontrolü o durumda temizlemeyi atlardı.
+    if (timeoutId !== null) clearTimeout(timeoutId);
   }
 }
 
