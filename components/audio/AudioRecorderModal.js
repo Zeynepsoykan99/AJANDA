@@ -78,6 +78,9 @@ export default function AudioRecorderModal({
   // State bir render geride kalabildiği için bayraklar ref'te tutulur.
   const startPendingRef = useRef(false);
   const savePendingRef = useRef(false);
+  // Önizleme sesi yüklenirken gelen ikinci basış ikinci bir Audio.Sound
+  // oluşturup ilkini sahipsiz bırakır (iki ses aynı anda çalar)
+  const previewPendingRef = useRef(false);
 
   // Android canlı tanıma oturumu (expo-speech-recognition kendi kayıt motoruyla)
   const liveSessionRef = useRef(null);
@@ -159,6 +162,7 @@ export default function AudioRecorderModal({
     // kalmış bir işlem bir sonraki açılışta butonları kilitli bırakabilir.
     startPendingRef.current = false;
     savePendingRef.current = false;
+    previewPendingRef.current = false;
     setIsPreparingRecording(false);
     setIsSaving(false);
 
@@ -342,6 +346,12 @@ export default function AudioRecorderModal({
   // Önizlemeyi Oynat / Duraklat
   const handleTogglePreview = async () => {
     if (!tempUriRef.current) return;
+    // `previewSound` state'i bir render geride kaldığı için, yükleme sürerken
+    // gelen ikinci basış `!previewSound` dalına tekrar girip İKİNCİ bir
+    // Audio.Sound oluşturuyordu: iki ses aynı anda çalıyor, ilki hiç
+    // unload edilmeden sahipsiz kalıyordu.
+    if (previewPendingRef.current) return;
+    previewPendingRef.current = true;
 
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -374,6 +384,8 @@ export default function AudioRecorderModal({
       }
     } catch (error) {
       console.warn('handleTogglePreview hatası:', error);
+    } finally {
+      previewPendingRef.current = false;
     }
   };
 

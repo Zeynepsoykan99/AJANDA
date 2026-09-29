@@ -240,9 +240,10 @@ export async function recognizeSelectedStrokes(selectedStrokes, options = { lang
   const lang = options.language || 'tr';
   const itc = lang === 'tr' ? 'tr-t-i0-handwrit' : 'en-t-i0-handwrit';
   const controller = new AbortController();
+  let timeoutId = null;
 
   try {
-    const timeoutId = setTimeout(() => {
+    timeoutId = setTimeout(() => {
       controller.abort();
     }, 10000); // 10 saniye zaman aşımı
 
@@ -274,8 +275,6 @@ export async function recognizeSelectedStrokes(selectedStrokes, options = { lang
       }
     );
 
-    clearTimeout(timeoutId);
-
     if (!response.ok) {
       return { text: '', candidates: [], success: false, error: `Sunucu yanıtı: ${response.status}` };
     }
@@ -304,6 +303,10 @@ export async function recognizeSelectedStrokes(selectedStrokes, options = { lang
       success: false,
       error: error.name === 'AbortError' ? 'Zaman aşımı' : 'Bağlantı hatası veya çevrimdışı',
     };
+  } finally {
+    // Tutarlılık: zamanlayıcı ağ hatasında da temizlenir, boşta beklemez.
+    // (Kimlik 0 olabileceği için doğruluk kontrolü değil, !== null kullanılır.)
+    if (timeoutId !== null) clearTimeout(timeoutId);
   }
 }
 

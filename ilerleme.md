@@ -4,6 +4,54 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-09-29] - Kalan Async Basış İşleyicilerinin İncelenmesi (C3)
+
+### 🔍 Kapsam ve İhtiyaç
+- Denetim raporunun C3 maddesinde listelenen yedi korumasız async `onPress` işleyicisi tek tek incelendi. Amaç, gereksiz karmaşıklık eklemeden yalnızca gerçekten sorun çıkaranları korumaktı.
+
+### 📋 İnceleme Sonucu
+
+| İşleyici | Hızlı çift basış etkisi | Karar |
+| --- | --- | --- |
+| `handleTogglePreview` (kaydedici) | **İKİ `Audio.Sound` oluşuyor**, ikisi de `shouldPlay: true`; iki ses aynı anda çalıyor ve ilki hiç `unload` edilmeden sahipsiz kalıyor | 🔴 **Koruma eklendi** |
+| `handleShare` (aylık duygu analizi) | İkinci paylaşım isteği: Android'de iki seçici üst üste yığılıyor, iOS'ta ikinci sunum reddediliyor | 🟠 **Koruma eklendi** |
+| `handleOpenNotebook` (defter kapağı) | **Zaten korumalı** — `isOpeningRef` + 500 ms serbest bırakma | ✅ Değişiklik yok |
+| `handleToggleLock` (defter kapağı) | Kilidi doğrudan değiştirmiyor; yalnızca PIN modalını açıyor. İki özdeş `setState` çağrısı idempotent | ✅ Değişiklik yok |
+| `handleSeekTouch` (oynatıcı) | `loadSound` içindeki `loadPromiseRef` tekilleştirmesi ikinci yüklemeyi zaten engelliyor; iki sarma yarışıyor, sonuncusu kazanıyor | ✅ Değişiklik yok |
+| `handleCopyTranscript` (oynatıcı) | Aynı metin iki kez kopyalanıyor, `setIsCopied(true)` idempotent, iki zamanlayıcı da rozeti aynı anda kapatıyor | ✅ Değişiklik yok |
+| `handleResetRecording` (kaydedici) | `deleteAudioFile` ikinci çağrıda dosyayı bulamıyor, `previewSound` işlemleri `.catch()` ile yutuluyor, state sıfırlamaları idempotent | ✅ Değişiklik yok |
+
+- **Denetim raporundaki bir hata düzeltildi:** `handleOpenNotebook` "koruması yok" diye listelenmişti. Bu, denetimdeki otomatik taramanın yanlış pozitifiydi — tarama `if (isXxx) return` kalıbını arıyordu, koddaki kalıp ise `if (!notebook || isOpeningRef.current) return`. İşleyici en başından beri korumalıymış.
+
+### 🛠️ Eklenen İki Koruma
+- **`components/audio/AudioRecorderModal.js`:** `previewPendingRef` eklendi. `previewSound` state'i bir render geride kaldığı için, yükleme sürerken gelen ikinci basış `!previewSound` dalına tekrar giriyordu. Bayrak `finally` ile serbest bırakılıyor ve `cleanup()` içinde de sıfırlanıyor.
+- **`components/diary/MonthlyMoodAnalyticsModal.js`:** `sharePendingRef` eklendi; paylaşım sayfası kapanana kadar yeni basışlar yok sayılıyor, sonra tekrar açılabiliyor.
+- Etkileri düşük olduğu için **görsel gösterge (ActivityIndicator vb.) eklenmedi**; bu işlemler kullanıcıya zaten anında görünür bir sonuç veriyor (ses çalmaya başlıyor / paylaşım sayfası açılıyor).
+
+### 🧹 Tutarlılık Düzeltmesi
+- `services/handwritingService.js` içindeki `recognizeSelectedStrokes` fonksiyonunda `clearTimeout` yalnızca başarı yolundaydı; ağ hatasında zamanlayıcı 10 saniye boşta bekliyordu. `finally` bloğuna taşındı, böylece dosyadaki iki tanıma fonksiyonu da aynı deseni kullanıyor.
+
+### 🧪 Eklenen Test
+- **`tests/pressGuards.test.js`** [NEW] — 7 doğrulama.
+  - **Test 1 korumasız önizlemenin gerçekten iki ses akışı oluşturduğunu kanıtlıyor**, Test 2 korumanın bunu tek akışa indirdiğini.
+  - Test 3: paylaşım sayfası çift açılmıyor ama kapandıktan sonra tekrar açılabiliyor (koruma kalıcı kilitlenmiyor).
+  - Test 5: `handleOpenNotebook`'un mevcut koruması gerileme testine bağlandı.
+  - **Test 6 farklı bir amaca hizmet ediyor:** korumasız bırakılan üç işleyicinin *zararsızlık dayanaklarını* kaynağa bağlıyor. Örneğin `handleSeekTouch` yalnızca `loadPromiseRef` tekilleştirmesi durduğu sürece zararsız; o tekilleştirme kaldırılırsa test kalır ve kararın yeniden gözden geçirilmesi gerektiğini bildirir.
+
+### 📁 Değiştirilen Dosyalar
+- [`components/audio/AudioRecorderModal.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/audio/AudioRecorderModal.js)
+- [`components/diary/MonthlyMoodAnalyticsModal.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/diary/MonthlyMoodAnalyticsModal.js)
+- [`services/handwritingService.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/services/handwritingService.js)
+- [`tests/pressGuards.test.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/tests/pressGuards.test.js) [NEW]
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- `tests/` altındaki **15 test dosyasının tamamı** geçti.
+- 104 kaynak dosya `babel-preset-expo` ile sözdizimi denetiminden geçti; kırık relative import ve ölü referans yok.
+- **Cihazda doğrulanmadı:** Gerçek dokunma zamanlaması cihazda test edilmelidir.
+
+---
+
 ## 📅 [2026-09-29] - El Yazısı Tanımada İstek Yalıtımı (E1)
 
 ### 🔍 Kapsam ve İhtiyaç

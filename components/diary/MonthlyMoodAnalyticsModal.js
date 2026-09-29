@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -106,8 +106,17 @@ export default function MonthlyMoodAnalyticsModal({
     }
   };
 
+  // Paylasim sayfasi acikken gelen yeni basislari yok saymak icin
+  const sharePendingRef = useRef(false);
+
   // Share summary as text message
   const handleShare = async () => {
+    // Paylasim sayfasi acilirken gelen ikinci basis ikinci bir paylasim
+    // istegi baslatir: Android'de iki secici ust uste yigilir, iOS'ta ikinci
+    // sunum reddedilir. Ilk paylasim kapanana kadar yeni basislar yok sayilir.
+    if (sharePendingRef.current) return;
+    sharePendingRef.current = true;
+
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       const appTitle = t('common.appName', 'AJANDA');
@@ -127,6 +136,8 @@ export default function MonthlyMoodAnalyticsModal({
       });
     } catch (error) {
       console.warn('Share error:', error);
+    } finally {
+      sharePendingRef.current = false;
     }
   };
 
