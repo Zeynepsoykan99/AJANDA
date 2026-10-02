@@ -4,6 +4,42 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-02] - Yol Haritası: Android'de Cihaz Üstü Konuşma Tanıma (yayın sonrası)
+
+### 🔍 Durum Tespiti (kod değişikliği YAPILMADI)
+- `services/transcriptionService.js:256` ve `:438` → `requiresOnDeviceRecognition: Platform.OS === 'ios'`.
+  Yani **Android'de `false`**.
+- `node_modules/expo-speech-recognition/android/.../ExpoSpeechService.kt:92-110`: flag `true` olmadığı için
+  `else -> SpeechRecognizer.createSpeechRecognizer(reactContext)` dalına düşülüyor — **varsayılan sistem
+  tanıyıcısı**, Play Services'li cihazlarda pratikte Google'ın uygulaması.
+- Aynı dosya `:381-382`: `EXTRA_PREFER_OFFLINE` yalnızca flag `true` iken set ediliyor → **set edilmiyor**.
+- Sonuç: Bir konuşmanın yerel mi bulutta mı işlendiğine **Google'ın tanıyıcısı** karar veriyor, uygulama değil.
+  Model kurulu değilse ses, metne çevrilmek üzere Google'ın sunucularına gidebilir. Gönderilen şey **sesin kendisi**.
+- **iOS koşullu:** `ios/ExpoSpeechRecognizer.swift:579-581` flag'i yalnızca `recognizer.supportsOnDeviceRecognition`
+  true ise uyguluyor; desteklenmiyorsa **sessizce yok sayılıyor**. Proje `transcriptionService.js:93-94`'te tam izni
+  (`requestPermissionsAsync`) istediği için ağ yolu hata vermeden çalışır. `supportsOnDeviceRecognition()` yardımcısı
+  kütüphanede mevcut, **çağrılmıyor**.
+- **Yan bulgu:** Android'de `addsPunctuation: true` gönderiliyor ama kütüphanenin kendi dokümanına göre
+  (`README.md:797`) bu ayar Android'de yalnızca cihaz üstü tanıma etkinken çalışıyor → şu an **işlevsiz**.
+
+### 🗺️ Yol Haritası Maddesi (yayın sonrası ele alınacak)
+Kullanıcı kararı: **şimdilik geçiş yapılmayacak.** Yapılacağı zaman gerekenler:
+- `requiresOnDeviceRecognition`'ı Android'de de `true`'ya çevirmek **tek başına yeterli değil**.
+- Gereksinimler: **Android 13+** (`TIRAMISU`); altındaki sürümlerde cihaz üstü tanıma yok.
+- Türkçe dil modelinin indirilmiş olması gerekir. Kütüphane gereken yardımcıları sunuyor:
+  `supportsOnDeviceRecognition()`, `getSupportedLocales()`, `androidTriggerOfflineModelDownload({ locale })`.
+  Android 13'te indirme bir **sistem diyaloğu** açar (`status: "opened_dialog"`), Android 14+'ta programatik olabiliyor.
+- Model yoksa `start()` `service-not-allowed` / `language-not-supported` ile başarısız olur → geri düşme stratejisi gerekir.
+- Kazanç: ses cihazdan çıkmaz; `addsPunctuation` gerçekten çalışır; kütüphane uzun kayıt dönüşümü için de
+  cihaz üstünü öneriyor (`README.md:518`).
+- Kayıp: Android 12 ve altında özellik kaybı.
+- Tahmini iş büyüklüğü: **~1 gün** (destek/model durumu kontrolü, indirme akışı ve arayüzü, geri düşme).
+
+### 📁 Değiştirilen Dosyalar
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md) (yalnızca bu kayıt)
+
+---
+
 ## 📅 [2026-10-02] - PIN Düz Metin Yedeğinin Kaldırılması: SecureStore-Only (B1)
 
 ### 🔍 Kapsam ve İhtiyaç
