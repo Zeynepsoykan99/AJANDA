@@ -26,7 +26,8 @@
     "menuNotes": "my notes",
     "menuTodoList": "to-do list",
     "themeTooltip": "App Theme",
-    "languageTooltip": "Language Selection"
+    "languageTooltip": "Language Selection",
+    "privacyPolicy": "Privacy Policy"
   },
   "todo": {
     "title": "To-Do List",

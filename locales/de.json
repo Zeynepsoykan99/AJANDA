@@ -26,7 +26,8 @@
     "menuNotes": "meine notizen",
     "menuTodoList": "to-do liste",
     "themeTooltip": "App-Design",
-    "languageTooltip": "Sprachauswahl"
+    "languageTooltip": "Sprachauswahl",
+    "privacyPolicy": "Datenschutzerklärung"
   },
   "todo": {
     "title": "To-Do Liste",

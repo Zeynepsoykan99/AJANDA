@@ -4,6 +4,102 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-02] - Gizlilik Politikası: Beş Dil, GitHub Pages ve Uygulama İçi Bağlantı
+
+### 🔍 Kapsam ve İhtiyaç
+- E2 kararının (işlev kaldırma yok, bilgilendirme var) yayın tarafındaki tamamlayıcısı: mağazalar
+  **herkese açık bir politika adresi** zorunlu tutuyor. Uygulama içi bildirimler bunun yerini tutmaz.
+- Metin kullanıcı tarafından onaylandı; **değiştirilmeden** uygulandı. Kararlar: `docs/` klasörü,
+  beş dil, ana menünün en altına küçük bir bağlantı, iletişim bilgileri gerçek değerleriyle.
+
+### 📄 Metnin Dayandığı Doğrulanmış Gerçekler
+Politika yazılmadan önce kaynak tarandı; metindeki her iddia bir koda dayanıyor:
+- Uygulamanın yaptığı **tek** ağ çağrısı `services/handwritingService.js` → `inputtools.google.com`.
+  Başka `fetch`/`axios`/WebSocket yok.
+- Analitik, çökme raporu, reklam veya izleme SDK'sı **yok** (bağımlılık listesinde hiçbiri geçmiyor).
+- Uzak bildirim (push) token'ı **yok**; yalnızca `scheduleNotificationAsync` (tamamen yerel).
+- Fotoğraf/kişiler/konum erişimi **yok** (ilgili bağımlılık yok).
+- PDF: `printToFileAsync` (yerel) + `Sharing.shareAsync` (işletim sistemi paylaşım menüsü).
+- **Otomatik el yazısı tanıma yalnızca Ajandam ve Yapılacaklar'da çalışıyor.** Günlüğüm ve Notlarım'da
+  otomatik tanıma yok; oradaki içerik yalnızca kement aracıyla açıkça istenirse gönderiliyor
+  (`NotebookPagesView.js:985`). Kilitlenebilen özel içerik için kullanıcı lehine bir gerçek olduğu
+  için politikaya ayrıca yazıldı.
+
+### 🗂️ Oluşturulan Yapı
+```
+docs/_config.yml        Jekyll yapılandırması (jekyll-theme-primer)
+docs/index.md           permalink: /          → beş dile bağlanan giriş sayfası
+docs/PRIVACY.md         permalink: /privacy/      (tr)
+docs/PRIVACY.en.md      permalink: /privacy/en/
+docs/PRIVACY.de.md      permalink: /privacy/de/
+docs/PRIVACY.es.md      permalink: /privacy/es/
+docs/PRIVACY.fr.md      permalink: /privacy/fr/
+PRIVACY.md              kökte yalnızca İŞARETÇİ (metni tekrarlamaz)
+constants/links.js      SITE_BASE_URL + getPrivacyPolicyUrl(language)
+```
+- **Jekyll `permalink` front matter'ı** kullanıldı: böylece dosya adları `PRIVACY.en.md` kalırken
+  yayınlanan adresler `/privacy/en/` gibi temiz oluyor. Markdown tek kaynak; elle HTML yazılmadı.
+- **`.nojekyll` bilinçli olarak eklenmedi** — eklenirse Markdown render edilmez, dosya olarak inilir.
+  Test bunu ayrıca denetliyor.
+- Kökteki `PRIVACY.md` politika metnini **tekrarlamıyor**, yalnızca kaynak dosya + yayın adresi
+  tablosu içeriyor. Metni iki yerde tutmak sapma riski yaratırdı.
+
+### 🔗 Uygulama İçi Bağlantı
+- `app/index.js` → ana menünün en altında küçük, altı çizili bir satır + "dışa aç" ikonu.
+- Bağlantı **kullanıcının diline göre** üretiliyor (`getPrivacyPolicyUrl(i18n.language)`).
+  Bölgesel kodlar (`en-US`, `tr-TR`) doğru dile gidiyor; desteklenmeyen bir dil **İngilizceye**
+  düşüyor — Türkçeye düşmek yabancı bir kullanıcıyı okuyamadığı bir metne götürürdü.
+- `Linking.openURL` başarısız olursa `console.warn` ile bildiriliyor, sessiz kalınmıyor.
+- **Not:** `expo-linking` yerine React Native'in yerleşik `Linking`'i kullanıldı. Harici bir adresi
+  açmak için ikisi eşdeğer; `expo-linking` derin bağlantı üretme/çözme içindir. Yeni import gerekmedi.
+- `home.privacyPolicy` anahtarı beş dile eklendi. Toplam **422 anahtar**, tam parite.
+
+### 🧪 Eklenen Test
+- **`tests/privacyPolicyDocs.test.js`** [NEW] — 11 doğrulama. Asıl risk metnin **beş ayrı dosyada**
+  tutulması: biri güncellenip diğerleri unutulursa mağazaya verilen adreste çelişkili metin yayınlanır.
+  - Test 1: front matter ve beş `permalink` değeri.
+  - Test 2: **bölüm yapısı beş dilde aynı** — `## 1.`…`## 11.` eksiksiz ve sıralı, tek numarasız özet
+    bölümü, tek H1. Numaralandırma dilden bağımsız olduğu için çeviriden etkilenmiyor.
+  - Test 3: iletişim e-postası ve sahip adı beş dilde aynı.
+  - Test 4: doldurulmamış `[...]` yer tutucu kalmamış (Markdown bağlantıları ayıklanarak).
+  - Test 5: her dil diğer dört dile çapraz bağlantı veriyor, kendine vermiyor.
+  - Test 6: `inputtools.google.com`, Google, Apple, Keychain/Keystore ve tarih beş dilde de var.
+  - **Test 7: `constants/links.js`'teki adresler dosyaların `permalink` değerleriyle birebir eşliyor.**
+    Bu sapma bağlantının 404 vermesine yol açardı. Bölgesel kod ve geri düşme de denetleniyor.
+  - Test 8: ana menüdeki bağlantı bağlı, beş dile çevrili, başlıklar birbirinden farklı.
+  - Test 9: Jekyll yapısı kurulu, `.nojekyll` yok, giriş sayfası beş dile bağlanıyor.
+  - Test 10: kök `PRIVACY.md` yalnızca işaretçi, politika metnini tekrarlamıyor.
+  - **Test 11: politika uygulama içi bildirimlerle çelişmiyor** — el yazısında Google, seste Apple,
+    kilitte "şifrelemez" ifadesi hem `locales/tr.json` hem politikada; özet bölümü istisnaları söylüyor.
+- **Testin dişi olduğu kanıtlandı:** beş kasıtlı kırılma (de.md'den 9. bölümün silinmesi, es.md
+  permalink'inin değiştirilmesi, fr.md e-postasının değiştirilmesi, `links.js`'te de yolunun
+  saptırılması, tr.md'ye yer tutucunun geri konması) denendi; **beşi de yakalandı**, kod geri alındı.
+
+### 📁 Değiştirilen Dosyalar
+- [`docs/`](file:///c:/Users/Zeynep/Desktop/AJANDA/docs) [NEW] — `_config.yml`, `index.md` ve beş politika dosyası
+- [`PRIVACY.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/PRIVACY.md) [NEW] — kök işaretçi
+- [`constants/links.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/constants/links.js) [NEW]
+- [`app/index.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/index.js)
+- [`locales/{tr,en,de,es,fr}.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales)
+- [`tests/privacyPolicyDocs.test.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/tests/privacyPolicyDocs.test.js) [NEW]
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- `tests/` altındaki **21 test dosyasının tamamı** geçti.
+- 106 kaynak dosya `babel-preset-expo` ile sözdizimi denetiminden geçti; kırık relative import yok.
+- `localeIntegrity`: 422 anahtar, beş dilde tam parite; kodda kullanılan 300 anahtarın tamamı tanımlı.
+- **Cihazda doğrulanmadı:** Bağlantının tarayıcıda açıldığı ve dil değiştirince doğru sürüme gittiği
+  cihazda test edilmelidir.
+- **Yayın doğrulanmadı:** GitHub Pages'in repo ayarlarından açılması gerekiyor (kullanıcı adımı);
+  açılmadan adresler çalışmaz.
+
+### 📝 Kapsam Dışı
+- Mağaza veri güvenliği formlarının (Play Data Safety / App Store App Privacy) doldurulması —
+  politika metni hazır, formlar yayın sırasında doldurulacak.
+- Metnin hukukçu incelemesi.
+
+---
+
 ## 📅 [2026-10-02] - Sesli Not Kaydında Duraklat/Devam (Hibrit: A + D) ve Face ID Metni
 
 ### 🔍 Araştırma Bulgusu (karar bu bulguya dayanıyor)

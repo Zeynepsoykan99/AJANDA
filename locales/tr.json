@@ -26,7 +26,8 @@
     "menuNotes": "notlarım",
     "menuTodoList": "yapılacaklar",
     "themeTooltip": "Uygulama Teması",
-    "languageTooltip": "Dil Seçimi"
+    "languageTooltip": "Dil Seçimi",
+    "privacyPolicy": "Gizlilik Politikası"
   },
   "todo": {
     "title": "Yapılacaklar",

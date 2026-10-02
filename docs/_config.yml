@@ -1,0 +1,8 @@
+title: AJANDA
+description: Dijital kırtasiye tarzı ajanda ve günlük uygulaması
+theme: jekyll-theme-primer
+lang: tr
+
+# Yayınlanan sayfalarda görünmemesi gerekenler
+exclude:
+  - README.md

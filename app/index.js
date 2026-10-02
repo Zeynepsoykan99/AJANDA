@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import GlobalSearchModal from '../components/ui/GlobalSearchModal';
 import LanguagePickerModal from '../components/LanguagePickerModal';
 import { useTheme } from '../context/ThemeContext';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
+import { getPrivacyPolicyUrl } from '../constants/links';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -32,6 +33,17 @@ export default function HomeScreen() {
 
   const handleMenuPress = (item) => {
     router.push(item.route);
+  };
+
+  // Gizlilik politikasi uygulama icinde degil tarayicida acilir: metin repodaki
+  // docs/ klasorunde tutulup GitHub Pages ile yayinlanir, boylece magaza
+  // formlarindaki adresle birebir ayni metin gosterilir.
+  const handleOpenPrivacy = () => {
+    const url = getPrivacyPolicyUrl(i18n.language);
+    Linking.openURL(url).catch((error) => {
+      // Sessiz kalmamali: tarayici acilamazsa kullanici neden olmadigini anlamaz
+      console.warn('Gizlilik politikasi acilamadi:', url, error);
+    });
   };
 
   return (
@@ -103,6 +115,23 @@ export default function HomeScreen() {
             />
           ))}
         </View>
+
+        {/* Gizlilik Politikasi — menunun en altinda kucuk bir satir */}
+        <TouchableOpacity
+          activeOpacity={0.6}
+          onPress={handleOpenPrivacy}
+          style={styles.privacyLink}
+          accessibilityRole="link"
+        >
+          <Text style={[styles.privacyLinkText, { color: colors.textSecondary }]}>
+            {t('home.privacyPolicy', 'Gizlilik Politikası')}
+          </Text>
+          <MaterialCommunityIcons
+            name="open-in-new"
+            size={12}
+            color={colors.textSecondary}
+          />
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Dil Seçici Modal */}
@@ -127,6 +156,20 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  privacyLink: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 28,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  privacyLinkText: {
+    fontSize: 12,
+    opacity: 0.75,
+    textDecorationLine: 'underline',
+  },
   safeArea: {
     flex: 1,
   },

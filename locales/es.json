@@ -26,7 +26,8 @@
     "menuNotes": "mis notas",
     "menuTodoList": "mis tareas",
     "themeTooltip": "Tema de la aplicación",
-    "languageTooltip": "Selección de idioma"
+    "languageTooltip": "Selección de idioma",
+    "privacyPolicy": "Política de Privacidad"
   },
   "todo": {
     "title": "Lista de Tareas",
