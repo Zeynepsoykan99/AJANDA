@@ -346,7 +346,11 @@
     "resetRecord": "Neu aufnehmen",
     "discardConfirmTitle": "Aufnahme verwerfen",
     "discardConfirmMessage": "Möchten Sie diese Aufnahme wirklich verwerfen?",
-    "collapsedBadge": "{{count}} Sprachnotizen"
+    "collapsedBadge": "{{count}} Sprachnotizen",
+    "pauseRecord": "Pause",
+    "resumeRecord": "Fortsetzen",
+    "paused": "Angehalten",
+    "noPauseHint": "Statt anzuhalten können Sie die Aufnahme beenden und eine weitere Notiz hinzufügen."
   },
   "export": {
     "button": "Als PDF exportieren",

@@ -4,6 +4,96 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-02] - Sesli Not Kaydında Duraklat/Devam (Hibrit: A + D) ve Face ID Metni
+
+### 🔍 Araştırma Bulgusu (karar bu bulguya dayanıyor)
+- **expo-av yolu DESTEKLİYOR:** `node_modules/expo-av/build/Audio/Recording.d.ts:175` → `pauseAsync()`.
+  Devam = `startAsync()` tekrar. Doküman uyarısı: *"only available on Android API version 24 and later"*
+  — SDK 54'ün minSdk'si 24, sorun değil.
+- **Android canlı tanıma yolu DESTEKLEMİYOR:** `expo-speech-recognition` modülünün tüm API'si
+  `start()` / `stop()` / `abort()`. Kütüphanenin kendi Android kaydedici arayüzü
+  (`ExpoAudioRecorder.kt:21,23`) de yalnızca `fun start()` / `fun stop()`. Oradaki "duraklatma"
+  `stop()`+`start()` demek olurdu: her segment **ayrı bir WAV dosyası** üretir ve tanıma oturumu
+  sıfırlanır; tek not için WAV birleştirme (RIFF başlığı yeniden yazma) ve transkript dikme gerekirdi.
+- **Ters asimetri:** `supportsLiveRecording()` → `supportsRecording()` yalnızca **Android 13+**'ta true.
+  Yani iOS'ta ve **Android 12 ve altında** duraklatma çalışır, **Android 13+**'ta çalışmaz.
+- Kullanıcı kararı: **Hibrit (A + D)** — destekleyen yolda gerçek duraklat/devam, desteklemeyen yolda
+  düğme yok + "bitir + yeni not ekle" akışına yönlendiren tek satırlık ipucu.
+
+### ✅ Yapılan Düzeltme
+- `recordState` artık `'idle' | 'recording' | 'paused' | 'recorded'`.
+- **Biriktirmeli sayaç.** Eskiden `Date.now() - startedAt` ile sabit bir başlangıçtan ölçülüyordu;
+  duraklatma kavramı yoktu. Artık `segmentStartRef` + `accumulatedMsRef`:
+  her devam edişte yeni segment başlar, duraklatmada o segmentin süresi toplama eklenir.
+  **Duraklatılan süre sayaca DAHİL EDİLMEZ** (kullanıcı kararı).
+  - `resumeElapsedTimer()` içinde `if (timerRef.current) return;` koruması var: çift kurulum olursa
+    ilk `setInterval` sahipsiz kalır ve durdurduktan sonra bile sayaç ilerlemeye devam ederdi.
+- **`handleTogglePause`** eklendi. `pauseAsync()` / `startAsync()` kullanır.
+  - Sayaç `await`'ten **sonra** duraklatılır: `await` süresince ses hâlâ kaydedildiği için sayaç
+    dosya süresiyle uyumlu kalır.
+  - Durum değişikliği de `await`'ten **sonra**: `pauseAsync()` hata verirse `recordState` ve sayaç
+    olduğu gibi kalır, kayıt sürmeye devam eder.
+- **C1 ailesine genişletme:** `pausePendingRef` eklendi; `handleTogglePause` hem `startPendingRef`
+  hem `pausePendingRef` kontrol eder ve bayrağı `finally` içinde serbest bırakır. Modal kapanış
+  temizliğinde ve `handleResetRecording`'de `pausePendingRef` ve `accumulatedMsRef` sıfırlanır.
+- **Otomatik seçim:** `canPauseRecording = useMemo(() => !shouldUseLiveRecognition(), [])`.
+- **Arayüz:** Duraklat/Devam düğmesi aksiyon satırında, "Kaydı Durdur"un yanında, yalnızca
+  destekleyen yolda. Durdurma düğmesi duraklatılmışken de erişilebilir. `'paused'` için ayrı alt
+  metin (`audio.paused`). Desteklemeyen yolda yalnızca kayıt sürerken tek satırlık `audio.noPauseHint`.
+  Nabız animasyonu duraklatmada kendiliğinden durur (zaten `recordState === 'recording'` koşullu).
+
+### 🔧 Sayaçla İlgili Küçük Bir Doğruluk Düzeltmesi
+- `handleStopRecording`'de süre yedeği `result.durationMs || elapsedMs` (state) idi; state bir render
+  geride kalabildiği için duraklatma sonrası yanlış süre yazabilirdi. `elapsedMsRef.current` yapıldı.
+
+### 📝 Face ID İzin Metni (kullanıcı onayıyla)
+- `app.json` → `NSFaceIDUsageDescription`: *"...korumak için..."* ifadesi `lockedDesc`'teki aynı
+  "içerik şifreli" imasını taşıyordu. Yeni metin: *"Günlüğünüzü ve kişisel defterlerinizi yalnızca
+  sizin açabilmeniz için Face ID doğrulaması kullanılır."*
+
+### 🌍 Dil Dosyaları
+- `audio.pauseRecord`, `audio.resumeRecord`, `audio.paused`, `audio.noPauseHint` — 5 dile gerçek
+  çevirilerle eklendi. Toplam **421 anahtar**, tam parite.
+
+### 🧪 Eklenen Test
+- **`tests/recordingPauseResume.test.js`** [NEW] — 15 doğrulama. Gerçek sayaç fonksiyonları ve
+  `handleTogglePause` **kaynaktan okunarak** çalıştırılıyor.
+  - **Test 1 eski sayaç mantığının duraklatmalı kaydı doğru ölçemediğini kanıtlıyor.**
+  - Test 2-3: duraklatılan 200 ms sayaca dahil edilmiyor, birikim doğru, ekran değeri ref ile tutarlı.
+  - Test 4: çift "devam" basışı sahipsiz zamanlayıcı bırakmıyor.
+  - **Test 5 korumasız duraklatmanın çift basışta iki kez çalıştığını kanıtlıyor.**
+  - Test 6-7: gerçek handler üçlü basışta bile yalnızca bir kez çalışıyor (duraklat ve devam yolları).
+  - Test 8: kayıt hazırlığı sürerken duraklatma basışı yok sayılıyor.
+  - Test 9: `pauseAsync` hata verirse durum/sayaç değişmiyor, bayrak serbest bırakılıyor.
+  - Test 10: `idle` ve `recorded` durumlarında işlem yapılmıyor.
+  - Test 11-15: otomatik seçim, ipucunun koşulu, `'paused'` arayüzü, C1 korumaları, süre yedeğinin
+    ref'ten okunması, metinlerin 5 dilde gerçek çeviri olması.
+- **Testin dişi olduğu kanıtlandı:** beş kasıtlı kırılma (resume'deki çift kurulum korumasının
+  kaldırılması, `pausePendingRef` korumasının kaldırılması, sayaç birikiminin bozulması, düğme
+  kapısının kaldırılması, durum değişikliğinin `await`'ten öne alınması) denendi; **beşi de
+  yakalandı**, ardından kod geri alındı.
+
+### 📁 Değiştirilen Dosyalar
+- [`components/audio/AudioRecorderModal.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/audio/AudioRecorderModal.js)
+- [`app.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/app.json)
+- [`locales/{tr,en,de,es,fr}.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales)
+- [`tests/recordingPauseResume.test.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/tests/recordingPauseResume.test.js) [NEW]
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- `tests/` altındaki **20 test dosyasının tamamı** geçti.
+- 105 kaynak dosya `babel-preset-expo` ile sözdizimi denetiminden geçti; kırık relative import yok.
+- `localeIntegrity`: 421 anahtar, beş dilde tam parite; kodda kullanılan 299 anahtarın tamamı tanımlı.
+- **Cihazda doğrulanmadı:** Duraklat/devam akışı ve duraklatma sonrası kaydedilen dosyanın süresi
+  gerçek cihazda test edilmelidir.
+
+### 📝 Kapsam Dışı
+- Android 13+'ta WAV segment birleştirme yoluyla gerçek duraklatma (denetim seçeneği "C", ~2-3 gün)
+  yapılmadı; kullanıcı kararıyla hibrit yaklaşım seçildi.
+- Gizlilik politikası metni ve mağaza veri güvenliği formları hâlâ yazılmadı (yayın öncesi gerekli).
+
+---
+
 ## 📅 [2026-10-02] - Gizlilik Bilgilendirmeleri ve Dürüst Metinler (E2)
 
 ### 🔍 Kapsam ve İhtiyaç

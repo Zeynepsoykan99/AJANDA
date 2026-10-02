@@ -346,7 +346,11 @@
     "resetRecord": "Grabar de Nuevo",
     "discardConfirmTitle": "Descartar Grabación",
     "discardConfirmMessage": "¿Está seguro de que desea descartar esta grabación?",
-    "collapsedBadge": "{{count}} Notas de Voz"
+    "collapsedBadge": "{{count}} Notas de Voz",
+    "pauseRecord": "Pausar",
+    "resumeRecord": "Continuar",
+    "paused": "En pausa",
+    "noPauseHint": "En lugar de pausar, puedes terminar la grabación y añadir otra nota."
   },
   "export": {
     "button": "Exportar como PDF",

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -64,7 +64,7 @@ export default function AudioRecorderModal({
   const { t, i18n } = useTranslation();
   const { colors } = useTheme();
 
-  // Durumlar: 'idle' | 'recording' | 'recorded'
+  // Durumlar: 'idle' | 'recording' | 'paused' | 'recorded'
   const [recordState, setRecordState] = useState('idle');
   const [elapsedMs, setElapsedMs] = useState(0);
   const [previewSound, setPreviewSound] = useState(null);
@@ -95,12 +95,20 @@ export default function AudioRecorderModal({
   // Önizleme sesi yüklenirken gelen ikinci basış ikinci bir Audio.Sound
   // oluşturup ilkini sahipsiz bırakır (iki ses aynı anda çalar)
   const previewPendingRef = useRef(false);
+  // Duraklat/devam basislari da asenkron (pauseAsync / startAsync). Hizli art
+  // arda basisda ikinci cagri ilkinin await'i surerken girip recordState ile
+  // gercek kaydedici durumunu birbirinden ayirabilirdi.
+  const pausePendingRef = useRef(false);
 
   // Android canlı tanıma oturumu (expo-speech-recognition kendi kayıt motoruyla)
   const liveSessionRef = useRef(null);
   const liveTranscriptRef = useRef(null);
   const elapsedMsRef = useRef(0);
   const timerRef = useRef(null);
+  // Duraklatilan sure sayaca DAHIL EDILMEZ: her devam edisde yeni bir segment
+  // baslar, duraklatmada o segmentin suresi toplama eklenir.
+  const segmentStartRef = useRef(0);
+  const accumulatedMsRef = useRef(0);
 
   /**
    * Android'de expo-av, konuşma tanımanın kabul ettiği hiçbir formatta kayıt yapamadığı için
@@ -111,15 +119,48 @@ export default function AudioRecorderModal({
   const shouldUseLiveRecognition = () =>
     Platform.OS === 'android' && isTranscriptionAvailable() && supportsLiveRecording();
 
+  /**
+   * Duraklat/devam YALNIZCA expo-av yolunda mumkun: expo-av `pauseAsync()` sunar.
+   * Android canli tanima yolunda (expo-speech-recognition) duraklatma yok —
+   * modulun tum API'si start() / stop() / abort(); kutuphanenin kendi Android
+   * kaydedici arayuzu de yalnizca start()/stop(). Oradaki "duraklatma" stop+start
+   * demek olurdu: her segment ayri bir WAV dosyasi uretir ve tanima oturumu
+   * sifirlanir. Bu yuzden o yolda dugme hic gosterilmez; kullanici "bitir + yeni
+   * not ekle" akisina yonlendirilir.
+   *
+   * Pratikte: iOS her zaman, Android 13 ve ustunde HAYIR (canli tanima devreye
+   * girer), Android 12 ve altinda EVET (expo-av yedegi kullanilir).
+   */
+  const canPauseRecording = useMemo(() => !shouldUseLiveRecognition(), []);
+
+  /** Sayaci sifirdan baslatir (yeni kayit) */
   const startElapsedTimer = () => {
-    const startedAt = Date.now();
+    accumulatedMsRef.current = 0;
     elapsedMsRef.current = 0;
     setElapsedMs(0);
+    resumeElapsedTimer();
+  };
+
+  /** Duraklatmadan sonra kaldigi yerden devam ettirir */
+  const resumeElapsedTimer = () => {
+    // Cift kurulum olursa ilk interval sahipsiz kalir ve sayac iki kat hizlanir
+    if (timerRef.current) return;
+    segmentStartRef.current = Date.now();
     timerRef.current = setInterval(() => {
-      const ms = Date.now() - startedAt;
+      const ms = accumulatedMsRef.current + (Date.now() - segmentStartRef.current);
       elapsedMsRef.current = ms;
       setElapsedMs(ms);
     }, 200);
+  };
+
+  /** Sayaci duraklatir ve o ana kadarki sureyi toplama ekler */
+  const pauseElapsedTimer = () => {
+    if (!timerRef.current) return;
+    clearInterval(timerRef.current);
+    timerRef.current = null;
+    accumulatedMsRef.current += Date.now() - segmentStartRef.current;
+    elapsedMsRef.current = accumulatedMsRef.current;
+    setElapsedMs(accumulatedMsRef.current);
   };
 
   const stopElapsedTimer = () => {
@@ -177,6 +218,8 @@ export default function AudioRecorderModal({
     startPendingRef.current = false;
     savePendingRef.current = false;
     previewPendingRef.current = false;
+    pausePendingRef.current = false;
+    accumulatedMsRef.current = 0;
     setIsPreparingRecording(false);
     setIsSaving(false);
 
@@ -360,7 +403,9 @@ export default function AudioRecorderModal({
 
       if (result.success && result.tempUri) {
         tempUriRef.current = result.tempUri;
-        durationMsRef.current = result.durationMs || elapsedMs;
+        // Yedek olarak state degil REF kullanilir: state bir render geride
+        // kalabilir ve duraklatma sonrasi yanlis sure yazilirdi.
+        durationMsRef.current = result.durationMs || elapsedMsRef.current;
         setRecordState('recorded');
       } else {
         setRecordState('idle');
@@ -368,6 +413,42 @@ export default function AudioRecorderModal({
     } catch (error) {
       console.warn('handleStopRecording hatası:', error);
       setRecordState('idle');
+    }
+  };
+
+  // Kaydı Duraklat / Devam Ettir (yalnızca expo-av yolu)
+  const handleTogglePause = async () => {
+    // C1 ailesi: baslatma hazirligi surerken veya onceki duraklat/devam cagrisi
+    // bitmeden gelen basislar yok sayilir. Aksi halde recordState ile gercek
+    // kaydedici durumu birbirinden ayrilabilirdi.
+    if (startPendingRef.current || pausePendingRef.current) return;
+
+    const recording = recordingRef.current;
+    if (!recording) return;
+    if (recordState !== 'recording' && recordState !== 'paused') return;
+
+    pausePendingRef.current = true;
+    const wasRecording = recordState === 'recording';
+
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      if (wasRecording) {
+        await recording.pauseAsync();
+        // Sayac await'ten SONRA duraklatilir: await suresince ses hala
+        // kaydedildigi icin sayac dosya suresiyle uyumlu kalir.
+        pauseElapsedTimer();
+        setRecordState('paused');
+      } else {
+        await recording.startAsync();
+        resumeElapsedTimer();
+        setRecordState('recording');
+      }
+    } catch (error) {
+      // Durum degistirilmedi: sayac ve recordState oldugu gibi kalir
+      console.warn('handleTogglePause hatası:', error);
+    } finally {
+      pausePendingRef.current = false;
     }
   };
 
@@ -430,6 +511,8 @@ export default function AudioRecorderModal({
     }
     liveTranscriptRef.current = null;
     elapsedMsRef.current = 0;
+    accumulatedMsRef.current = 0;
+    pausePendingRef.current = false;
 
     if (previewSound) {
       await previewSound.stopAsync().catch(() => {});
@@ -594,6 +677,8 @@ export default function AudioRecorderModal({
                 <Text style={[styles.timerSub, { color: colors.textSecondary }]}>
                   {recordState === 'recording'
                     ? t('audio.recording', 'Kaydediliyor...')
+                    : recordState === 'paused'
+                    ? t('audio.paused', 'Duraklatıldı')
                     : recordState === 'recorded'
                     ? t('audio.readyToSave', 'Kayıt hazır')
                     : t('audio.tapToRecord', 'Kayda başlamak için mikrofona dokunun')}
@@ -634,7 +719,7 @@ export default function AudioRecorderModal({
                   </TouchableOpacity>
                 )}
 
-                {recordState === 'recording' && (
+                {(recordState === 'recording' || recordState === 'paused') && (
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={handleStopRecording}
@@ -679,17 +764,44 @@ export default function AudioRecorderModal({
                   </TouchableOpacity>
                 )}
 
-                {recordState === 'recording' && (
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={handleStopRecording}
-                    style={[styles.primaryBtn, { backgroundColor: '#E53935' }]}
-                  >
-                    <MaterialCommunityIcons name="stop-circle" size={20} color="#FFFFFF" />
-                    <Text style={styles.primaryBtnText}>
-                      {t('audio.stopRecord', 'Kaydı Durdur')}
-                    </Text>
-                  </TouchableOpacity>
+                {(recordState === 'recording' || recordState === 'paused') && (
+                  <>
+                    {/* Duraklat/Devam yalnizca expo-av yolunda mumkun */}
+                    {canPauseRecording && (
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={handleTogglePause}
+                        style={[styles.secondaryBtn, { borderColor: colors.border }]}
+                        accessibilityLabel={
+                          recordState === 'paused'
+                            ? t('audio.resumeRecord', 'Devam Et')
+                            : t('audio.pauseRecord', 'Duraklat')
+                        }
+                      >
+                        <MaterialCommunityIcons
+                          name={recordState === 'paused' ? 'play' : 'pause'}
+                          size={18}
+                          color={colors.textSecondary}
+                        />
+                        <Text style={[styles.secondaryBtnText, { color: colors.textSecondary }]}>
+                          {recordState === 'paused'
+                            ? t('audio.resumeRecord', 'Devam Et')
+                            : t('audio.pauseRecord', 'Duraklat')}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={handleStopRecording}
+                      style={[styles.primaryBtn, { backgroundColor: '#E53935' }]}
+                    >
+                      <MaterialCommunityIcons name="stop-circle" size={20} color="#FFFFFF" />
+                      <Text style={styles.primaryBtnText}>
+                        {t('audio.stopRecord', 'Kaydı Durdur')}
+                      </Text>
+                    </TouchableOpacity>
+                  </>
                 )}
 
                 {recordState === 'recorded' && (
@@ -741,6 +853,18 @@ export default function AudioRecorderModal({
                   </>
                 )}
               </View>
+
+              {/* Duraklatmayi desteklemeyen yol (Android canli tanima): kullaniciyi
+                  "bitir + yeni not ekle" akisina yonlendiren tek satirlik ipucu.
+                  Sayfa birden fazla sesli notu zaten destekliyor. */}
+              {recordState === 'recording' && !canPauseRecording && (
+                <Text style={[styles.pauseHint, { color: colors.textSecondary }]}>
+                  {t(
+                    'audio.noPauseHint',
+                    'Duraklatmak yerine kaydı bitirip yeni bir not ekleyebilirsiniz.'
+                  )}
+                </Text>
+              )}
             </View>
           </TouchableWithoutFeedback>
         </View>
@@ -832,6 +956,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 6,
+  },
+  pauseHint: {
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: 'center',
+    marginTop: 12,
+    paddingHorizontal: 8,
   },
   actionsRow: {
     width: '100%',

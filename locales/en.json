@@ -346,7 +346,11 @@
     "resetRecord": "Record Again",
     "discardConfirmTitle": "Discard Recording",
     "discardConfirmMessage": "Are you sure you want to discard this recording?",
-    "collapsedBadge": "{{count}} Voice Notes"
+    "collapsedBadge": "{{count}} Voice Notes",
+    "pauseRecord": "Pause",
+    "resumeRecord": "Resume",
+    "paused": "Paused",
+    "noPauseHint": "Instead of pausing, you can finish this recording and add another note."
   },
   "export": {
     "button": "Export as PDF",

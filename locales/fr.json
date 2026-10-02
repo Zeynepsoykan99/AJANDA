@@ -346,7 +346,11 @@
     "resetRecord": "Réenregistrer",
     "discardConfirmTitle": "Supprimer l'Enregistrement",
     "discardConfirmMessage": "Êtes-vous sûr de vouloir supprimer cet enregistrement ?",
-    "collapsedBadge": "{{count}} Notes Vocales"
+    "collapsedBadge": "{{count}} Notes Vocales",
+    "pauseRecord": "Pause",
+    "resumeRecord": "Reprendre",
+    "paused": "En pause",
+    "noPauseHint": "Au lieu de mettre en pause, vous pouvez terminer l’enregistrement et ajouter une autre note."
   },
   "export": {
     "button": "Exporter en PDF",

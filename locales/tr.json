@@ -346,7 +346,11 @@
     "resetRecord": "Baştan Kaydet",
     "discardConfirmTitle": "Kaydı Sil",
     "discardConfirmMessage": "Bu ses kaydını silmek istediğinize emin misiniz?",
-    "collapsedBadge": "{{count}} Sesli Not"
+    "collapsedBadge": "{{count}} Sesli Not",
+    "pauseRecord": "Duraklat",
+    "resumeRecord": "Devam Et",
+    "paused": "Duraklatıldı",
+    "noPauseHint": "Duraklatmak yerine kaydı bitirip yeni bir not ekleyebilirsiniz."
   },
   "export": {
     "button": "PDF Olarak Dışa Aktar",
