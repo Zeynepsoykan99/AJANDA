@@ -4,6 +4,74 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-02] - Mağaza Gizlilik Formları Rehberi (Play Data Safety / App Store App Privacy)
+
+### 🔍 Kapsam
+- Gizlilik politikasının yayın tarafındaki son parçası: Play Console "Data safety" ve App Store
+  Connect "App Privacy" formlarının kalem kalem nasıl doldurulacağı.
+- **Kod değişikliği yok**, yalnızca doküman: [`STORE-PRIVACY-FORMS.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/STORE-PRIVACY-FORMS.md) [NEW]
+- Dosya **kökte**, `docs/` içinde DEĞİL — yayınlanmasını istemiyoruz, iç kullanım dokümanı.
+
+### ✅ Formda İşaretlenecek İki Kalem
+| | Google Play | Apple |
+|---|---|---|
+| El yazısı | App activity → Other user-generated content | User Content → Other User Content |
+| Sesli not | Audio files → Voice or sound recordings | User Content → Audio Data |
+
+Her ikisi için: amaç yalnızca **App functionality**; Play'de **Both (collected + shared)**,
+**Required**, **ephemeral değil**; Apple'da **not linked to identity**, **tracking yok**.
+Diğer tüm kategoriler "hayır" olarak, her biri için gerekçesiyle listelendi.
+
+### 🧭 Dokümanda Açıkça Belirtilen İki Yargı Kararı
+1. **Sesli notun beyan edilip edilmeyeceği.** Ses, uygulamanın kendi ağ isteğiyle değil işletim
+   sisteminin ses tanıma API'siyle işleniyor; mağaza kuralları işletim sisteminin kullanıcı adına
+   yaptığı işlemleri bazı durumlarda beyan dışı bırakıyor. **Kuralların lafzı net değil, emin
+   değilim.** Doküman temkinli yorumu öneriyor (beyan et): fazla beyan risksiz, eksik beyan
+   uygulamanın kaldırılmasına yol açabilir. Karar kullanıcıya bırakıldı.
+2. **"Do you provide a way for users to request that their data is deleted?"** Sunucuda veri
+   olmadığı için **No** öneriliyor; Google/Apple'ın tanıma için aldığı veriyi biz silemediğimiz
+   için **Yes** demek yanıltıcı olurdu. Alternatif de belirtildi.
+
+### 🔎 Dokümandaki İddiaların Kod Doğrulaması
+- El yazısı isteği **HTTPS** (`handwritingService.js:138,251`) → "encrypted in transit: Yes".
+- Gövdedeki `api_level` ve `device` alanları **sabit metin** (`'537.36'`, satır 146-147, 259-260),
+  gerçek cihaz bilgisi değil → Apple'da "not linked to the user's identity" doğru cevap.
+- **Tanımayı kapatan bir ayar yok** (`AudioRecorderModal.js` tarandı) → Play'de **Required**.
+- Analitik/çökme/reklam/izleme SDK'sı yok, push token yok, fotoğraf/kişiler/konum erişimi yok
+  (önceki turda bağımlılık listesi ve ağ çağrıları taranarak doğrulandı).
+
+### ⚠️ iOS Privacy Manifest — Kontrol Edilmesi Gereken Nokta
+- Üçüncü taraf kütüphaneler **kendi manifest'lerini getiriyor** (`node_modules` içinde 11 adet
+  doğrulandı): `async-storage` → `FileTimestamp` (sebep `C617.1`), `expo-file-system` →
+  `FileTimestamp` + `DiskSpace`, ayrıca `react-native`, `expo-constants`, `expo-localization`,
+  `expo-notifications`, `expo-application`.
+- Uygulamanın **kendi** manifest'i yok (`app.json`'da `ios.privacyManifests` tanımlı değil).
+- Değerlendirme: uygulamanın JS kodu bu API'lere doğrudan dokunmuyor, hepsi kütüphanelerin içinde
+  ve onlar beyan ediyor → kendi manifest'e muhtemelen gerek yok. **Doğrulanmadı;** ilk TestFlight
+  yüklemesinde Apple eksik beyan bildirirse `expo.ios.privacyManifests` ile eklenebilir.
+
+### 📝 Yol Haritası Maddesi (dokümanda da yazılı)
+- Her iki kalem şu anda **Required** çünkü otomatik el yazısı tanımayı ve sesli not dönüşümünü
+  kapatan ayar yok. Ayarlara iki anahtar eklenirse Play formunda **Optional**'a çevrilebilir;
+  hem mağaza kartında daha iyi görünür hem gizlilik duyarlı kullanıcıya gerçek seçim sunar.
+  Şu an **yapılmadı**.
+
+### ⚠️ Tutarlılık Uyarısı (dokümanda vurgulandı)
+- Play'deki **"Target audience and content"** cevabı politikanın 9. bölümüyle çelişmemeli:
+  politika "13 yaş altına yönelik değil" diyor. Formda 13 yaş altı bir grup seçilirse Play'in
+  Families politikası devreye girer ve el yazısı/ses verisinin üçüncü tarafa gitmesi ayrıca
+  değerlendirilmelidir.
+
+### 📁 Değiştirilen Dosyalar
+- [`STORE-PRIVACY-FORMS.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/STORE-PRIVACY-FORMS.md) [NEW]
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- Kod değişikliği olmadığı için test/sözdizimi durumu değişmedi: **21/21 test** geçiyor.
+- **Formlar doldurulmadı** — rehber hazır, doldurma yayın sırasında kullanıcı tarafından yapılacak.
+
+---
+
 ## 📅 [2026-10-02] - Gizlilik Politikası: Beş Dil, GitHub Pages ve Uygulama İçi Bağlantı
 
 ### 🔍 Kapsam ve İhtiyaç
