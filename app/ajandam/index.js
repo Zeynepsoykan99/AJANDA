@@ -31,6 +31,7 @@ import DrawingCanvas from '../../components/drawing/DrawingCanvas';
 import DrawingToolbar from '../../components/drawing/DrawingToolbar';
 import TextCanvas from '../../components/text/TextCanvas';
 import { recognizeHandwriting } from '../../services/handwritingService';
+import { getPrivacySettings } from '../../services/privacySettingsService';
 
 /**
  * AjandamScreen - Ajanda Kapağı Ekranı (Full-Bleed ve Çizilebilir)
@@ -124,6 +125,9 @@ export default function AjandamScreen() {
         });
       } else {
         recognitionTimeoutRef.current = setTimeout(async () => {
+          // Kullanici otomatik taniimayi kapattiysa cizgiler cihaz disina cikmaz.
+          // Kement ile "metne cevir" bundan ETKILENMEZ (kullanici kendi tetikler).
+          if (!(await getPrivacySettings()).autoHandwriting) return;
           const result = await recognizeHandwriting(newDrawings, { language: i18n.language || 'tr' });
           if (result.success && !result.aborted && !result.stale) {
             setCoverData((current) => ({
@@ -173,6 +177,9 @@ export default function AjandamScreen() {
         StorageService.setCover({ ...updated, recognizedText: '', recognizedWords: [] });
       } else {
         recognitionTimeoutRef.current = setTimeout(async () => {
+          // Kullanici otomatik taniimayi kapattiysa cizgiler cihaz disina cikmaz.
+          // Kement ile "metne cevir" bundan ETKILENMEZ (kullanici kendi tetikler).
+          if (!(await getPrivacySettings()).autoHandwriting) return;
           const result = await recognizeHandwriting(updatedDrawings, { language: i18n.language || 'tr' });
           if (result.success && !result.aborted && !result.stale) {
             StorageService.setCover({

@@ -8,6 +8,7 @@ import CircleMenuButton from '../components/CircleMenuButton';
 import ThemePickerModal from '../components/ThemePickerModal';
 import GlobalSearchModal from '../components/ui/GlobalSearchModal';
 import LanguagePickerModal from '../components/LanguagePickerModal';
+import PrivacySettingsModal from '../components/PrivacySettingsModal';
 import { useTheme } from '../context/ThemeContext';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
 import { getPrivacyPolicyUrl } from '../constants/links';
@@ -21,6 +22,7 @@ export default function HomeScreen() {
   const [isThemeModalVisible, setIsThemeModalVisible] = React.useState(false);
   const [isSearchModalVisible, setIsSearchModalVisible] = React.useState(false);
   const [isLanguageModalVisible, setIsLanguageModalVisible] = React.useState(false);
+  const [isPrivacyModalVisible, setIsPrivacyModalVisible] = React.useState(false);
 
   const currentLang = (i18n.language || 'tr').substring(0, 2).toUpperCase();
 
@@ -77,6 +79,15 @@ export default function HomeScreen() {
               activeOpacity={0.7}
             >
               <MaterialCommunityIcons name="palette-outline" size={22} color={colors.textSecondary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.headerIconButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => setIsPrivacyModalVisible(true)}
+              activeOpacity={0.7}
+              accessibilityLabel={t('privacy.settingsTitle', 'Gizlilik ve Veri')}
+            >
+              <MaterialCommunityIcons name="shield-lock-outline" size={22} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -138,6 +149,12 @@ export default function HomeScreen() {
       <LanguagePickerModal
         visible={isLanguageModalVisible}
         onClose={() => setIsLanguageModalVisible(false)}
+      />
+
+      {/* Gizlilik ve Veri Ayarları */}
+      <PrivacySettingsModal
+        visible={isPrivacyModalVisible}
+        onClose={() => setIsPrivacyModalVisible(false)}
       />
 
       {/* Tema Seçici Modal */}

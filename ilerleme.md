@@ -4,6 +4,96 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-02] - Otomatik Veri Gönderimi İçin Aç/Kapa Ayarları + Rehber Tutarlılık Testi
+
+### 🔍 Kapsam
+1. `STORE-PRIVACY-FORMS.md` ile `constants/links.js` arasındaki adres tutarlılığını denetleyen test.
+2. Cihaz dışına veri gönderen **iki otomatik akış** için aç/kapa ayarı. Bu, mağaza formundaki iki
+   kalemi **Required → Optional**'a çeviriyor.
+
+### ✅ Eklenen Ayarlar
+- **`services/privacySettingsService.js`** [NEW] — `@ajanda_auto_handwriting_v1`,
+  `@ajanda_auto_transcribe_v1`. Önbellekli; açılışta `_layout.js`'te bir kez yükleniyor.
+  `getPrivacySettings()` kapılar için (yüklemeyi **bekler**), `isAuto*Enabled()` arayüz için senkron.
+- **`components/PrivacySettingsModal.js`** [NEW] — ana menü başlığındaki kalkan ikonundan açılıyor
+  (dil/tema düğmelerinin yanı; projede ayrı bir "Ayarlar" ekranı yok, mevcut desen bu).
+  Her satırın altında **kapatılınca ne kaybedildiği** yazılı.
+- Kapılar: `app/ajandam/index.js`, `app/ajandam/[pageId].js`, `app/todolist/[pageId].js` —
+  **6 otomatik `recognizeHandwriting` çağrısının tamamı**; `AudioRecorderModal.js` —
+  `shouldUseLiveRecognition()` ve kayıt sonrası otomatik `transcribeAudioFile`.
+- **Dokunulmayanlar (kullanıcı kendi tetikliyor):** kement ile "metne çevir"
+  (`recognizeSelectedStrokes`) ve `handleRetryTranscription`. Test 12 bunların ayardan
+  etkilenmediğini açıkça denetliyor.
+
+### 🐛 Testin Yakaladığı Gerçek Hata
+İlk yazımda `getPrivacySettings = () => loadPrivacySettings()` idi. `loadPrivacySettings` bir kez
+çözülen bir promise döndürüyor ve **çözüldüğü andaki önbellek kopyasını** taşıyor. Sonuç: kullanıcı
+ayarı kapatsa bile kapılar **uygulama yeniden başlayana kadar eski değeri** görür — arayüzde ayar
+kapanmış görünür ama veri gönderimi sürer. Düzeltme: yükleme beklenip **güncel** önbellek
+döndürülüyor. Test 7 tam olarak bu senaryoyu (uygulama yeniden başlatılmadan kapatma) kanıtlıyor.
+
+### 🎁 Yan Kazanç
+Ayar kapatıldığında Android da expo-av yoluna düştüğü için **duraklat/devam Android 13+'ta da
+çalışır hâle geliyor**. `canPauseRecording` bu yüzden `autoTranscribe`'a bağlandı.
+
+### 🏪 Mağaza Rehberi Güncellendi
+- `STORE-PRIVACY-FORMS.md` 1.3, 1.4, 5 ve özet tablo: **Required → "Users can choose whether this
+  data is collected" (Optional)**.
+- **Varsayılan değer form cevabını DEĞİŞTİRMEZ:** Play'in ölçütü kullanıcının *kapatabiliyor*
+  olması, varsayılanın değeri değil. Rehbere bu açıkça yazıldı.
+- Mevcut varsayılan: **ikisi de AÇIK** (`AUTO_HANDWRITING_DEFAULT`, `AUTO_TRANSCRIBE_DEFAULT` —
+  tek satırdan değiştirilebilir). Kullanıcı onayı bekliyor.
+
+### 🌍 Dil Dosyaları
+- `privacy.settingsTitle/settingsDesc/autoHandwritingLabel/autoHandwritingNote/
+  autoTranscribeLabel/autoTranscribeNote` — 6 anahtar × 5 dil, gerçek çevirilerle.
+  Toplam **428 anahtar**, tam parite.
+
+### 🧪 Eklenen / Genişletilen Testler
+- **`tests/privacySettings.test.js`** [NEW] — 17 doğrulama.
+  - **Test 1 kapısız halin ayar kapalıyken bile tanımayı çalıştırdığını kanıtlıyor.**
+  - Test 2-6: varsayılanlar, `'0'`/`'1'` okuma, kapının engellemesi/engellememesi, yükleme
+    yarışında atlanmaması, diske yazma.
+  - **Test 7: ayar değişikliğinin kapılara anında yansıması** (yukarıdaki hatanın regresyon testi).
+  - Test 8-10: ayarların bağımsızlığı, dinleyici, okuma/yazma hatalarının yutulmaması.
+  - Test 11: üç ekranda **çağrı sayısı = kapı sayısı** ve kapının çağrının **hemen öncesinde**
+    olması (ungated bir çağrı kalmasın).
+  - Test 12: kement ve "yeniden dene" akışlarının ayardan **etkilenmediği**.
+  - Test 13-17: ses tarafı kapıları, açılışta yükleme, modal bağlantısı + çift dokunuş koruması +
+    yazma hatasında anahtarın geri alınması, 5 dil, rehberin güncelliği.
+- **`tests/privacyPolicyDocs.test.js`** → Test 11 eklendi: rehberdeki mağaza adresi `links.js` ve
+  dosyaların `permalink` değerleriyle **aynı olmalı**; rehberde izinsiz bir AJANDA adresi geçmemeli.
+- **Testlerin dişi kanıtlandı:** dört kasıtlı kırılma (bayat promise'in geri dönmesi, bir kapının
+  kaldırılması, rehberdeki adresin saptırılması, yazma hatasında anahtarın geri alınmaması)
+  denendi; **dördü de yakalandı**, kod geri alındı.
+- Ayrıca `recordingPauseResume` Test 11'in biçim beklentisi `canPauseRecording`'in yeni
+  `[autoTranscribe]` bağımlılığını kapsayacak şekilde güncellendi.
+
+### 📁 Değiştirilen Dosyalar
+- [`services/privacySettingsService.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/services/privacySettingsService.js) [NEW]
+- [`components/PrivacySettingsModal.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/PrivacySettingsModal.js) [NEW]
+- [`app/_layout.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/_layout.js), [`app/index.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/index.js)
+- [`app/ajandam/index.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/ajandam/index.js), `app/ajandam/[pageId].js`, `app/todolist/[pageId].js`
+- [`components/audio/AudioRecorderModal.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/audio/AudioRecorderModal.js)
+- [`STORE-PRIVACY-FORMS.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/STORE-PRIVACY-FORMS.md)
+- [`locales/{tr,en,de,es,fr}.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales)
+- [`tests/privacySettings.test.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/tests/privacySettings.test.js) [NEW], `tests/privacyPolicyDocs.test.js`, `tests/recordingPauseResume.test.js`
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- `tests/` altındaki **22 test dosyasının tamamı** geçti.
+- 108 kaynak dosya `babel-preset-expo` ile sözdizimi denetiminden geçti; kırık import yok.
+- Çözümlenemeyen tanımlayıcı yok.
+- `localeIntegrity`: 428 anahtar, beş dilde tam parite; kodda kullanılan 306 anahtarın tamamı tanımlı.
+- **Cihazda doğrulanmadı.**
+
+### 📝 Kullanıcı Onayı Bekleyen
+- **Varsayılan değer.** Önerilen: **ikisi de AÇIK** (bugüne kadarki davranış korunur, kullanıcı
+  hiçbir şey kaybetmez; "Optional" sınıflandırması yine elde edilir çünkü ölçüt varsayılan değil
+  kapatılabilirlik). Değiştirmek `privacySettingsService.js`'te iki satır.
+
+---
+
 ## 📅 [2026-10-02] - Mağaza Gizlilik Formları Rehberi (Play Data Safety / App Store App Privacy)
 
 ### 🔍 Kapsam

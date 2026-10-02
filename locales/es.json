@@ -487,6 +487,12 @@
     "voiceAndroidBody": "de esto se encarga el propio servicio de reconocimiento de voz del teléfono; en la mayoría de los dispositivos ese servicio pertenece a Google. Tu audio puede enviarse por internet a ese servicio para convertirlo en texto.",
     "voiceIosLabel": "En iPhone y iPad:",
     "voiceIosBody": "la conversión se hace en el dispositivo siempre que sea posible. Sin embargo, si tu dispositivo no puede procesar por sí solo el idioma que has elegido, tu audio puede enviarse a los servidores de Apple.",
-    "voiceP4": "El archivo de audio que grabas se guarda solo en este dispositivo. No se envían tu nombre, tu cuenta ni la información de tu dispositivo."
+    "voiceP4": "El archivo de audio que grabas se guarda solo en este dispositivo. No se envían tu nombre, tu cuenta ni la información de tu dispositivo.",
+    "settingsTitle": "Privacidad y datos",
+    "settingsDesc": "Estas dos funciones envían lo que escribes por internet a un servicio para convertirlo en texto. Puedes desactivarlas si lo prefieres.",
+    "autoHandwritingLabel": "Reconocimiento automático de escritura",
+    "autoHandwritingNote": "Si lo desactivas, tu escritura no se podrá buscar en las páginas de Mi agenda y Tareas. La acción «convertir en texto» de la herramienta de lazo sigue funcionando.",
+    "autoTranscribeLabel": "Convertir notas de voz en texto automáticamente",
+    "autoTranscribeNote": "Si lo desactivas, la grabación sigue funcionando pero no se genera texto. Puedes convertir una nota tú mismo más tarde."
   }
 }

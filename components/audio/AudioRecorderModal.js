@@ -38,6 +38,11 @@ import {
   startLiveRecognition,
   resolveTranscriptionLanguage,
 } from '../../services/transcriptionService';
+import {
+  getPrivacySettings,
+  isAutoTranscribeEnabled,
+  addPrivacySettingsListener,
+} from '../../services/privacySettingsService';
 import PrivacyNoticeModal, {
   VOICE_NOTICE_KEY,
   hasSeenNotice,
@@ -82,6 +87,24 @@ export default function AudioRecorderModal({
   // Sesli notun metne cevrilmesi cihaz disinda islenebilir. Kullaniciya ilk
   // kayit denemesinde BIR KEZ bildiriyoruz; onay akisi degil.
   // Bildirim kapandiginda kayit OTOMATIK BASLAMAZ (kullanici karari).
+  // Otomatik metne cevirme ayari. Render'da (canPauseRecording) senkron bir
+  // degere ihtiyac oldugu icin state'te tutulur; acilista diskten okunur ve
+  // ayar modalindan degistirilirse dinleyiciyle guncellenir.
+  const [autoTranscribe, setAutoTranscribe] = useState(isAutoTranscribeEnabled());
+  useEffect(() => {
+    let isActive = true;
+    getPrivacySettings().then((settings) => {
+      if (isActive) setAutoTranscribe(settings.autoTranscribe);
+    });
+    const unsubscribe = addPrivacySettingsListener((settings) => {
+      if (isActive) setAutoTranscribe(settings.autoTranscribe);
+    });
+    return () => {
+      isActive = false;
+      unsubscribe();
+    };
+  }, []);
+
   const [showVoiceNotice, setShowVoiceNotice] = useState(false);
   const handleDismissVoiceNotice = () => {
     setShowVoiceNotice(false);
@@ -116,8 +139,13 @@ export default function AudioRecorderModal({
    * tek geçişte hem transkript hem de 16 kHz mono PCM WAV dosyası elde edilir.
    * iOS'ta expo-av LINEARPCM üretebildiği için mevcut dosya tabanlı akış korunur.
    */
+  // Ayar kapaliysa canli tanima HIC kullanilmaz: Android'de kayit expo-av'a
+  // duser. Ses o zaman isletim sisteminin tanima servisine hic verilmez.
   const shouldUseLiveRecognition = () =>
-    Platform.OS === 'android' && isTranscriptionAvailable() && supportsLiveRecording();
+    autoTranscribe &&
+    Platform.OS === 'android' &&
+    isTranscriptionAvailable() &&
+    supportsLiveRecording();
 
   /**
    * Duraklat/devam YALNIZCA expo-av yolunda mumkun: expo-av `pauseAsync()` sunar.
@@ -131,7 +159,12 @@ export default function AudioRecorderModal({
    * Pratikte: iOS her zaman, Android 13 ve ustunde HAYIR (canli tanima devreye
    * girer), Android 12 ve altinda EVET (expo-av yedegi kullanilir).
    */
-  const canPauseRecording = useMemo(() => !shouldUseLiveRecognition(), []);
+  // Ayar kapatilinca Android da expo-av yoluna duser ve duraklatma mumkun olur,
+  // bu yuzden autoTranscribe degisince yeniden hesaplanir.
+  const canPauseRecording = useMemo(
+    () => !shouldUseLiveRecognition(),
+    [autoTranscribe]
+  );
 
   /** Sayaci sifirdan baslatir (yeni kayit) */
   const startElapsedTimer = () => {
@@ -600,7 +633,10 @@ export default function AudioRecorderModal({
       onClose && onClose();
 
       // Arka planda asenkron transkripsiyonu başlat (UI bloklanmaz)
-      if (!hasLiveTranscript && isAvailable && onTranscriptReady) {
+      // Otomatik dönüşüm kapatıldıysa kayıt yine saklanır, transkript üretilmez.
+      // Kullanici isterse notun yanindaki "yeniden dene" ile kendisi tetikleyebilir.
+      const autoAllowed = (await getPrivacySettings()).autoTranscribe;
+      if (!hasLiveTranscript && isAvailable && autoAllowed && onTranscriptReady) {
         transcribeAudioFile(saved?.uri, { language: i18n.language })
           .then((res) => {
             if (res.success && res.transcript) {

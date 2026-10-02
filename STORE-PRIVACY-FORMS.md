@@ -95,7 +95,7 @@ adresine gidiyor (`services/handwritingService.js`). Burada tartışma yok:
 |---|---|
 | Is this data collected, shared, or both? | **Both** (Collected **ve** Shared) |
 | Is this data processed ephemerally? | **No** — "collected" seçin |
-| Is this data required for your app, or can users choose whether it's collected? | **Required** |
+| Is this data required for your app, or can users choose whether it's collected? | **Users can choose whether this data is collected** (= Optional) |
 | Why is this user data collected? | Yalnızca **App functionality** |
 | Why is this user data shared? | Yalnızca **App functionality** |
 
@@ -106,9 +106,9 @@ adresine gidiyor (`services/handwritingService.js`). Burada tartışma yok:
 - **Ephemeral değil:** "Ephemeral" iddiası, verinin işlendikten sonra hemen
   silindiğini garanti etmek demektir. Google/Apple'ın ne kadar sakladığını
   **bilemiyoruz**, dolayısıyla bu iddiada bulunmamalıyız.
-- **Required:** Şu anda kayıt yaparken metne çevirmeyi kapatan bir ayar **yok**
-  (doğrulandı: `components/audio/AudioRecorderModal.js`). Bir ayar eklenirse bu
-  **Optional**'a çevrilebilir — bkz. bölüm 5.
+- **Optional:** Ana menüdeki **Gizlilik ve Veri** ekranından *"Sesli notları
+  otomatik metne çevir"* kapatılabiliyor (`services/privacySettingsService.js`).
+  Kapatıldığında ses, işletim sisteminin tanıma servisine **hiç verilmez**.
 
 ### 1.4 "Other user-generated content" detay sayfası
 
@@ -116,12 +116,13 @@ adresine gidiyor (`services/handwritingService.js`). Burada tartışma yok:
 |---|---|
 | Is this data collected, shared, or both? | **Both** |
 | Is this data processed ephemerally? | **No** |
-| Is this data required for your app, or can users choose whether it's collected? | **Required** |
+| Is this data required for your app, or can users choose whether it's collected? | **Users can choose whether this data is collected** (= Optional) |
 | Why is this user data collected? | Yalnızca **App functionality** |
 | Why is this user data shared? | Yalnızca **App functionality** |
 
-**Gerekçe:** El yazısı çizgi koordinatları. Ajandam ve Yapılacaklar'da
-**kendiliğinden** gönderiliyor ve kapatma ayarı yok → **Required**.
+**Gerekçe:** El yazısı çizgi koordinatları. Ana menüdeki **Gizlilik ve Veri**
+ekranından *"Otomatik el yazısı tanıma"* kapatılabiliyor
+(`services/privacySettingsService.js`) → **Optional**.
 
 ### 1.5 Son adım
 **Store listing preview** ekranını okuyun. Kartta şu iki satırın görünmesi
@@ -281,25 +282,34 @@ Data safety dışında şunlar da doldurulur; gizlilikle ilgili olanlar:
 | Kimliğe bağlı mı? | — | **No, not linked** |
 | İzleme (tracking)? | — | **No** |
 | Paylaşılıyor mu? | **Both** (collected + shared) | — |
-| Zorunlu mu? | **Required** | — |
+| Zorunlu mu? | **Optional** (kullanıcı kapatabiliyor) | — |
 | Ephemeral? | **No** | — |
 | Analitik / reklam / tanımlayıcı | Hiçbiri | Hiçbiri |
 | Politika adresi | `https://zeynepsoykan99.github.io/AJANDA/privacy/` | aynı |
 
 ---
 
-## 5. Sonradan değiştirmek isteyebileceğiniz bir şey
+## 5. Ayarlar — "Optional" sınıflandırmasının dayanağı
 
-Her iki kalem de şu anda **"Required"** olarak beyan ediliyor, çünkü el yazısı
-otomatik tanımayı ve sesli not dönüşümünü **kapatan bir ayar yok**.
+Ana menüdeki **Gizlilik ve Veri** ekranında (kalkan ikonu) iki aç/kapa var:
 
-Ayarlara iki anahtar eklenirse ("el yazısında aramayı kapat", "sesli notları
-metne çevirmeyi kapat"), Play formunda bu kalemler **"Optional"**'a çevrilebilir.
-Bu hem mağaza kartında daha iyi görünür hem de gizlilik duyarlı kullanıcılar
-için gerçek bir seçim sunar.
+| Ayar | Kapatılınca ne olur |
+|---|---|
+| Otomatik el yazısı tanıma | Ajandam/Yapılacaklar'da el yazısı **aranabilir olmaz**. Kement ile "metne çevir" çalışmaya devam eder |
+| Sesli notları otomatik metne çevir | Kayıt çalışır ama **transkript üretilmez**. Kullanıcı bir notu sonradan kendisi çevirebilir |
 
-Bu bir yol haritası maddesidir; şu an **yapılmadı** ve formlar mevcut duruma
-göre doldurulmalıdır.
+Kod: `services/privacySettingsService.js`
+(`@ajanda_auto_handwriting_v1`, `@ajanda_auto_transcribe_v1`).
+
+### Varsayılan değer form cevabını DEĞİŞTİRMEZ
+Play'in sorusu şu: *"Is this data required for your app, or can users choose
+whether it's collected?"* — ölçüt **kullanıcının kapatabiliyor olması**, ayarın
+varsayılan değeri değil. Varsayılan açık da olsa kapalı da olsa cevap
+**"Users can choose whether this data is collected"** (= Optional) olur.
+
+**Mevcut varsayılan:** her ikisi de **AÇIK**
+(`AUTO_HANDWRITING_DEFAULT`, `AUTO_TRANSCRIBE_DEFAULT` — `privacySettingsService.js`).
+Varsayılan değiştirilirse bu satırı güncelleyin; **form cevabı değişmez.**
 
 ---
 

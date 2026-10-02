@@ -35,6 +35,7 @@ import AudioRecorderModal from '../../components/audio/AudioRecorderModal';
 import AudioNotesDeck from '../../components/audio/AudioNotesDeck';
 import IndexFlagsRail from '../../components/stationery/IndexFlagsRail';
 import { recognizeHandwriting, recognizeSelectedStrokes } from '../../services/handwritingService';
+import { getPrivacySettings } from '../../services/privacySettingsService';
 import { NotificationService } from '../../services/notificationService';
 import { AudioService } from '../../services/audioService';
 import { transcribeAudioFile } from '../../services/transcriptionService';
@@ -261,6 +262,9 @@ export default function TodoViewScreen() {
 
       recognitionTimeoutRef.current = setTimeout(async () => {
         recognitionTimeoutRef.current = null;
+        // Kullanici otomatik taniimayi kapattiysa cizgiler cihaz disina cikmaz.
+        // Kement ile "metne cevir" bundan ETKILENMEZ (kullanici kendi tetikler).
+        if (!(await getPrivacySettings()).autoHandwriting) return;
         const result = await recognizeHandwriting(newDrawings, { language: i18n.language || 'tr' });
         if (!result.success || result.aborted || result.stale) return;
 
@@ -306,6 +310,9 @@ export default function TodoViewScreen() {
         StorageService.updatePage(prev.id, { recognizedText: '', recognizedWords: [] });
       } else {
         recognitionTimeoutRef.current = setTimeout(async () => {
+          // Kullanici otomatik taniimayi kapattiysa cizgiler cihaz disina cikmaz.
+          // Kement ile "metne cevir" bundan ETKILENMEZ (kullanici kendi tetikler).
+          if (!(await getPrivacySettings()).autoHandwriting) return;
           const result = await recognizeHandwriting(updatedDrawings, { language: i18n.language || 'tr' });
           if (result.success && !result.aborted && !result.stale) {
             StorageService.updatePage(prev.id, {

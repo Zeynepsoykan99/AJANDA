@@ -277,7 +277,39 @@ console.log('--- Gizlilik Politikasi Dokuman Testleri ---');
   console.log('OK Test 10: kok PRIVACY.md yalnizca isaretci, metni tekrarlamiyor');
 }
 
-// --- Test 11: Uygulama içi bildirimlerle çelişmiyor -----------------
+// --- Test 11: Mağaza rehberindeki adres links.js ile aynı -----------
+{
+  const guide = fs.readFileSync(path.join(ROOT, 'STORE-PRIVACY-FORMS.md'), 'utf8');
+  const linksSource = fs.readFileSync(path.join(ROOT, 'constants', 'links.js'), 'utf8');
+  const base = /export const SITE_BASE_URL = '([^']+)';/.exec(linksSource)[1];
+  const trUrl = base + frontMatter(docs.tr).permalink;
+
+  // Rehber mağaza formlarına girilecek adresi içeriyor; biri değişip diğeri
+  // unutulursa form yanlış adresle doldurulur.
+  assert.ok(
+    guide.includes(trUrl),
+    'STORE-PRIVACY-FORMS.md Turkce politika adresini links.js ile AYNI yazmali -> beklenen: ' + trUrl
+  );
+
+  // Rehberde links.js'te OLMAYAN bir ajanda adresi gecmemeli
+  const guideUrls = (guide.match(/https:\/\/[a-z0-9.\-/]*AJANDA[a-z0-9.\-/]*/gi) || []).map((u) =>
+    u.replace(/[).,]+$/, '')
+  );
+  const allowed = new Set([
+    base,
+    base + '/',
+    ...['tr', 'en', 'de', 'es', 'fr'].map((lng) => base + frontMatter(docs[lng]).permalink),
+  ]);
+  guideUrls.forEach((u) => {
+    assert.ok(
+      allowed.has(u),
+      'rehberdeki adres links.js/permalink degerleriyle uyumlu olmali -> ' + u
+    );
+  });
+  console.log('OK Test 11: magaza rehberindeki adresler links.js ile tutarli');
+}
+
+// --- Test 12: Uygulama içi bildirimlerle çelişmiyor -----------------
 {
   const tr = JSON.parse(fs.readFileSync(path.join(ROOT, 'locales', 'tr.json'), 'utf8'));
 
@@ -301,7 +333,7 @@ console.log('--- Gizlilik Politikasi Dokuman Testleri ---');
     /iki istisnas/i.test(docs.tr),
     'politika cihaz disina cikan istisnalari ozet bolumunde belirtmeli'
   );
-  console.log('OK Test 11: politika uygulama ici bildirimlerle celismiyor');
+  console.log('OK Test 12: politika uygulama ici bildirimlerle celismiyor');
 }
 
 console.log('--- TUM GIZLILIK POLITIKASI TESTLERI BASARIYLA GECTI! ---');

@@ -487,6 +487,12 @@
     "voiceAndroidBody": "c’est le service de reconnaissance vocale du téléphone qui s’en charge ; sur la plupart des appareils, ce service appartient à Google. Votre audio peut être envoyé par internet à ce service pour être converti en texte.",
     "voiceIosLabel": "Sur iPhone et iPad :",
     "voiceIosBody": "la conversion se fait sur l’appareil autant que possible. Mais si votre appareil ne peut pas traiter seul la langue que vous avez choisie, votre audio peut être envoyé aux serveurs d’Apple.",
-    "voiceP4": "Le fichier audio que vous enregistrez est conservé uniquement sur cet appareil. Votre nom, votre compte et les informations de votre appareil ne sont pas envoyés."
+    "voiceP4": "Le fichier audio que vous enregistrez est conservé uniquement sur cet appareil. Votre nom, votre compte et les informations de votre appareil ne sont pas envoyés.",
+    "settingsTitle": "Confidentialité et données",
+    "settingsDesc": "Ces deux fonctions envoient ce que vous écrivez par internet à un service pour le transformer en texte. Vous pouvez les désactiver si vous le souhaitez.",
+    "autoHandwritingLabel": "Reconnaissance automatique de l’écriture",
+    "autoHandwritingNote": "Si vous désactivez cette option, votre écriture ne sera pas recherchable dans les pages Mon agenda et À faire. L’action « convertir en texte » de l’outil lasso continue de fonctionner.",
+    "autoTranscribeLabel": "Convertir automatiquement les notes vocales en texte",
+    "autoTranscribeNote": "Si vous désactivez cette option, l’enregistrement fonctionne toujours mais aucun texte n’est produit. Vous pourrez convertir une note vous-même plus tard."
   }
 }

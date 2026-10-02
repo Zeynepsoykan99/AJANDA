@@ -487,6 +487,12 @@
     "voiceAndroidBody": "this is handled by the phone’s own speech recognition service — on most devices that service belongs to Google. Your audio may be sent over the internet to that service to be converted to text.",
     "voiceIosLabel": "On iPhone and iPad:",
     "voiceIosBody": "the conversion is done on the device whenever possible. However, if your device cannot handle your selected language on its own, your audio may be sent to Apple’s servers.",
-    "voiceP4": "The audio file you record is stored only on this device. Your name, account, and device information are not sent."
+    "voiceP4": "The audio file you record is stored only on this device. Your name, account, and device information are not sent.",
+    "settingsTitle": "Privacy and Data",
+    "settingsDesc": "These two features send what you write over the internet to a service to turn it into text. You can turn them off if you prefer.",
+    "autoHandwritingLabel": "Automatic handwriting recognition",
+    "autoHandwritingNote": "If you turn this off, your handwriting will not be searchable on My Agenda and To-Do pages. The lasso tool’s “convert to text” still works.",
+    "autoTranscribeLabel": "Convert voice notes to text automatically",
+    "autoTranscribeNote": "If you turn this off, recording still works but no text is produced. You can convert a note yourself later."
   }
 }

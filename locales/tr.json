@@ -487,6 +487,12 @@
     "voiceAndroidBody": "bu işi telefonun kendi ses tanıma servisi yapar — çoğu cihazda bu servis Google’a aittir. Sesiniz, metne çevrilmek üzere internet üzerinden bu servise gönderilebilir.",
     "voiceIosLabel": "iPhone ve iPad’de:",
     "voiceIosBody": "çevirme öncelikle cihazın içinde yapılır. Ancak cihazınız seçtiğiniz dili kendi başına çeviremiyorsa sesiniz Apple’ın sunucularına gönderilebilir.",
-    "voiceP4": "Kaydettiğiniz ses dosyası yalnızca bu cihazda saklanır. Adınız, hesabınız veya cihaz bilginiz gönderilmez."
+    "voiceP4": "Kaydettiğiniz ses dosyası yalnızca bu cihazda saklanır. Adınız, hesabınız veya cihaz bilginiz gönderilmez.",
+    "settingsTitle": "Gizlilik ve Veri",
+    "settingsDesc": "Bu iki özellik yazdıklarınızı metne çevirmek için internet üzerinden bir servise gönderir. İstemiyorsanız kapatabilirsiniz.",
+    "autoHandwritingLabel": "Otomatik el yazısı tanıma",
+    "autoHandwritingNote": "Kapatırsanız Ajandam ve Yapılacaklar sayfalarında el yazınız aranabilir olmaz. Kement aracıyla “metne çevir” yine çalışır.",
+    "autoTranscribeLabel": "Sesli notları otomatik metne çevir",
+    "autoTranscribeNote": "Kapatırsanız kayıt yine çalışır ama metin üretilmez. Bir notu daha sonra kendiniz çevirebilirsiniz."
   }
 }

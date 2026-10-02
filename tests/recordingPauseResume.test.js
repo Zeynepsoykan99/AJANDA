@@ -344,10 +344,13 @@ console.log('--- Kayit Duraklat / Devam Testleri ---');
 
 // --- Kaynak denetimleri -----------------------------------------------
 function runSourceChecks() {
-  // Cihaz destegine gore otomatik secim
+  // Cihaz destegine gore otomatik secim. Ayar kapatilinca Android da expo-av
+  // yoluna dustugu icin autoTranscribe bagimliligi da bulunmali.
   assert.ok(
-    /const canPauseRecording = useMemo\(\(\) => !shouldUseLiveRecognition\(\), \[\]\);/.test(source),
-    'duraklatma destegi shouldUseLiveRecognition uzerinden otomatik secilmeli'
+    /const canPauseRecording = useMemo\(\s*\n?\s*\(\) => !shouldUseLiveRecognition\(\),\s*\n?\s*\[autoTranscribe\]\s*\n?\s*\);/.test(
+      source
+    ),
+    'duraklatma destegi shouldUseLiveRecognition uzerinden secilmeli ve autoTranscribe degisince yeniden hesaplanmali'
   );
 
   // Dugme YALNIZCA destekleyen yolda render edilmeli

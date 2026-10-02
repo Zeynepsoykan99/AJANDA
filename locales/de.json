@@ -487,6 +487,12 @@
     "voiceAndroidBody": "übernimmt dies der eigene Spracherkennungsdienst des Telefons – auf den meisten Geräten gehört dieser Dienst Google. Ihre Audioaufnahme kann zur Umwandlung in Text über das Internet an diesen Dienst gesendet werden.",
     "voiceIosLabel": "Auf iPhone und iPad:",
     "voiceIosBody": "erfolgt die Umwandlung möglichst direkt auf dem Gerät. Wenn Ihr Gerät die gewählte Sprache jedoch nicht selbst verarbeiten kann, kann Ihre Audioaufnahme an die Server von Apple gesendet werden.",
-    "voiceP4": "Die von Ihnen aufgenommene Audiodatei wird nur auf diesem Gerät gespeichert. Ihr Name, Ihr Konto und Ihre Geräteinformationen werden nicht gesendet."
+    "voiceP4": "Die von Ihnen aufgenommene Audiodatei wird nur auf diesem Gerät gespeichert. Ihr Name, Ihr Konto und Ihre Geräteinformationen werden nicht gesendet.",
+    "settingsTitle": "Datenschutz und Daten",
+    "settingsDesc": "Diese beiden Funktionen senden Ihre Eingaben über das Internet an einen Dienst, um sie in Text umzuwandeln. Sie können sie ausschalten, wenn Sie möchten.",
+    "autoHandwritingLabel": "Automatische Handschrifterkennung",
+    "autoHandwritingNote": "Wenn Sie dies ausschalten, ist Ihre Handschrift auf den Seiten „Mein Kalender“ und „To-do“ nicht durchsuchbar. „In Text umwandeln“ mit dem Lasso-Werkzeug funktioniert weiterhin.",
+    "autoTranscribeLabel": "Sprachnotizen automatisch in Text umwandeln",
+    "autoTranscribeNote": "Wenn Sie dies ausschalten, funktioniert die Aufnahme weiterhin, es wird aber kein Text erzeugt. Sie können eine Notiz später selbst umwandeln."
   }
 }
