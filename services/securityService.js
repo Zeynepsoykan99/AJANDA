@@ -8,7 +8,17 @@ import {
 } from './biometricService';
 
 const SECURE_STORE_PIN_KEY = 'ajanda_diary_pin_v1';
-const ASYNC_FALLBACK_PIN_KEY = '@ajanda_diary_pin_secure_v1';
+
+// ─── Eski Düz Metin PIN Yedeği (artık KULLANILMIYOR) ───────────────
+// Önceden SecureStore kullanılamadığında veya yazma hata verdiğinde PIN
+// AsyncStorage'a DÜZ METİN olarak yazılıyordu. AsyncStorage şifrelenmemiş bir
+// depodur; rootlu/jailbreak cihazda veya yedek dosyasında PIN açıkta kalıyordu.
+// Üstelik yazılan kopya hiç temizlenmediği için SecureStore sonradan çalışmaya
+// başladığında geride bir "gölge kimlik bilgisi" bırakıyordu.
+//
+// Bu yol tamamen kaldırıldı. Anahtar adı yalnızca eski kopyaları SİLMEK için
+// tutuluyor (bkz. cleanupLegacyPlaintextPins).
+const LEGACY_PLAINTEXT_PIN_KEY = '@ajanda_diary_pin_secure_v1';
 
 // ─── PIN Deneme Sınırı (Kademeli Gecikme) ──────────────────────────
 // 4 haneli PIN yalnızca 10.000 kombinasyon demektir; sınırsız deneme kaba kuvvet
@@ -100,17 +110,64 @@ const isSecureStoreAvailable = async () => {
 };
 
 /**
- * SecurityService - Günlük ve Defterler için PIN / Şifreleme Servisi
+ * PIN özelliğinin bu platformda/cihazda kullanılabilir olup olmadığını söyler.
+ * PIN yalnızca SecureStore'da (iOS Keychain / Android Keystore) tutulduğu için
+ * SecureStore yoksa PIN de yoktur. Arayüz bu bilgiyle kilit seçeneğini gizler.
  *
- * iOS Keychain ve Android Keystore donanım şifrelemesi kullanır.
- * Web ortamında güvenli AsyncStorage fallback'i sağlar.
+ * @returns {Promise<boolean>}
+ */
+export const isPinSupportedAsync = () => isSecureStoreAvailable();
+
+/**
+ * Geride kalmış eski DÜZ METİN PIN kopyalarını siler.
+ *
+ * Tek seferlik temizlik: uygulama açılışında bir kez çağrılır. İdempotenttir,
+ * silinecek bir şey yoksa hiçbir şey yapmaz. Tüm hedefleri (günlük + her defter)
+ * kapsamak için anahtar ön ekine göre tarama yapar.
+ *
+ * NOT: Bu temizlik, yalnızca eski düz metin yedeğinde PIN'i olan bir kullanıcının
+ * kilidini düşürür. Bu durum `NotebookCoverView` içindeki yetim kilit temizliği
+ * tarafından zaten güvenle ele alınıyor (PIN yoksa isLocked false'a çekilir),
+ * yani kullanıcı var olmayan bir şifreyle kilitli kalmaz.
+ *
+ * @returns {Promise<number>} Silinen anahtar sayısı
+ */
+export const cleanupLegacyPlaintextPins = async () => {
+  try {
+    const allKeys = await AsyncStorage.getAllKeys();
+    const legacyKeys = allKeys.filter((k) => k.startsWith(LEGACY_PLAINTEXT_PIN_KEY));
+    if (legacyKeys.length === 0) return 0;
+    await AsyncStorage.multiRemove(legacyKeys);
+    console.warn(
+      `[SecurityService] ${legacyKeys.length} adet eski duz metin PIN kopyasi silindi.`
+    );
+    return legacyKeys.length;
+  } catch (error) {
+    // Sessiz kalmamalı: temizlik yapılamazsa düz metin kopya diskte kalır
+    console.error('[SecurityService] eski duz metin PIN temizligi basarisiz:', error);
+    return 0;
+  }
+};
+
+/**
+ * SecurityService - Günlük ve Defterler için PIN Servisi
+ *
+ * PIN YALNIZCA SecureStore'da tutulur: iOS Keychain ve Android Keystore
+ * donanım şifrelemesi. Şifrelenmemiş AsyncStorage'a hiçbir koşulda PIN yazılmaz;
+ * SecureStore kullanılamıyorsa PIN özelliği kapalıdır (bkz. isPinSupportedAsync).
  * Kesinlikle hiçbir varsayılan/otomatik PIN barındırmaz.
  */
 export const SecurityService = {
   normalizeTargetId,
 
+  isPinSupportedAsync,
+
   /**
-   * 4 haneli kullanıcı PIN kodunu güvenli alana kaydeder
+   * 4 haneli kullanıcı PIN kodunu güvenli alana kaydeder.
+   *
+   * SecureStore kullanılamıyorsa veya yazma hata verirse DÜZ METİN yedeğine
+   * düşmez; false döner. Arayüz bunu `security.saveError` ile kullanıcıya bildirir.
+   *
    * @param {string} pin
    * @param {string} [targetId='diary']
    * @returns {Promise<boolean>}
@@ -122,26 +179,23 @@ export const SecurityService = {
 
     const normId = normalizeTargetId(targetId);
     const key = `${SECURE_STORE_PIN_KEY}_${normId}`;
-    const fallbackKey = `${ASYNC_FALLBACK_PIN_KEY}_${normId}`;
+
+    const secureAvailable = await isSecureStoreAvailable();
+    if (!secureAvailable) {
+      console.error(
+        '[SecurityService] SecureStore kullanilamiyor, PIN kaydedilmedi (duz metin yedegi yok).'
+      );
+      return false;
+    }
 
     try {
-      const secureAvailable = await isSecureStoreAvailable();
-      if (secureAvailable) {
-        await SecureStore.setItemAsync(key, cleanPin, {
-          keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-        });
-      } else {
-        await AsyncStorage.setItem(fallbackKey, cleanPin);
-      }
+      await SecureStore.setItemAsync(key, cleanPin, {
+        keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+      });
       return true;
     } catch (error) {
-      console.warn('[SecurityService] setPin error:', error);
-      try {
-        await AsyncStorage.setItem(fallbackKey, cleanPin);
-        return true;
-      } catch {
-        return false;
-      }
+      console.error('[SecurityService] setPin basarisiz, PIN kaydedilmedi:', error);
+      return false;
     }
   },
 
@@ -158,19 +212,12 @@ export const SecurityService = {
 
     const normId = normalizeTargetId(targetId);
     const key = `${SECURE_STORE_PIN_KEY}_${normId}`;
-    const fallbackKey = `${ASYNC_FALLBACK_PIN_KEY}_${normId}`;
+
+    const secureAvailable = await isSecureStoreAvailable();
+    if (!secureAvailable) return false;
 
     try {
-      let storedPin = null;
-      const secureAvailable = await isSecureStoreAvailable();
-      if (secureAvailable) {
-        storedPin = await SecureStore.getItemAsync(key);
-      }
-
-      if (!storedPin) {
-        storedPin = await AsyncStorage.getItem(fallbackKey);
-      }
-
+      const storedPin = await SecureStore.getItemAsync(key);
       if (!storedPin) return false;
       return storedPin === cleanPin;
     } catch (error) {
@@ -187,17 +234,12 @@ export const SecurityService = {
   async hasPin(targetId = 'diary') {
     const normId = normalizeTargetId(targetId);
     const key = `${SECURE_STORE_PIN_KEY}_${normId}`;
-    const fallbackKey = `${ASYNC_FALLBACK_PIN_KEY}_${normId}`;
+
+    const secureAvailable = await isSecureStoreAvailable();
+    if (!secureAvailable) return false;
 
     try {
-      let storedPin = null;
-      const secureAvailable = await isSecureStoreAvailable();
-      if (secureAvailable) {
-        storedPin = await SecureStore.getItemAsync(key);
-      }
-      if (!storedPin) {
-        storedPin = await AsyncStorage.getItem(fallbackKey);
-      }
+      const storedPin = await SecureStore.getItemAsync(key);
       return !!storedPin;
     } catch (error) {
       console.warn('[SecurityService] hasPin error:', error);
@@ -236,25 +278,20 @@ export const SecurityService = {
   async removePin(targetId = 'diary') {
     const normId = normalizeTargetId(targetId);
     const key = `${SECURE_STORE_PIN_KEY}_${normId}`;
-    const fallbackKey = `${ASYNC_FALLBACK_PIN_KEY}_${normId}`;
+    // Savunma amaçlı: eski sürümlerden kalmış olabilecek düz metin kopya da silinir
+    const legacyKey = `${LEGACY_PLAINTEXT_PIN_KEY}_${normId}`;
 
     try {
       const secureAvailable = await isSecureStoreAvailable();
       if (secureAvailable) {
         await SecureStore.deleteItemAsync(key);
       }
-      await AsyncStorage.removeItem(fallbackKey);
+      await AsyncStorage.removeItem(legacyKey);
       this.lockSession(normId);
       return true;
     } catch (error) {
-      console.warn('[SecurityService] removePin error:', error);
-      try {
-        await AsyncStorage.removeItem(fallbackKey);
-        this.lockSession(normId);
-        return true;
-      } catch {
-        return false;
-      }
+      console.error('[SecurityService] removePin basarisiz:', error);
+      return false;
     }
   },
 

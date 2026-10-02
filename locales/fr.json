@@ -302,7 +302,8 @@
     "pinChangedSuccess": "Votre code PIN a été mis à jour avec succès.",
     "attemptsRemaining": "Il reste {{count}} tentatives.",
     "lockedSeconds": "Réessayez dans {{count}} secondes.",
-    "lockedMinutes": "Réessayez dans {{count}} minutes."
+    "lockedMinutes": "Réessayez dans {{count}} minutes.",
+    "pinUnsupported": "La fonction de verrouillage n'est pas disponible, car le stockage sécurisé n'est pas pris en charge sur cette plateforme."
   },
   "reminder": {
     "title": "Définir un Rappel",

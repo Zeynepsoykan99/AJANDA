@@ -302,7 +302,8 @@
     "pinChangedSuccess": "Şifreniz başarıyla güncellendi.",
     "attemptsRemaining": "{{count}} deneme hakkınız kaldı.",
     "lockedSeconds": "{{count}} saniye sonra tekrar deneyin.",
-    "lockedMinutes": "{{count}} dakika sonra tekrar deneyin."
+    "lockedMinutes": "{{count}} dakika sonra tekrar deneyin.",
+    "pinUnsupported": "Bu platformda güvenli depolama kullanılamadığı için kilit özelliği devre dışı."
   },
   "reminder": {
     "title": "Hatırlatıcı Kur",

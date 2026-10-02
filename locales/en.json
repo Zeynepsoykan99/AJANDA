@@ -302,7 +302,8 @@
     "pinChangedSuccess": "Your PIN has been updated successfully.",
     "attemptsRemaining": "{{count}} attempts remaining.",
     "lockedSeconds": "Try again in {{count}} seconds.",
-    "lockedMinutes": "Try again in {{count}} minutes."
+    "lockedMinutes": "Try again in {{count}} minutes.",
+    "pinUnsupported": "The lock feature is unavailable because secure storage is not supported on this platform."
   },
   "reminder": {
     "title": "Set Reminder",

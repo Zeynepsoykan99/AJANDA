@@ -14,6 +14,7 @@ import {
   addNotificationListeners,
 } from '../services/notificationService';
 import { startSessionAutoLock } from '../services/biometricService';
+import { cleanupLegacyPlaintextPins } from '../services/securityService';
 
 /**
  * GlobalErrorBoundary - React Render Ağacındaki Tüm Ölümcül Hataları Yakalayan Kalkan
@@ -125,6 +126,12 @@ function ThemedApp() {
   // Kilitli günlük/defterler: uygulama arka plana alınınca oturum kilitlerini
   // düşür ki öne dönüldüğünde PIN/biyometri tekrar istensin.
   useEffect(() => startSessionAutoLock(), []);
+
+  // Tek seferlik temizlik: eski surumlerde SecureStore yoksa PIN duz metin olarak
+  // AsyncStorage'a yaziliyordu. O kopyalar artik okunmuyor; diskte de kalmamali.
+  useEffect(() => {
+    cleanupLegacyPlaintextPins();
+  }, []);
 
   // Bildirim altyapısını ve dinleyicilerini başlat (Web ortamında güvenli)
   useEffect(() => {

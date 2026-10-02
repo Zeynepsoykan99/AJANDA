@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -92,6 +92,20 @@ export default function NotebookCoverView({
     onSuccessCallback: null,
   });
   const [isLockManagementVisible, setIsLockManagementVisible] = useState(false);
+
+  // PIN yalnizca SecureStore'da (Keychain / Keystore) tutulur. SecureStore yoksa
+  // (web, ya da guvenli depoya erisilemeyen bir cihaz) kilit secenegi gosterilmez.
+  const [isPinSupported, setIsPinSupported] = useState(Platform.OS !== 'web');
+  useEffect(() => {
+    let isActive = true;
+    (async () => {
+      const supported = await SecurityService.isPinSupportedAsync();
+      if (isActive) setIsPinSupported(supported);
+    })();
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
 
   // Kapak Şablonu ve Dinamik Kenar Rengi
@@ -200,6 +214,25 @@ export default function NotebookCoverView({
   // Kilit durumunu değiştir (PIN Kurulumu veya Kilit Yönetim Menüsü)
   const handleToggleLock = useCallback(async () => {
     if (!notebook) return;
+
+    // Guvenli depo yoksa PIN kaydedilemez; kullaniciya sahte bir kilit sunmayiz.
+    if (!(await SecurityService.isPinSupportedAsync())) {
+      const message = t(
+        'security.pinUnsupported',
+        'Bu platformda güvenli depolama kullanılamadığı için kilit özelliği devre dışı.'
+      );
+      if (Platform.OS === 'web') {
+        window.alert(message);
+      } else {
+        Alert.alert(
+          t('security.lockNotebook', 'Bu Defteri Kilitle'),
+          message,
+          [{ text: t('common.ok', 'Tamam') }]
+        );
+      }
+      return;
+    }
+
     const targetId = notebook?.id || 'diary';
     const hasExistingPin = await SecurityService.hasPin(targetId);
 
@@ -221,7 +254,7 @@ export default function NotebookCoverView({
         },
       });
     }
-  }, [notebook]);
+  }, [notebook, t]);
 
   // Kilit Yönetimi: Şifreyi Değiştir (3 Aşamalı Akış)
   const handleOpenChangePin = useCallback(() => {
@@ -409,7 +442,8 @@ export default function NotebookCoverView({
         <View style={styles.headerCenter} />
 
         <View style={styles.headerRightGroup}>
-          {/* Biyometrik Kilit Butonu */}
+          {/* Biyometrik Kilit Butonu — guvenli depo yoksa hic gosterilmez */}
+          {isPinSupported && (
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={handleToggleLock}
@@ -430,6 +464,7 @@ export default function NotebookCoverView({
               color={notebook?.isLocked ? colors.accent : colors.textSecondary}
             />
           </TouchableOpacity>
+          )}
 
           {/* İç Sayfa Kağıt Şablonu Seçimi */}
           <TouchableOpacity

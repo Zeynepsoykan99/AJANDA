@@ -302,7 +302,8 @@
     "pinChangedSuccess": "Deine PIN wurde erfolgreich aktualisiert.",
     "attemptsRemaining": "Noch {{count}} Versuche.",
     "lockedSeconds": "Versuchen Sie es in {{count}} Sekunden erneut.",
-    "lockedMinutes": "Versuchen Sie es in {{count}} Minuten erneut."
+    "lockedMinutes": "Versuchen Sie es in {{count}} Minuten erneut.",
+    "pinUnsupported": "Die Sperrfunktion ist nicht verfügbar, da auf dieser Plattform kein sicherer Speicher unterstützt wird."
   },
   "reminder": {
     "title": "Erinnerung einstellen",

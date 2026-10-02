@@ -4,6 +4,61 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-02] - PIN Düz Metin Yedeğinin Kaldırılması: SecureStore-Only (B1)
+
+### 🔍 Kapsam ve İhtiyaç
+- Denetim raporundaki B1: SecureStore kullanılamadığında veya yazma hata verdiğinde PIN'in **düz metin** olarak AsyncStorage'a yazılması; `verifyPin`/`hasPin`'in de her koşulda AsyncStorage'a düşmesi.
+- Kullanıcı kararı: **Seçenek (c)** — fallback tamamen kaldırılsın, PIN yalnızca SecureStore'da tutulsun. Web'de PIN özelliğinin çalışmaması kabul edildi.
+
+### 🐛 Kökteki İki Sorun
+1. **Düz metin yazma.** AsyncStorage şifrelenmemiş bir depodur; rootlu/jailbreak cihazda veya cihaz yedeğinde PIN açıkta kalıyordu.
+2. **Gölge kimlik bilgisi.** `catch` dalında yazılan düz metin kopya **hiç temizlenmiyordu**. SecureStore sonradan çalışmaya başladığında `verifyPin` önce SecureStore'a bakıyor, boş dönerse AsyncStorage kopyasını kabul ediyordu — yani geride ikinci, zayıf bir kimlik bilgisi kalıyordu.
+
+### ✅ Yapılan Düzeltme
+- `ASYNC_FALLBACK_PIN_KEY` kaldırıldı. Anahtar adı yalnızca **silme** amacıyla `LEGACY_PLAINTEXT_PIN_KEY` olarak tutuluyor.
+- `setPin`: SecureStore yoksa veya yazma istisna atarsa **düz metine düşmez**, `false` döner ve `console.error` ile bildirir.
+- `verifyPin` / `hasPin`: SecureStore yoksa doğrudan `false`. AsyncStorage dalları tamamen kaldırıldı.
+- `removePin`: SecureStore kaydını siler, savunma amaçlı eski düz metin kopyayı da siler. Sessiz `catch`-başarı dönüşü kaldırıldı (`console.error` + `false`).
+- **`cleanupLegacyPlaintextPins()`** eklendi: anahtar ön ekine göre tarayıp günlük ve **tüm defterlerin** eski kopyalarını siler. İdempotent; `app/_layout.js`'te açılışta bir kez çağrılıyor.
+- **`isPinSupportedAsync()`** export edildi. `NotebookCoverView` bunu okuyup kilit düğmesini desteklenmeyen platformda **hiç render etmiyor**; `handleToggleLock` ayrıca çalışma anında koruyup `security.pinUnsupported` mesajını gösteriyor.
+- Servisin JSDoc başlığı düzeltildi — eskiden "Web ortamında güvenli AsyncStorage fallback'i sağlar" diyordu, bu artık doğru değil.
+
+### 🔗 Arayüz Uyumu (kontrol edildi, düzeltme gerekmedi)
+- `PinAuthModal.js` `setPin`'in `false` dönüşünü **iki yerde** (kurulum ve şifre değiştirme) zaten `security.saveError` ile işliyor; ek düzeltme gerekmedi.
+- `NotebookCoverView.js`'teki mevcut **yetim kilit temizliği** (`isLocked` true ama PIN yok → `isLocked` false'a çekilir) sayesinde, eski düz metin kopyası silinen bir kullanıcı var olmayan bir şifreyle kilitli kalmıyor.
+
+### 🌍 Dil Dosyaları
+- `security.pinUnsupported` beş dile eklendi (gerçek çeviriler, yer tutucu değil). Toplam 405 anahtar, tam parite.
+
+### 🧪 Eklenen Test
+- **`tests/pinSecureStoreOnly.test.js`** [NEW] — 14 doğrulama. Gerçek `setPin`/`verifyPin`/`hasPin`/`removePin`/`cleanupLegacyPlaintextPins` **kaynaktan okunarak** sahte SecureStore + AsyncStorage ile çalıştırılıyor.
+  - **Test 1 eski fallback'in PIN'i gerçekten düz metin yazdığını kanıtlıyor.**
+  - Test 2-3: SecureStore yokken **ve** istisna atarken `false` dönüyor, AsyncStorage'a hiçbir şey yazılmıyor.
+  - Test 4: normal yol bozulmadı (kaydet/doğrula/sorgula).
+  - Test 5-6: AsyncStorage'daki düz metin kopya artık kimlik bilgisi olarak **kabul edilmiyor** (gölge kimlik bilgisi yolu kapalı).
+  - Test 7-8: temizlik günlük + iki defterin kopyasını siliyor, ilgisiz anahtarlara dokunmuyor, idempotent.
+  - Test 9: `removePin` her iki kaydı birlikte siliyor ve oturum kilidini düşürüyor.
+  - Test 10-14: kaynakta düz metin yazan yol kalmadı, temizlik açılışta kurulu, `PinAuthModal` hatayı bildiriyor, kilit düğmesi kapılı, mesaj beş dilde.
+- **Testin dişi olduğu kanıtlandı:** dört kasıtlı kırılma (setPin'e fallback geri eklenmesi, verifyPin'e fallback geri eklenmesi, açılış temizliğinin kaldırılması, buton kapısının kaldırılması) denendi; **dördü de yakalandı**, ardından kod geri alındı.
+
+### 📁 Değiştirilen Dosyalar
+- [`services/securityService.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/services/securityService.js)
+- [`app/_layout.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/_layout.js)
+- [`components/notebook/NotebookCoverView.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/notebook/NotebookCoverView.js)
+- [`locales/{tr,en,de,es,fr}.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales)
+- [`tests/pinSecureStoreOnly.test.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/tests/pinSecureStoreOnly.test.js) [NEW]
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- `tests/` altındaki **18 test dosyasının tamamı** geçti.
+- 104 kaynak dosya `babel-preset-expo` ile sözdizimi denetiminden geçti; kırık relative import yok.
+- **Cihazda doğrulanmadı:** PIN kurma / doğrulama / değiştirme / kaldırma akışının gerçek cihazda bozulmadığı test edilmelidir.
+
+### 📝 Kapsam Notu
+- **PIN bir güvenlik sınırı değil, arayüz kapısıdır.** Günlük ve defter içeriği (`@ajanda_diary_v1`, `@ajanda_notebooks_v1`) hâlâ AsyncStorage'da **şifresiz** duruyor; AsyncStorage'ı okuyabilen biri PIN'e hiç ihtiyaç duymadan içeriği okur. İçeriğin gerçekten şifrelenmesi (denetim raporundaki seçenek "d") ayrı ve büyük bir iş olarak kullanıcı kararıyla yol haritasına bırakıldı.
+
+---
+
 ## 📅 [2026-09-29] - Bekleyen Kayıtların Arka Planda Yazılması ve Güncelleyicilerin Saflaştırılması (A2, A3)
 
 ### 🔍 Kapsam ve İhtiyaç

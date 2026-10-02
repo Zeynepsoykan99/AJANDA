@@ -302,7 +302,8 @@
     "pinChangedSuccess": "Tu PIN ha sido actualizado con éxito.",
     "attemptsRemaining": "Quedan {{count}} intentos.",
     "lockedSeconds": "Inténtalo de nuevo en {{count}} segundos.",
-    "lockedMinutes": "Inténtalo de nuevo en {{count}} minutos."
+    "lockedMinutes": "Inténtalo de nuevo en {{count}} minutos.",
+    "pinUnsupported": "La función de bloqueo no está disponible porque esta plataforma no admite almacenamiento seguro."
   },
   "reminder": {
     "title": "Configurar Recordatorio",
