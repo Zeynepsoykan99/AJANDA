@@ -264,7 +264,7 @@
     "lockNotebook": "Verrouiller ce carnet",
     "unlockNotebook": "Supprimer le verrouillage",
     "lockedNotebook": "Carnet verrouillé",
-    "lockedDesc": "Les pages et notes personnelles de ce carnet sont protégées par la sécurité de votre appareil.",
+    "lockedDesc": "Le verrou permet uniquement à une personne qui vérifie son identité d’ouvrir ce carnet ; il ne chiffre pas le contenu du carnet.",
     "unlockPrompt": "Authentifiez-vous pour accéder au contenu",
     "unlockPromptWithTitle": "Authentifiez-vous pour déverrouiller « {{title}} »",
     "unlockToOpen": "Authentifiez-vous pour ouvrir le carnet",
@@ -469,5 +469,19 @@
     "suggestionMeeting": "Réunion",
     "suggestionIdea": "Idée",
     "suggestionUrgent": "Urgent"
+  },
+  "privacy": {
+    "understood": "J’ai compris",
+    "handwritingTitle": "À propos de la reconnaissance d’écriture",
+    "handwritingP1": "Pour transformer votre écriture en texte que vous pouvez rechercher, les coordonnées de vos tracés et la langue que vous avez choisie sont envoyées par internet au service de reconnaissance d’écriture de Google, où elles sont converties en texte.",
+    "handwritingP2": "Votre nom, votre compte et les informations de votre appareil ne sont pas envoyés. Le texte obtenu est enregistré uniquement sur cet appareil.",
+    "handwritingP3": "Cette conversion se lance automatiquement sur les pages que vous écrivez à la main, et lorsque vous utilisez l’action « convertir en texte » de l’outil lasso.",
+    "voiceTitle": "À propos des notes vocales",
+    "voiceP1": "Pour transformer vos notes vocales en texte que vous pouvez rechercher, votre enregistrement est transmis à la fonction de reconnaissance vocale de votre téléphone.",
+    "voiceAndroidLabel": "Sur les téléphones Android :",
+    "voiceAndroidBody": "c’est le service de reconnaissance vocale du téléphone qui s’en charge ; sur la plupart des appareils, ce service appartient à Google. Votre audio peut être envoyé par internet à ce service pour être converti en texte.",
+    "voiceIosLabel": "Sur iPhone et iPad :",
+    "voiceIosBody": "la conversion se fait sur l’appareil autant que possible. Mais si votre appareil ne peut pas traiter seul la langue que vous avez choisie, votre audio peut être envoyé aux serveurs d’Apple.",
+    "voiceP4": "Le fichier audio que vous enregistrez est conservé uniquement sur cet appareil. Votre nom, votre compte et les informations de votre appareil ne sont pas envoyés."
   }
 }

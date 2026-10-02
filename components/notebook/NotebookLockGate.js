@@ -174,7 +174,7 @@ export default function NotebookLockGate({
           <Text style={[styles.description, { color: colors.textSecondary }]}>
             {t(
               'security.lockedDesc',
-              'Bu defterin sayfaları ve kişisel notları cihazınızın yerel güvenliğiyle korunmaktadır.'
+              'Kilit, bu defteri yalnızca kimliğini doğrulayan kişinin açmasına izin verir; defterin içeriğini şifrelemez.'
             )}
           </Text>
 

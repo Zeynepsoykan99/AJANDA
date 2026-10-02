@@ -51,7 +51,10 @@ export default function LockManagementSheet({
       visible={visible}
       onClose={onClose}
       title={title || t('security.lockManagement', 'Kilit Yönetimi')}
-      subtitle={t('security.lockedDesc', 'Bu defter yerel güvenlik kilidiyle korunmaktadır.')}
+      subtitle={t(
+        'security.lockedDesc',
+        'Kilit, bu defteri yalnızca kimliğini doğrulayan kişinin açmasına izin verir; defterin içeriğini şifrelemez.'
+      )}
     >
       <View style={styles.contentContainer}>
         {/* Şifreyi Değiştir Seçeneği */}

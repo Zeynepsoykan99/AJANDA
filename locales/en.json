@@ -264,7 +264,7 @@
     "lockNotebook": "Lock This Notebook",
     "unlockNotebook": "Remove Lock",
     "lockedNotebook": "Locked Notebook",
-    "lockedDesc": "The pages and personal notes in this notebook are protected by your device's security.",
+    "lockedDesc": "The lock lets only someone who verifies their identity open this notebook; it does not encrypt the notebook’s contents.",
     "unlockPrompt": "Authenticate to access content",
     "unlockPromptWithTitle": "Authenticate to unlock \"{{title}}\"",
     "unlockToOpen": "Authenticate to open notebook",
@@ -469,5 +469,19 @@
     "suggestionMeeting": "Meeting",
     "suggestionIdea": "Idea",
     "suggestionUrgent": "Urgent"
+  },
+  "privacy": {
+    "understood": "Got it",
+    "handwritingTitle": "About Handwriting Recognition",
+    "handwritingP1": "To turn your handwriting into searchable text, the coordinates of your strokes and your selected language are sent over the internet to Google’s handwriting recognition service, where they are converted to text.",
+    "handwritingP2": "Your name, account, and device information are not sent. The resulting text is stored only on this device.",
+    "handwritingP3": "This conversion runs automatically on pages where you write by hand, and when you use the lasso tool’s “convert to text” action.",
+    "voiceTitle": "About Voice Notes",
+    "voiceP1": "To turn your voice notes into searchable text, your recording is passed to your phone’s speech recognition feature.",
+    "voiceAndroidLabel": "On Android phones:",
+    "voiceAndroidBody": "this is handled by the phone’s own speech recognition service — on most devices that service belongs to Google. Your audio may be sent over the internet to that service to be converted to text.",
+    "voiceIosLabel": "On iPhone and iPad:",
+    "voiceIosBody": "the conversion is done on the device whenever possible. However, if your device cannot handle your selected language on its own, your audio may be sent to Apple’s servers.",
+    "voiceP4": "The audio file you record is stored only on this device. Your name, account, and device information are not sent."
   }
 }

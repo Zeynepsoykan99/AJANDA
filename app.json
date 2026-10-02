@@ -13,7 +13,7 @@
       "infoPlist": {
         "NSFaceIDUsageDescription": "Günlüğünüzü ve kişisel defterlerinizi korumak için Face ID doğrulaması kullanılır.",
         "NSMicrophoneUsageDescription": "Sayfalarınıza sesli notlar eklemek ve kaydetmek için mikrofon erişimi gereklidir.",
-        "NSSpeechRecognitionUsageDescription": "Sesli notlarınızı otomatik olarak metne dönüştürmek ve aranabilir kılmak için ses tanıma izni gereklidir."
+        "NSSpeechRecognitionUsageDescription": "Sesli notlarınızı metne dönüştürüp aranabilir kılmak için ses tanıma kullanılır. Cihazınız bu dönüşümü kendi başına yapamadığında kaydınız, işlenmek üzere Apple'ın sunucularına gönderilebilir."
       }
     },
     "android": {

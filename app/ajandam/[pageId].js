@@ -52,6 +52,11 @@ import {
   processLassoRecognitionResults,
 } from '../../utils/lassoGeometry';
 import { getPageDisplayTitle, getCategoryDisplayName } from '../../utils/pageTitleHelper';
+import PrivacyNoticeModal, {
+  HANDWRITING_NOTICE_KEY,
+  hasSeenNotice,
+  markNoticeSeen,
+} from '../../components/ui/PrivacyNoticeModal';
 
 /**
  * PageViewScreen - Dinamik sayfa görüntüleme ve düzenleme
@@ -168,6 +173,26 @@ export default function PageViewScreen() {
   useEffect(() => {
     pageRef.current = page;
   }, [page]);
+
+  // El yazisi tanima, bu ekranda otomatik olarak calisabilir ve cizgiler cihaz
+  // disina gonderilir. Kullaniciya bunu BIR KEZ bildiriyoruz; onay akisi degil.
+  const [showHandwritingNotice, setShowHandwritingNotice] = useState(false);
+  useEffect(() => {
+    let isActive = true;
+    (async () => {
+      if (!(await hasSeenNotice(HANDWRITING_NOTICE_KEY)) && isActive) {
+        setShowHandwritingNotice(true);
+      }
+    })();
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const handleDismissHandwritingNotice = useCallback(() => {
+    setShowHandwritingNotice(false);
+    markNoticeSeen(HANDWRITING_NOTICE_KEY);
+  }, []);
 
   /**
    * Bekleyen tum degisiklikleri HEMEN diske yazar.
@@ -1356,6 +1381,13 @@ export default function PageViewScreen() {
         onDelete={handleDeleteAudioNote}
         onOpenRecorder={() => setIsAudioModalVisible(true)}
         onRetryTranscription={handleRetryTranscription}
+      />
+
+      {/* El Yazisi Tanima Bilgilendirmesi (bir kez) */}
+      <PrivacyNoticeModal
+        visible={showHandwritingNotice}
+        type="handwriting"
+        onDismiss={handleDismissHandwritingNotice}
       />
 
       {/* Geri Al (Undo) Bildirimi */}

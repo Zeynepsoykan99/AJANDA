@@ -264,7 +264,7 @@
     "lockNotebook": "Bloquear este cuaderno",
     "unlockNotebook": "Quitar bloqueo",
     "lockedNotebook": "Cuaderno bloqueado",
-    "lockedDesc": "Las páginas y notas personales de este cuaderno están protegidas con la seguridad del dispositivo.",
+    "lockedDesc": "El bloqueo permite abrir este cuaderno solo a quien verifique su identidad; no cifra el contenido del cuaderno.",
     "unlockPrompt": "Autentícate para acceder al contenido",
     "unlockPromptWithTitle": "Autentícate para desbloquear \"{{title}}\"",
     "unlockToOpen": "Autentícate para abrir el cuaderno",
@@ -469,5 +469,19 @@
     "suggestionMeeting": "Reunión",
     "suggestionIdea": "Idea",
     "suggestionUrgent": "Urgente"
+  },
+  "privacy": {
+    "understood": "Entendido",
+    "handwritingTitle": "Acerca del reconocimiento de escritura",
+    "handwritingP1": "Para convertir tu escritura en texto que se pueda buscar, las coordenadas de tus trazos y el idioma que has elegido se envían por internet al servicio de reconocimiento de escritura de Google, donde se convierten en texto.",
+    "handwritingP2": "No se envían tu nombre, tu cuenta ni la información de tu dispositivo. El texto resultante se guarda solo en este dispositivo.",
+    "handwritingP3": "Esta conversión se ejecuta automáticamente en las páginas donde escribes a mano y cuando usas la acción «convertir en texto» de la herramienta de lazo.",
+    "voiceTitle": "Acerca de las notas de voz",
+    "voiceP1": "Para convertir tus notas de voz en texto que se pueda buscar, tu grabación se pasa a la función de reconocimiento de voz de tu teléfono.",
+    "voiceAndroidLabel": "En teléfonos Android:",
+    "voiceAndroidBody": "de esto se encarga el propio servicio de reconocimiento de voz del teléfono; en la mayoría de los dispositivos ese servicio pertenece a Google. Tu audio puede enviarse por internet a ese servicio para convertirlo en texto.",
+    "voiceIosLabel": "En iPhone y iPad:",
+    "voiceIosBody": "la conversión se hace en el dispositivo siempre que sea posible. Sin embargo, si tu dispositivo no puede procesar por sí solo el idioma que has elegido, tu audio puede enviarse a los servidores de Apple.",
+    "voiceP4": "El archivo de audio que grabas se guarda solo en este dispositivo. No se envían tu nombre, tu cuenta ni la información de tu dispositivo."
   }
 }

@@ -264,7 +264,7 @@
     "lockNotebook": "Dieses Notizbuch sperren",
     "unlockNotebook": "Sperre aufheben",
     "lockedNotebook": "Gesperrtes Notizbuch",
-    "lockedDesc": "Die Seiten und persönlichen Notizen dieses Notizbuchs sind durch die Gerätesicherheit geschützt.",
+    "lockedDesc": "Die Sperre erlaubt nur Personen, die ihre Identität bestätigen, dieses Notizbuch zu öffnen; sie verschlüsselt den Inhalt des Notizbuchs nicht.",
     "unlockPrompt": "Authentifizieren, um auf den Inhalt zuzugreifen",
     "unlockPromptWithTitle": "Authentifizieren, um „{{title}}“ zu entsperren",
     "unlockToOpen": "Authentifizieren, um das Notizbuch zu öffnen",
@@ -469,5 +469,19 @@
     "suggestionMeeting": "Meeting",
     "suggestionIdea": "Idee",
     "suggestionUrgent": "Dringend"
+  },
+  "privacy": {
+    "understood": "Verstanden",
+    "handwritingTitle": "Über die Handschrifterkennung",
+    "handwritingP1": "Um Ihre Handschrift in durchsuchbaren Text umzuwandeln, werden die Koordinaten Ihrer Striche und die von Ihnen gewählte Sprache über das Internet an den Handschrifterkennungsdienst von Google gesendet und dort in Text umgewandelt.",
+    "handwritingP2": "Ihr Name, Ihr Konto und Ihre Geräteinformationen werden nicht gesendet. Der zurückgegebene Text wird nur auf diesem Gerät gespeichert.",
+    "handwritingP3": "Diese Umwandlung läuft automatisch auf Seiten, die Sie handschriftlich beschreiben, und wenn Sie mit dem Lasso-Werkzeug „in Text umwandeln“ wählen.",
+    "voiceTitle": "Über Sprachnotizen",
+    "voiceP1": "Um Ihre Sprachnotizen in durchsuchbaren Text umzuwandeln, wird Ihre Aufnahme an die Spracherkennung Ihres Telefons weitergegeben.",
+    "voiceAndroidLabel": "Auf Android-Telefonen:",
+    "voiceAndroidBody": "übernimmt dies der eigene Spracherkennungsdienst des Telefons – auf den meisten Geräten gehört dieser Dienst Google. Ihre Audioaufnahme kann zur Umwandlung in Text über das Internet an diesen Dienst gesendet werden.",
+    "voiceIosLabel": "Auf iPhone und iPad:",
+    "voiceIosBody": "erfolgt die Umwandlung möglichst direkt auf dem Gerät. Wenn Ihr Gerät die gewählte Sprache jedoch nicht selbst verarbeiten kann, kann Ihre Audioaufnahme an die Server von Apple gesendet werden.",
+    "voiceP4": "Die von Ihnen aufgenommene Audiodatei wird nur auf diesem Gerät gespeichert. Ihr Name, Ihr Konto und Ihre Geräteinformationen werden nicht gesendet."
   }
 }

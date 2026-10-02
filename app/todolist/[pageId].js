@@ -47,6 +47,11 @@ import {
 } from '../../utils/lassoGeometry';
 import useResponsiveLayout, { computeContainedPageDimensions } from '../../hooks/useResponsiveLayout';
 import { getPageDisplayTitle, getCategoryDisplayName } from '../../utils/pageTitleHelper';
+import PrivacyNoticeModal, {
+  HANDWRITING_NOTICE_KEY,
+  hasSeenNotice,
+  markNoticeSeen,
+} from '../../components/ui/PrivacyNoticeModal';
 
 /**
  * TodoViewScreen - Sadece To-Do listesini görüntüler ve düzenler
@@ -158,6 +163,26 @@ export default function TodoViewScreen() {
   useEffect(() => {
     pageRef.current = page;
   }, [page]);
+
+  // El yazisi tanima, bu ekranda otomatik olarak calisabilir ve cizgiler cihaz
+  // disina gonderilir. Kullaniciya bunu BIR KEZ bildiriyoruz; onay akisi degil.
+  const [showHandwritingNotice, setShowHandwritingNotice] = useState(false);
+  useEffect(() => {
+    let isActive = true;
+    (async () => {
+      if (!(await hasSeenNotice(HANDWRITING_NOTICE_KEY)) && isActive) {
+        setShowHandwritingNotice(true);
+      }
+    })();
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const handleDismissHandwritingNotice = useCallback(() => {
+    setShowHandwritingNotice(false);
+    markNoticeSeen(HANDWRITING_NOTICE_KEY);
+  }, []);
 
   /**
    * Bekleyen tum degisiklikleri HEMEN diske yazar.
@@ -1253,6 +1278,13 @@ export default function TodoViewScreen() {
         onDelete={handleDeleteAudioNote}
         onOpenRecorder={() => setIsAudioModalVisible(true)}
         onRetryTranscription={handleRetryTranscription}
+      />
+
+      {/* El Yazisi Tanima Bilgilendirmesi (bir kez) */}
+      <PrivacyNoticeModal
+        visible={showHandwritingNotice}
+        type="handwriting"
+        onDismiss={handleDismissHandwritingNotice}
       />
 
       {/* Geri Al (Undo) Bildirimi */}

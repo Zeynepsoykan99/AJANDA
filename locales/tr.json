@@ -264,7 +264,7 @@
     "lockNotebook": "Bu Defteri Kilitle",
     "unlockNotebook": "Kilidi Kaldır",
     "lockedNotebook": "Kilitli Defter",
-    "lockedDesc": "Bu defterin sayfaları ve kişisel notları cihazınızın yerel güvenliğiyle korunmaktadır.",
+    "lockedDesc": "Kilit, bu defteri yalnızca kimliğini doğrulayan kişinin açmasına izin verir; defterin içeriğini şifrelemez.",
     "unlockPrompt": "İçeriğe erişmek için kimliğinizi doğrulayın",
     "unlockPromptWithTitle": "\"{{title}}\" kilidini açmak için kimliğinizi doğrulayın",
     "unlockToOpen": "Defteri açmak için kimliğinizi doğrulayın",
@@ -469,5 +469,19 @@
     "suggestionMeeting": "Toplantı",
     "suggestionIdea": "Fikir",
     "suggestionUrgent": "Acil"
+  },
+  "privacy": {
+    "understood": "Anladım",
+    "handwritingTitle": "El Yazısı Tanıma Hakkında",
+    "handwritingP1": "El yazınızı aranabilir metne çevirebilmek için, çizgilerinizin koordinatları ve seçtiğiniz dil internet üzerinden Google’ın el yazısı tanıma servisine gönderilir ve metne orada dönüştürülür.",
+    "handwritingP2": "Adınız, hesabınız veya cihaz bilginiz gönderilmez. Dönen metin yalnızca bu cihazda saklanır.",
+    "handwritingP3": "Bu dönüşüm, el yazısı yazdığınız sayfalarda otomatik olarak ve kement aracıyla “metne çevir” dediğinizde çalışır.",
+    "voiceTitle": "Sesli Notlar Hakkında",
+    "voiceP1": "Sesli notlarınızı aranabilir metne çevirmek için kaydınız, telefonunuzun ses tanıma özelliğine iletilir.",
+    "voiceAndroidLabel": "Android telefonlarda:",
+    "voiceAndroidBody": "bu işi telefonun kendi ses tanıma servisi yapar — çoğu cihazda bu servis Google’a aittir. Sesiniz, metne çevrilmek üzere internet üzerinden bu servise gönderilebilir.",
+    "voiceIosLabel": "iPhone ve iPad’de:",
+    "voiceIosBody": "çevirme öncelikle cihazın içinde yapılır. Ancak cihazınız seçtiğiniz dili kendi başına çeviremiyorsa sesiniz Apple’ın sunucularına gönderilebilir.",
+    "voiceP4": "Kaydettiğiniz ses dosyası yalnızca bu cihazda saklanır. Adınız, hesabınız veya cihaz bilginiz gönderilmez."
   }
 }

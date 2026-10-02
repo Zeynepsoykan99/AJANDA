@@ -38,6 +38,11 @@ import {
   startLiveRecognition,
   resolveTranscriptionLanguage,
 } from '../../services/transcriptionService';
+import PrivacyNoticeModal, {
+  VOICE_NOTICE_KEY,
+  hasSeenNotice,
+  markNoticeSeen,
+} from '../ui/PrivacyNoticeModal';
 
 /**
  * AudioRecorderModal - Sesli Not Kayıt Modalı
@@ -73,6 +78,15 @@ export default function AudioRecorderModal({
   // Hazırlık/kaydetme sırasında butonlara görsel geri bildirim
   const [isPreparingRecording, setIsPreparingRecording] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Sesli notun metne cevrilmesi cihaz disinda islenebilir. Kullaniciya ilk
+  // kayit denemesinde BIR KEZ bildiriyoruz; onay akisi degil.
+  // Bildirim kapandiginda kayit OTOMATIK BASLAMAZ (kullanici karari).
+  const [showVoiceNotice, setShowVoiceNotice] = useState(false);
+  const handleDismissVoiceNotice = () => {
+    setShowVoiceNotice(false);
+    markNoticeSeen(VOICE_NOTICE_KEY);
+  };
 
   // Yeniden giriş koruması: bir işlem sürerken gelen ikinci basışlar yok sayılır.
   // State bir render geride kalabildiği için bayraklar ref'te tutulur.
@@ -214,6 +228,20 @@ export default function AudioRecorderModal({
     // açık kalabilirdi. Bu yüzden hazırlık boyunca yeni basışlar yok sayılır.
     if (startPendingRef.current) return;
     startPendingRef.current = true;
+
+    // Ilk kayit denemesinde bilgilendirmeyi goster ve DUR. Kayit baslamaz;
+    // kullanici "Anladim" dedikten sonra kayit dugmesine kendisi tekrar basar.
+    //
+    // DIKKAT: Bu kontrol `await` icerdigi icin koruma bayragi ZATEN set edilmis
+    // olmali. Aksi halde iki hizli basis da bayragi false gorup birlikte gecer
+    // ve C1'de kapatilan yeniden giris deligi tekrar acilirdi. Bu dalda kayit
+    // baslamadigi icin bayrak burada elle serbest birakilir.
+    if (!(await hasSeenNotice(VOICE_NOTICE_KEY))) {
+      setShowVoiceNotice(true);
+      startPendingRef.current = false;
+      return;
+    }
+
     setIsPreparingRecording(true);
 
     try {
@@ -517,6 +545,7 @@ export default function AudioRecorderModal({
   };
 
   return (
+    <>
     <Modal
       visible={visible}
       transparent
@@ -717,6 +746,15 @@ export default function AudioRecorderModal({
         </View>
       </TouchableWithoutFeedback>
     </Modal>
+
+    {/* Sesli Not Bilgilendirmesi (bir kez). Ust Modal'in ICINDE degil KARDESI
+        olarak render edilir; iOS'ta Modal icinde Modal sunumu sorunludur. */}
+    <PrivacyNoticeModal
+      visible={showVoiceNotice}
+      type="voice"
+      onDismiss={handleDismissVoiceNotice}
+    />
+    </>
   );
 }
 

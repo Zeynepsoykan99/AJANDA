@@ -4,6 +4,110 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-02] - Gizlilik Bilgilendirmeleri ve Dürüst Metinler (E2)
+
+### 🔍 Kapsam ve İhtiyaç
+- Denetim raporundaki E2: el yazısı vektörlerinin `inputtools.google.com`'a gönderilmesi ve bunun
+  "tüm veri cihazda" iddiasıyla çelişmesi. Kullanıcı kararı: **Seçenek (a)** — işlev kaldırılmayacak,
+  kullanıcı bilgilendirilecek.
+- STT araştırması, sesli notların da (Android'de sistem tanıyıcısına, iOS'ta cihaz desteklemiyorsa
+  Apple'a) cihaz dışına çıktığını gösterdi. Kullanıcı kararı: **iki ayrı bildirim**, birleştirilmeyecek.
+- Tüm metinler kullanıcı tarafından önceden onaylandı; değiştirilmeden uygulandı.
+
+### ✅ Eklenen Bileşen
+- **`components/ui/PrivacyNoticeModal.js`** [NEW] — iki bildirimi de gösteren paylaşılan kart.
+  - **Onay akışı DEĞİL:** kullanıcı yalnızca okuduğunu onaylar ("Anladım"). Reddetme yolu yok,
+    çünkü kullanıcı kararı "kaldırma yok, bilgilendirme" idi.
+  - `hasSeenNotice(key)` / `markNoticeSeen(key)` dışa açık; anahtarlar
+    `@ajanda_handwriting_notice_v1` ve `@ajanda_voice_notice_v1`.
+  - **Okuma hata verirse "görülmüş" varsayılır.** Bildirimi her açılışta tekrar göstermek, bir kez
+    kaçırmaktan daha rahatsız edici olurdu. Yazma hatası `console.error` ile bildirilir, yutulmaz.
+
+### 📍 Nereye Bağlandı
+- **El yazısı bildirimi:** `app/ajandam/[pageId].js` ve `app/todolist/[pageId].js` — sayfa tuvaline
+  ilk girişte, yani otomatik tanımanın ateşlenebileceği ilk anda.
+- **Sesli not bildirimi:** `components/audio/AudioRecorderModal.js` → `handleStartRecording`.
+  Kullanıcı kararı gereği **"Anladım" kaydı OTOMATİK BAŞLATMAZ**; bildirim yalnızca kapanır,
+  kullanıcı kayıt düğmesine kendisi tekrar basar.
+
+### 🐛 Çalışma Sırasında Yakalanan Regresyon (C1 deliği geri açılmıştı)
+- Bildirim kapısını ilk olarak `startPendingRef.current = true` atamasından **önce** koymuştum.
+  Kapı `await hasSeenNotice(...)` içerdiği için araya bir `await` girdi: iki hızlı basış da bayrağı
+  `false` görüp birlikte geçebilir, iki kayıt oturumu açılabilirdi — **C1'de kapatılan yeniden giriş
+  deliği tam olarak geri açılmış oluyordu.**
+- **Bunu mevcut `tests/audioRecorderReentrancy.test.js` yakaladı** (Test 7 düştü).
+- Düzeltme: bayrak `await`'ten **önce** set ediliyor; bildirim dalında kayıt başlamadığı için bayrak
+  o dalda **elle serbest bırakılıyor** (bırakılmazsa kayıt düğmesi kalıcı olarak ölürdü).
+
+### 🎭 Modal İçinde Modal Yerine Kardeş Modal
+- Bildirim ilk olarak `AudioRecorderModal`'ın `<Modal>`'ı **içine** yerleştirilmişti. Projede hiçbir
+  bileşen iç içe `<Modal>` kullanmıyor (kontrol edildi) ve iOS'ta Modal içinde Modal sunumu sorunlu.
+- Bileşenin dönüşü bir Fragment'e alınarak bildirim üst Modal'ın **kardeşi** yapıldı.
+
+### 📝 Dürüstlük Düzeltmeleri (metinler)
+- **`security.lockedDesc`** — eski: *"...cihazınızın yerel güvenliğiyle **korunmaktadır**."* Bu ifade
+  içeriğin şifrelendiğini ima ediyordu; **içerik şifreli değil.** Yeni: *"Kilit, bu defteri yalnızca
+  kimliğini doğrulayan kişinin açmasına izin verir; defterin içeriğini şifrelemez."*
+  Kullanıcı kararıyla **tek anahtar** olarak bırakıldı (iki ekranda da okunacak şekilde yazıldı).
+- **`NotebookLockGate.js` ve `LockManagementSheet.js`** satır içi varsayılan metinleri dil dosyasıyla
+  hizalandı. (İkisi birbirinden de farklıydı; `LockManagementSheet` *"yerel güvenlik kilidiyle
+  korunmaktadır"* diyordu.)
+- **`app.json` → `NSSpeechRecognitionUsageDescription`** — eski metin ağ işlemesinden hiç söz
+  etmiyordu; Apple'ın bu izni tam olarak sesin Apple sunucularına gönderilmesi içindir. Yeni metin
+  bunu açıkça söylüyor.
+
+### 🌍 Dil Dosyaları
+- Yeni `privacy` bölümü: 12 anahtar × 5 dil, **gerçek çeviriler** (yer tutucu veya Türkçe kopya yok;
+  Test 12 bunu açıkça denetliyor). `security.lockedDesc` beş dilde güncellendi.
+- Toplam **417 anahtar**, beş dilde tam parite.
+
+### 🧪 Eklenen Test
+- **`tests/privacyNoticeOnce.test.js`** [NEW] — 14 doğrulama. Gerçek `hasSeenNotice`/`markNoticeSeen`
+  kaynaktan okunup sahte AsyncStorage ile çalıştırılıyor.
+  - **Test 1 kalıcı kayıt olmadan bildirimin her seferinde gösterildiğini kanıtlıyor.**
+  - Test 2-4: gerçek mekanizmada tam olarak bir kez gösteriliyor, iki anahtar birbirinden bağımsız,
+    kayıt geçerli bir zaman damgası.
+  - Test 5-6: okuma hatasında spam yok, yazma hatası yutulmuyor.
+  - Test 8: el yazısı bildirimi iki sayfa tuvaline de bağlı.
+  - **Test 9: bildirim kapısı C1 korumasıyla çakışmıyor** (bayrak `await`'ten önce set, bildirim
+    dalında serbest bırakılıyor).
+  - Test 10: "Anladım" kaydı otomatik başlatmıyor.
+  - Test 11: iç içe Modal yok, kardeş olarak render ediliyor.
+  - Test 12-14: metinler beş dilde ve gerçek çeviri; `lockedDesc` artık şifrelemediğini **açıkça**
+    söylüyor (hem olumsuz hem olumlu kontrol); izin metni gerçeği yansıtıyor.
+- **Testin dişi olduğu kanıtlandı:** beş kasıtlı kırılma (okuma hatasında `false` dönmesi, kapının
+  bayraktan önce konması, "Anladım"ın kaydı başlatması, `de.json` metninin geri alınması, bildirim
+  dalında bayrağın serbest bırakılmaması) denendi; **beşi de yakalandı**, kod geri alındı.
+
+### 📁 Değiştirilen Dosyalar
+- [`components/ui/PrivacyNoticeModal.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/ui/PrivacyNoticeModal.js) [NEW]
+- [`app/ajandam/[pageId].js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/ajandam/%5BpageId%5D.js)
+- [`app/todolist/[pageId].js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/todolist/%5BpageId%5D.js)
+- [`components/audio/AudioRecorderModal.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/audio/AudioRecorderModal.js)
+- [`components/notebook/NotebookLockGate.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/notebook/NotebookLockGate.js)
+- [`components/security/LockManagementSheet.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/security/LockManagementSheet.js)
+- [`app.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/app.json)
+- [`locales/{tr,en,de,es,fr}.json`](file:///c:/Users/Zeynep/Desktop/AJANDA/locales)
+- [`tests/privacyNoticeOnce.test.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/tests/privacyNoticeOnce.test.js) [NEW]
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- `tests/` altındaki **19 test dosyasının tamamı** geçti.
+- 105 kaynak dosya `babel-preset-expo` ile sözdizimi denetiminden geçti; kırık relative import yok.
+- `app.json` geçerli JSON.
+- `localeIntegrity`: 417 anahtar, beş dilde tam parite; kodda kullanılan 295 anahtarın tamamı tanımlı.
+- **Cihazda doğrulanmadı:** Her iki bildirimin bir kez göründüğü ve ikinci açılışta çıkmadığı cihazda
+  test edilmelidir.
+
+### 📝 Kapsam Dışı / Bekleyen
+- **`NSFaceIDUsageDescription`** aynı "korumak için" imasını taşıyor; kullanıcı metni önce görmek
+  istediği için **değiştirilmedi**, onay bekliyor.
+- Sesli not kaydında **duraklat/devam** özelliği: Android canlı tanıma yolunda duraklatma teknik
+  olarak desteklenmediği için kod yazılmadı, kullanıcıya bulgularla birlikte soruldu.
+- Gizlilik politikası metni ve mağaza veri güvenliği formları hâlâ yazılmadı (yayın öncesi gerekli).
+
+---
+
 ## 📅 [2026-10-02] - Yol Haritası: Android'de Cihaz Üstü Konuşma Tanıma (yayın sonrası)
 
 ### 🔍 Durum Tespiti (kod değişikliği YAPILMADI)
