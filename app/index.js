@@ -128,6 +128,18 @@ export default function HomeScreen() {
           ))}
         </View>
 
+        {/* ⚠️ GECICI: PDF kutuphane dogrulamasi. Dogrulama bitince BU BLOK
+            ve app/pdf-probe.js SILINECEK. Kalici bir ozellik degildir. */}
+        <TouchableOpacity
+          activeOpacity={0.6}
+          onPress={() => router.push('/pdf-probe')}
+          style={styles.privacyLink}
+        >
+          <Text style={[styles.privacyLinkText, { color: colors.accent }]}>
+            PDF testi (geçici)
+          </Text>
+        </TouchableOpacity>
+
         {/* Gizlilik Politikasi — menunun en altinda kucuk bir satir */}
         <TouchableOpacity
           activeOpacity={0.6}

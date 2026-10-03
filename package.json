@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
+    "@dariyd/react-native-pdf-page-image": "^2.1.0",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~54.0.37",
@@ -17,6 +18,7 @@
     "expo-local-authentication": "~17.0.9",
     "expo-localization": "~17.0.9",
     "expo-notifications": "~0.32.17",
+    "expo-pdf-text-extract": "^1.1.0",
     "expo-print": "~15.0.8",
     "expo-router": "~6.0.24",
     "expo-secure-store": "~15.0.8",
