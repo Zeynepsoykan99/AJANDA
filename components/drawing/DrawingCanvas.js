@@ -12,6 +12,7 @@ import {
   getErasedCharacterIndices,
   eraseCharactersFromBlock,
 } from '../../utils/lassoGeometry';
+import { evaluateScribbleErase } from '../../utils/scribbleDetection';
 import { useZoomableCanvas } from './ZoomableCanvas';
 
 const triggerHaptic = () => {
@@ -70,6 +71,9 @@ export default function DrawingCanvas({
   onTextBlocksChange,
   onTextBlockDeleted,
   onTextBlockEdited,
+  stickers = [],
+  scribbleEraseEnabled = true,
+  onScribbleErase,
   selectedStrokeIds = [],
   selectionBounds = null,
   onSelectionChange,
@@ -161,6 +165,9 @@ export default function DrawingCanvas({
     onTextBlocksChange,
     onTextBlockDeleted,
     onTextBlockEdited,
+    stickers,
+    scribbleEraseEnabled,
+    onScribbleErase,
     selectedStrokeIds,
     selectionBounds,
     onSelectionChange,
@@ -202,6 +209,9 @@ export default function DrawingCanvas({
     onTextBlocksChange,
     onTextBlockDeleted,
     onTextBlockEdited,
+    stickers,
+    scribbleEraseEnabled,
+    onScribbleErase,
     selectedStrokeIds,
     selectionBounds,
     onSelectionChange,
@@ -560,6 +570,32 @@ export default function DrawingCanvas({
       pointsRef.current = [];
       setLassoPath('');
       return;
+    }
+
+    // Karalayarak silme: cizgi sayfaya EKLENMEDEN once degerlendirilir.
+    // Yalnizca `pen` aracinda calisir; fosforlu kalemde vurgulama hareketi
+    // zaten ustunu cizmeye benzedigi icin kapsam disidir.
+    if (
+      state.scribbleEraseEnabled &&
+      state.tool === 'pen' &&
+      state.onScribbleErase &&
+      pointsRef.current.length > 0
+    ) {
+      const verdict = evaluateScribbleErase({
+        points: pointsRef.current,
+        drawings: state.drawings,
+        textBlocks: state.textBlocks,
+        stickers: state.stickers,
+      });
+
+      // Karalama bir seye degmediyse hicbir sey silinmez ve cizgi normal
+      // sekilde islenmeye devam eder (asagiya duser).
+      if (verdict.shouldErase) {
+        state.onScribbleErase(verdict.targets);
+        pointsRef.current = [];
+        setCurrentPath('');
+        return;
+      }
     }
 
     if (pointsRef.current.length > 0 && state.onDrawingsChange) {

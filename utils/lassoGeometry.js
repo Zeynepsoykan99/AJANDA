@@ -44,7 +44,7 @@ function parseSvgPathToPoints(d) {
  * @param {object} stroke - Çizgi nesnesi
  * @returns {Array<{ x: number, y: number }>}
  */
-function getStrokePoints(stroke) {
+export function getStrokePoints(stroke) {
   if (Array.isArray(stroke?.points) && stroke.points.length > 0) {
     return stroke.points;
   }

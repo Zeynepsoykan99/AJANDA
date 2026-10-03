@@ -100,7 +100,9 @@
     "handwritingConverted": "Écriture convertie en texte",
     "multipleTextsConverted": "{{count}} textes convertis",
     "stickerDeleted": "Autocollant supprimé",
-    "typeNotePlaceholder": "Écrivez votre note..."
+    "typeNotePlaceholder": "Écrivez votre note...",
+    "scribbleErased": "{{count}} élément(s) supprimé(s)",
+    "scribbleEraseToggle": "Gribouiller pour effacer"
   },
   "lasso": {
     "convertToText": "Convertir en Texte",

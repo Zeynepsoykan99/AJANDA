@@ -66,6 +66,12 @@ import {
   processLassoRecognitionResults,
 } from '../../utils/lassoGeometry';
 import { transcribeAudioFile } from '../../services/transcriptionService';
+import { applyScribbleErase, revertScribbleErase } from '../../utils/scribbleDetection';
+import {
+  getDrawingPreferences,
+  isScribbleEraseEnabled,
+  addDrawingPreferencesListener,
+} from '../../services/drawingPreferencesService';
 
 const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
 
@@ -553,6 +559,21 @@ export default function NotebookPagesView({
 
   // Bildirim + geri alınabilir işlem kaydı. Her bildirime benzersiz id verilir; böylece art arda gelen
   // bildirimlerde otomatik kapanma süresi yeniden başlar ve Geri Al yalnızca son işlemi geri alır.
+  const [scribbleEraseEnabled, setScribbleEraseEnabled] = useState(isScribbleEraseEnabled());
+  useEffect(() => {
+    let isActive = true;
+    getDrawingPreferences().then((prefs) => {
+      if (isActive) setScribbleEraseEnabled(prefs.scribbleErase);
+    });
+    const unsubscribe = addDrawingPreferencesListener((prefs) => {
+      if (isActive) setScribbleEraseEnabled(prefs.scribbleErase);
+    });
+    return () => {
+      isActive = false;
+      unsubscribe();
+    };
+  }, []);
+
   const undoActionRef = useRef(null);
   const showUndoToast = useCallback((message, undoAction) => {
     undoActionRef.current = undoAction || null;
@@ -683,6 +704,24 @@ export default function NotebookPagesView({
     if (!action) return;
 
     switch (action.type) {
+      case 'scribble_erase': {
+        setNotebook((prev) => {
+          const currentPages = [...(prev?.pages || [])];
+          const index = currentPages.findIndex((p) => p.pageId === action.pageId);
+          if (index === -1) return prev;
+
+          const restored = revertScribbleErase({
+            drawings: currentPages[index].drawings || [],
+            textBlocks: currentPages[index].textBlocks || [],
+            stickers: currentPages[index].stickers || [],
+            undoRecord: action.undoRecord,
+          });
+          currentPages[index] = { ...currentPages[index], ...restored };
+          storageRef.current.updatePage(action.pageId, restored);
+          return { ...prev, pages: currentPages };
+        });
+        break;
+      }
       case 'page_added': {
         const updatedNotebook = await storageRef.current.deletePage(action.pageId);
         if (!updatedNotebook) return;
@@ -731,6 +770,53 @@ export default function NotebookPagesView({
   }, [pages, scrollToPageIndex]);
 
   // Çizimleri Güncelle (Sayfa bazlı debounced auto-save)
+  /**
+   * Karalayarak silme. Cizgi sayfaya eklenmez; uzeri karalanan cizgiler,
+   * cikartmalar ve metin karakterleri tek bir atomik islemde silinir.
+   *
+   * Uc alan birlikte degistigi icin TEK bir updatePage cagrisi yapilir:
+   * ayri ayri yazmak, bu ekrandaki paylasilan saveTimeoutRef yuzunden
+   * birbirini iptal ederdi.
+   */
+  const handleScribbleErase = useCallback(
+    (pageIndex, targets) => {
+      setNotebook((prev) => {
+        const currentPages = [...(prev?.pages || [])];
+        const target = currentPages[pageIndex];
+        if (!target) return prev;
+
+        const result = applyScribbleErase({
+          drawings: target.drawings || [],
+          textBlocks: target.textBlocks || [],
+          stickers: target.stickers || [],
+          targets,
+        });
+        if (result.deletedCount === 0) return prev;
+
+        currentPages[pageIndex] = {
+          ...target,
+          drawings: result.drawings,
+          textBlocks: result.textBlocks,
+          stickers: result.stickers,
+        };
+
+        storageRef.current.updatePage(target.pageId, {
+          drawings: result.drawings,
+          textBlocks: result.textBlocks,
+          stickers: result.stickers,
+        });
+
+        showUndoToast(
+          t('drawing.scribbleErased', '{{count}} öğe silindi', { count: result.deletedCount }),
+          { type: 'scribble_erase', pageId: target.pageId, undoRecord: result.undoRecord }
+        );
+
+        return { ...prev, pages: currentPages };
+      });
+    },
+    [showUndoToast, t]
+  );
+
   const handleDrawingsChange = useCallback(
     (pageIndex, newDrawings) => {
       setNotebook((prev) => {
@@ -1583,6 +1669,9 @@ export default function NotebookPagesView({
                       onDrawingsChange={(drawings) => handleDrawingsChange(index, drawings)}
                       textBlocks={p.textBlocks || []}
                       onTextBlocksChange={(blocks) => handleTextBlocksChange(index, blocks)}
+                      stickers={p.stickers || []}
+                      scribbleEraseEnabled={scribbleEraseEnabled}
+                      onScribbleErase={(targets) => handleScribbleErase(index, targets)}
                       selectedStrokeIds={isActive ? selectedStrokeIds : []}
                       selectionBounds={selectionBounds}
                       onSelectionChange={isActive ? handleSelectionChange : undefined}

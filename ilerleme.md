@@ -4,6 +4,125 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-03] - Karalayarak Silme + PDF Kütüphanesi Doğrulaması
+
+### 🎯 Karalayarak Silme (uygulandı)
+Fiziksel deftere yazıp üstünü karalayarak iptal etme hareketi. Kullanıcı kararları: otomatik hareket
+(Seçenek 5), dört modül, çizgi + el yazısı + metin kutusu + çıkartma, metinde **kısmi** silme,
+çıkartmada bütün silme, varsayılan **açık**.
+
+### 🧩 Yeniden Kullanılanlar (sıfırdan yazılmadı)
+- `utils/lassoGeometry.js`: `getStrokePoints`, `getTextBlockBounds`, `calculateCharacterBoxes`,
+  `getErasedCharacterIndices`, `eraseCharactersFromBlock`. (`getStrokePoints` dışa aktarıldı.)
+- `UndoToast` + mevcut geri alma desenleri (sayfa ekranlarında `pending*Ref`, defter ekranında
+  `showUndoToast(message, action)`).
+- Metin kutusunda kısmi silme, **mevcut silgi aracıyla aynı mantığı** kullanıyor: karalamanın her
+  noktası küçük bir silgi gibi davranıp `getErasedCharacterIndices` ile karakter seçiyor.
+
+### 🔬 Tespit — Üç Ölçüt, Biri Zorunlu
+`utils/scribbleDetection.js` [NEW], tamamı saf fonksiyon. Eşiklerin **tamamı** tek bir
+`SCRIBBLE_THRESHOLDS` nesnesinde (13 değer); cihaz testinden sonra yalnızca orası değişir.
+1. **Keskin yön dönüşü** (pencere tabanlı açı) — **ZORUNLU**
+2. Kendi kendini kesme sayısı
+3. Yoğunluk = yolUzunluğu / sınırKutusuKöşegeni
+
+Karar: **dönüş zorunlu + üçten en az iki ölçüt** + **karalamanın mevcut içerikle KESİŞMESİ**.
+
+### 🐛 Geliştirme Sırasında Düzeltilen İki Gerçek Hata
+1. **Seyreltme köşeleri yok ediyordu.** İlk sürüm nokta sayısını tekdüze örneklemeyle sınırlıyordu;
+   bu tam da ölçtüğümüz dönüşleri siliyor ve gerçek bir karalama (7 geçiş) düz çizgi gibi
+   görünüyordu — ölçülen dönüş 6 yerine **3**. Mesafe tabanlı yeniden seyreltmeye çevrildi.
+2. **Geniş karalamada dönüş iki ayrı 90° köşeye bölünüyordu** ve hiçbiri eşiği geçmiyordu
+   (çapraz karalama: **0 dönüş**). Yön artık tek parçadan değil `REVERSAL_SPAN` kadar noktalık bir
+   pencereden okunuyor; ayrıca `MIN_REVERSAL_ARM` ile kısa kollu dönüşler sayılmıyor.
+
+### 🛡️ Yanlış Pozitif: Ölçülen Sonuçlar
+Sentetik hareketlerle ölçüldü (eşik taraması yapıldı, `dec=8 / arm=14` seçildi):
+
+| Hareket | Karalama? |
+|---|---|
+| Düz çizgi, hafif dalga | hayır ✅ |
+| Spiral çizim | hayır ✅ |
+| El yazısı ilmekleri "eeee" | hayır ✅ |
+| Yatay / dar / çapraz / küçük karalama | **evet** ✅ |
+| Sık ilmekli el yazısı "eeeeeeee" | **evet** ⚠️ |
+| Tek darbede gölgelendirme | **evet** ⚠️ |
+
+**Dönüş şartı olmasaydı** "eeee" de silinecekti (3 ölçütten 2'sini sağlıyor) — Test 6 bunu kanıtlıyor.
+
+### ⚠️ Belgelenmiş Sınır
+Tek darbede **gölgelendirme** ve **sık ilmekli el yazısı** geometrik olarak karalamadan
+ayrılamıyor. İki koruma bunu yaşanabilir kılıyor: (1) karalama mevcut bir içerikle kesişmiyorsa
+hiçbir şey silinmez — boş alana gölgelendirme güvenli; (2) tek dokunuşla geri alınır.
+Kaynakta açıkça belgelendi, Test 14 davranışı sabitliyor. İleride **hız** (nokta zaman damgaları)
+üçüncü ayırt edici olarak eklenebilir.
+
+### 🔗 Entegrasyon
+- `DrawingCanvas.js`: çizgi sayfaya **eklenmeden önce** değerlendirilir, yalnızca `pen` aracında.
+  Yeni prop'lar: `stickers`, `scribbleEraseEnabled`, `onScribbleErase`.
+- `applyScribbleErase` / `revertScribbleErase` `scribbleDetection.js`'te — dört ekran aynı mantığı
+  paylaşsın diye. Silme **atomik**: çizgiler + çıkartmalar + metin değişiklikleri tek kayıt.
+- `app/ajandam/[pageId].js`, `app/todolist/[pageId].js`: `pendingScribbleEraseRef` + 5 sn UndoToast,
+  `handleUndo` zincirinin başına eklendi, unmount'ta zamanlayıcı temizleniyor.
+- `components/notebook/NotebookPagesView.js` (Günlüğüm + Notlarım): `showUndoToast` deseni ve
+  `handleUndoLastAction`'a `scribble_erase` dalı. Üç alan **tek** `updatePage` çağrısında yazılıyor;
+  ayrı ayrı yazmak o ekrandaki paylaşılan `saveTimeoutRef` yüzünden birbirini iptal ederdi.
+- `services/drawingPreferencesService.js` [NEW]: tercih dört ekranda ortak (ekran state'i değil).
+  `getDrawingPreferences()` **güncel** önbelleği döndürür — bayat promise kopyası hatası
+  (privacySettings'te yaşanan) burada baştan engellendi.
+- `DrawingToolbar.js`: silginin yanında aç/kapa anahtarı.
+- `locales`: `drawing.scribbleErased`, `drawing.scribbleEraseToggle` × 5 dil → **430 anahtar**.
+
+### 🧪 Test
+**`tests/scribbleDetection.test.js`** [NEW] — 20 doğrulama, gerçek fonksiyonlar kaynaktan okunuyor.
+Test 3 (6 normal hareket silinmiyor), Test 5 (4 karalama tanınıyor), Test 6 (dönüş şartının el
+yazısını kurtardığı), Test 9 (metinde kısmi silme), Test 10 (boş alan), Test 11 (düz çizgi),
+Test 15-18 (uygulama + atomik geri alma), Test 19-20 (bağlantı, ayar, 5 dil).
+**Dört kasıtlı kırılma denendi, dördü de yakalandı.**
+
+### 📚 PDF Kütüphanesi Doğrulaması (Aşama 1 — kod yazılmadı, paket KURULMADI)
+`@dariyd/react-native-pdf-page-image@2.1.0` paketi scratchpad'e indirilip **kaynak düzeyinde**
+incelendi:
+- `codegenConfig: { type: "modules" }` + `src/NativePdfPageImage.ts` (`TurboModuleRegistry.getEnforcing`)
+  → **gerçek TurboModule**, New Architecture yerlisi.
+- peerDep `react-native >= 0.76`; projede **0.81** ✓
+- iOS: `import PDFKit` + `UIGraphicsImageRenderer` (Apple yerel API). podspec'te
+  `install_modules_dependencies(s)` → New Arch pod yardımcısı ✓
+- Android: `android.graphics.pdf.PdfRenderer` + `ParcelFileDescriptor`, `minSdkVersion 24` ✓
+- Çalışma zamanı bağımlılığı **yok**.
+- API tam ihtiyacımıza uygun: `openPdf`, **`generate(uri, page, scale, {format, quality, maxDimension})`**
+  (sayfa sayfa tembel dönüştürme), `generateAllPages`, `compress`, `closePdf`.
+
+**Cihazda çalıştırılarak doğrulanmadı:** yeni native kod içerdiği için mevcut dev build'de
+`getEnforcing` hata verir; **yeni bir EAS development build gerekiyor** (kullanıcı kararı bekliyor,
+build başlatılmadı).
+
+**Metin çıkarma için öneri:** `expo-pdf-text-extract@1.1.0` (May 2026, PDFKit + PDFBox, Expo
+modülü). Alternatif `@meedwire/react-native-pdf-api@0.2.0` hem render hem çıkarma yapıyor ve
+TurboModule+Fabric, ancak **0.2.0** sürümü çok genç; tüm özelliği ona bağlamak risk.
+
+### 📁 Değiştirilen Dosyalar
+- `utils/scribbleDetection.js` [NEW], `services/drawingPreferencesService.js` [NEW]
+- `utils/lassoGeometry.js` (yalnızca `getStrokePoints` dışa aktarıldı)
+- `components/drawing/DrawingCanvas.js`, `components/drawing/DrawingToolbar.js`
+- `components/notebook/NotebookPagesView.js`
+- `app/ajandam/[pageId].js`, `app/todolist/[pageId].js`
+- `locales/{tr,en,de,es,fr}.json`
+- `tests/scribbleDetection.test.js` [NEW], `ilerleme.md`
+
+### ✅ Doğrulama
+- **24/24** test dosyası geçti · 110 dosya sözdizimi temiz · çözümlenemeyen tanımlayıcı yok
+- `localeIntegrity`: 430 anahtar, beş dilde tam parite
+- **Cihazda doğrulanmadı** (özellikle yanlış pozitif senaryoları)
+
+### 📝 Kapsam Dışı
+- **Kapak ekranları** (`app/ajandam/index.js`, `NotebookCoverView`) karalayarak silmeyi almadı.
+  `onScribbleErase` verilmediği için özellik orada sessizce pasif — güvenli, ama bilinçli bir eksik.
+- `NotebookPagesView`'deki paylaşılan `saveTimeoutRef` alan ezme sorunu (sayfa ekranlarında
+  A2/A3'te çözülmüştü) burada duruyor; kendi yazmam tek çağrıda olduğu için etkilenmiyor.
+
+---
+
 ## 📅 [2026-10-03] - Ana Menü Başlık/İkon Çakışması Düzeltildi
 
 ### 🐛 Kök Neden (kanıtlı)

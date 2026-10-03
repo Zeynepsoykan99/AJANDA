@@ -100,7 +100,9 @@
     "handwritingConverted": "Handwriting converted to text",
     "multipleTextsConverted": "{{count}} texts converted",
     "stickerDeleted": "Sticker deleted",
-    "typeNotePlaceholder": "Type your note..."
+    "typeNotePlaceholder": "Type your note...",
+    "scribbleErased": "{{count}} item deleted",
+    "scribbleEraseToggle": "Scribble to erase"
   },
   "lasso": {
     "convertToText": "Convert to Text",

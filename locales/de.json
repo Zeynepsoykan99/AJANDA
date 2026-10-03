@@ -100,7 +100,9 @@
     "handwritingConverted": "Handschrift in Text umgewandelt",
     "multipleTextsConverted": "{{count}} Texte konvertiert",
     "stickerDeleted": "Sticker gelöscht",
-    "typeNotePlaceholder": "Notiz schreiben..."
+    "typeNotePlaceholder": "Notiz schreiben...",
+    "scribbleErased": "{{count}} Element gelöscht",
+    "scribbleEraseToggle": "Durchstreichen zum Löschen"
   },
   "lasso": {
     "convertToText": "In Text umwandeln",

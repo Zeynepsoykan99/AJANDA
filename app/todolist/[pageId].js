@@ -36,6 +36,13 @@ import AudioNotesDeck from '../../components/audio/AudioNotesDeck';
 import IndexFlagsRail from '../../components/stationery/IndexFlagsRail';
 import { recognizeHandwriting, recognizeSelectedStrokes } from '../../services/handwritingService';
 import { getPrivacySettings } from '../../services/privacySettingsService';
+import * as Haptics from 'expo-haptics';
+import { applyScribbleErase, revertScribbleErase } from '../../utils/scribbleDetection';
+import {
+  getDrawingPreferences,
+  isScribbleEraseEnabled,
+  addDrawingPreferencesListener,
+} from '../../services/drawingPreferencesService';
 import { NotificationService } from '../../services/notificationService';
 import { AudioService } from '../../services/audioService';
 import { transcribeAudioFile } from '../../services/transcriptionService';
@@ -90,6 +97,22 @@ export default function TodoViewScreen() {
   const [isAudioModalVisible, setIsAudioModalVisible] = useState(false);
   const [undoToast, setUndoToast] = useState({ visible: false, message: '' });
   const pendingStickerDeleteRef = useRef(null);
+  // Karalayarak silme: geri alma penceresi boyunca bekleyen islem
+  const pendingScribbleEraseRef = useRef(null);
+  const [scribbleEraseEnabled, setScribbleEraseEnabled] = useState(isScribbleEraseEnabled());
+  useEffect(() => {
+    let isActive = true;
+    getDrawingPreferences().then((prefs) => {
+      if (isActive) setScribbleEraseEnabled(prefs.scribbleErase);
+    });
+    const unsubscribe = addDrawingPreferencesListener((prefs) => {
+      if (isActive) setScribbleEraseEnabled(prefs.scribbleErase);
+    });
+    return () => {
+      isActive = false;
+      unsubscribe();
+    };
+  }, []);
   const saveTimeoutRef = useRef(null);
   // Henuz diske yazilmamis degisiklikler TEK bir yukte birikir.
   // Onceden her alan (data / drawings / textBlocks) ayni zamanlayiciyi
@@ -293,6 +316,62 @@ export default function TodoViewScreen() {
       scheduleSave({ textBlocks: newTextBlocks }, 400);
     },
     [scheduleSave]
+  );
+
+  /**
+   * Karalayarak silme: cizgi sayfaya eklenmez, uzeri karalananlar silinir.
+   * Silinenler + karalama tek bir ATOMIK islem olarak kaydedilir.
+   */
+  const handleScribbleErase = useCallback(
+    (targets) => {
+      const current = pageRef.current;
+      if (!current) return;
+
+      const result = applyScribbleErase({
+        drawings: current.drawings || [],
+        textBlocks: current.textBlocks || [],
+        stickers: current.stickers || [],
+        targets,
+      });
+      if (result.deletedCount === 0) return;
+
+      setPage((prev) =>
+        prev
+          ? {
+              ...prev,
+              drawings: result.drawings,
+              textBlocks: result.textBlocks,
+              stickers: result.stickers,
+            }
+          : prev
+      );
+      scheduleSave({
+        drawings: result.drawings,
+        textBlocks: result.textBlocks,
+        stickers: result.stickers,
+      });
+
+      if (pendingScribbleEraseRef.current?.timer) {
+        clearTimeout(pendingScribbleEraseRef.current.timer);
+      }
+      const timer = setTimeout(() => {
+        pendingScribbleEraseRef.current = null;
+        setUndoToast({ visible: false, message: '' });
+      }, 5000);
+      pendingScribbleEraseRef.current = { undoRecord: result.undoRecord, timer };
+
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      } catch (e) {}
+
+      setUndoToast({
+        visible: true,
+        message: t('drawing.scribbleErased', '{{count}} öğe silindi', {
+          count: result.deletedCount,
+        }),
+      });
+    },
+    [scheduleSave, t]
   );
 
   const handleUndoDrawing = useCallback(() => {
@@ -675,6 +754,27 @@ export default function TodoViewScreen() {
 
   // Genel Geri Al (Undo) İşlemi - Çıkartma, Çizim ve Dönüştürmeyi Kapsar
   const handleUndo = useCallback(() => {
+    // 0. En son islem karalayarak silmeyse once onu geri al
+    if (pendingScribbleEraseRef.current) {
+      clearTimeout(pendingScribbleEraseRef.current.timer);
+      const { undoRecord } = pendingScribbleEraseRef.current;
+      pendingScribbleEraseRef.current = null;
+      setUndoToast({ visible: false, message: '' });
+
+      const current = pageRef.current;
+      if (current) {
+        const restored = revertScribbleErase({
+          drawings: current.drawings || [],
+          textBlocks: current.textBlocks || [],
+          stickers: current.stickers || [],
+          undoRecord,
+        });
+        setPage((prev) => (prev ? { ...prev, ...restored } : prev));
+        scheduleSave(restored);
+      }
+      return;
+    }
+
     // 1. Bekleyen toast işlemi var mı?
     if (pendingStickerDeleteRef.current) {
       clearTimeout(pendingStickerDeleteRef.current.timer);
@@ -768,6 +868,13 @@ export default function TodoViewScreen() {
 
   // Toast süresi dolunca veya kapanınca kalıcı güncelle
   const handleDismissUndoToast = useCallback(() => {
+    if (pendingScribbleEraseRef.current) {
+      clearTimeout(pendingScribbleEraseRef.current.timer);
+      pendingScribbleEraseRef.current = null;
+      setUndoToast({ visible: false, message: '' });
+      return;
+    }
+
     if (pendingStickerDeleteRef.current) {
       clearTimeout(pendingStickerDeleteRef.current.timer);
       const pending = pendingStickerDeleteRef.current;
@@ -786,6 +893,9 @@ export default function TodoViewScreen() {
       isMountedRef.current = false;
       if (pendingStickerDeleteRef.current) {
         clearTimeout(pendingStickerDeleteRef.current.timer);
+      }
+      if (pendingScribbleEraseRef.current) {
+        clearTimeout(pendingScribbleEraseRef.current.timer);
       }
     };
   }, []);
@@ -1194,6 +1304,9 @@ export default function TodoViewScreen() {
             onTextBlocksChange={handleTextBlocksChange}
             onTextBlockDeleted={handleTextBlockDeleted}
             onTextBlockEdited={handleTextBlockEdited}
+            stickers={page.stickers || []}
+            scribbleEraseEnabled={scribbleEraseEnabled}
+            onScribbleErase={handleScribbleErase}
             selectedStrokeIds={selectedStrokeIds}
             selectionBounds={selectionBounds}
             onSelectionChange={handleSelectionChange}

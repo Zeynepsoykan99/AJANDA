@@ -100,7 +100,9 @@
     "handwritingConverted": "El yazısı metne dönüştürüldü",
     "multipleTextsConverted": "{{count}} metin dönüştürüldü",
     "stickerDeleted": "Çıkartma silindi",
-    "typeNotePlaceholder": "Notunu yaz..."
+    "typeNotePlaceholder": "Notunu yaz...",
+    "scribbleErased": "{{count}} öğe silindi",
+    "scribbleEraseToggle": "Karalayarak silme"
   },
   "lasso": {
     "convertToText": "Metne Dönüştür",

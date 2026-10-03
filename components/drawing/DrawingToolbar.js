@@ -20,6 +20,11 @@ import Animated, {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
+import {
+  getDrawingPreferences,
+  isScribbleEraseEnabled,
+  setScribbleEraseEnabled,
+} from '../../services/drawingPreferencesService';
 import { useTheme } from '../../context/ThemeContext';
 import ColorPicker, { Panel3, Preview } from 'reanimated-color-picker';
 
@@ -82,6 +87,25 @@ export default function DrawingToolbar({
   canUndo = false,
   style,
 }) {
+  // Karalayarak silme tercihi dort ekranda ortaktir; servisten okunur.
+  const [scribbleErase, setScribbleErase] = React.useState(isScribbleEraseEnabled());
+  React.useEffect(() => {
+    let isActive = true;
+    getDrawingPreferences().then((prefs) => {
+      if (isActive) setScribbleErase(prefs.scribbleErase);
+    });
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const handleToggleScribbleErase = () => {
+    triggerHaptic();
+    const next = !scribbleErase;
+    setScribbleErase(next);
+    setScribbleEraseEnabled(next);
+  };
+
   const { t } = useTranslation();
   const { colors } = useTheme();
 
@@ -416,6 +440,24 @@ export default function DrawingToolbar({
                       name="eraser"
                       size={17}
                       color={currentTool === 'eraser' ? colors.accent : colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+
+                  {/* Karalayarak Silme Anahtari (arac degil, ac/kapa) */}
+                  <TouchableOpacity
+                    onPress={handleToggleScribbleErase}
+                    style={[
+                      styles.toolBtn,
+                      scribbleErase && [styles.activeToolBtn, { backgroundColor: colors.accent + '20' }],
+                    ]}
+                    accessibilityRole="switch"
+                    accessibilityState={{ checked: scribbleErase }}
+                    accessibilityLabel={t('drawing.scribbleEraseToggle', 'Karalayarak silme')}
+                  >
+                    <MaterialCommunityIcons
+                      name={scribbleErase ? 'draw' : 'draw-pen'}
+                      size={17}
+                      color={scribbleErase ? colors.accent : colors.textSecondary}
                     />
                   </TouchableOpacity>
 
