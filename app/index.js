@@ -56,12 +56,7 @@ export default function HomeScreen() {
       >
         {/* Başlık Bölümü */}
         <View style={styles.headerContainer}>
-          <Text style={[styles.appTitle, { color: colors.textPrimary }]}>
-            {t('home.appTitle', 'AJANDA')}
-          </Text>
-          <View style={[styles.titleUnderline, { backgroundColor: colors.border }]} />
-
-          {/* Sağ Üst Buton Grubu (Dil Seçimi + Tema Seçimi) */}
+          {/* Buton Grubu (Dil / Tema / Gizlilik) — basligin USTUNDE kendi satirinda */}
           <View style={styles.headerRightButtons}>
             <TouchableOpacity
               style={[styles.headerIconButton, { backgroundColor: colors.card, borderColor: colors.border }]}
@@ -90,6 +85,12 @@ export default function HomeScreen() {
               <MaterialCommunityIcons name="shield-lock-outline" size={22} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
+
+          <Text style={[styles.appTitle, { color: colors.textPrimary }]}>
+            {t('home.appTitle', 'AJANDA')}
+          </Text>
+          <View style={[styles.titleUnderline, { backgroundColor: colors.border }]} />
+
         </View>
 
         {/* Hızlı Arama Çubuğu (Spotlight Search Bar) */}
@@ -200,7 +201,6 @@ const styles = StyleSheet.create({
   headerContainer: {
     alignItems: 'center',
     marginBottom: 28,
-    position: 'relative',
     width: '100%',
   },
   appTitle: {
@@ -215,13 +215,17 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     marginTop: 6,
   },
+  // Butonlar MUTLAK konumlandirilmaz. Onceden `position: 'absolute'` ile sag
+  // uste sabitlenmislerdi; basligin ortalanmis genisligiyle dar ekranlarda
+  // kaciniimaz olarak cakisiyorlardi (ucuncu buton eklenince daha da kotulesti).
+  // Artik kendi satirlarinda, akisin icinde duruyorlar: hicbir genislikte
+  // cakisma olusamaz.
   headerRightButtons: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
+    alignSelf: 'flex-end',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginBottom: 14,
   },
   headerIconButton: {
     width: 42,

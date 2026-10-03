@@ -4,6 +4,60 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-03] - Ana Menü Başlık/İkon Çakışması Düzeltildi
+
+### 🐛 Kök Neden (kanıtlı)
+- `app/index.js` → `headerRightButtons` stili **`position: 'absolute', right: 0, top: 0`** ile sağ üste
+  sabitlenmişti; `appTitle` ise `headerContainer`'ın `alignItems: 'center'`'ı ile **ortalanıyordu**.
+  Mutlak konumlandırılan öğe akıştan çıktığı için iki alan birbirini "görmüyor" ve dar ekranlarda
+  kaçınılmaz olarak üst üste biniyordu.
+- Geometri: içerik genişliği = ekran − 2×24. Üç buton = 3×42 + 2×8 = **142px**. Başlık ≈ **125px**.
+  Çakışma koşulu `içerikGenişliği < 409px`, yani **ekran < 457px**.
+- Yeni eklenen üçüncü buton (gizlilik) sorunu büyüttü ama **sebebi değil**; iki butonla da
+  (100px) eşik 350px civarındaydı.
+
+### ✅ Düzeltme
+- Buton grubu **mutlak konumlandırmadan çıkarıldı**, `alignSelf: 'flex-end'` ile **kendi satırına**
+  alındı ve JSX'te **başlığın üstüne** taşındı. Başlık ve butonlar artık aynı dikey yığında;
+  **hiçbir genişlikte çakışma oluşamaz** — bu bir ayar değil, yapısal bir garanti.
+- `headerContainer`'daki artık gereksiz `position: 'relative'` kaldırıldı.
+- Buton satırı ile başlık arasına `marginBottom: 14` nefes payı eklendi.
+
+### 🤔 Değerlendirilip Seçilmeyen Yol
+- **Satır düzeni (başlık solda/ortada, butonlar sağda):** başlığın gerçekten ortalanması için
+  solda 142px'lik bir denge boşluğu gerekir; 360px ekranda başlığa kalan yer **28px**'e düşüyordu.
+  Uygulanabilir değil.
+- **Tabletlerde eski görünümü koruyan koşullu yerleşim:** iki ayrı kod yolu ve iki ayrı test yükü
+  getirirdi. Tek yerleşim tercih edildi; tablette de düzgün görünüyor. (Kullanıcı cihazda görüp
+  isterse koşullu varyanta dönülebilir.)
+
+### 🧪 Eklenen Test
+- **`tests/homeHeaderLayout.test.js`** [NEW] — 6 doğrulama. Ölçüler (buton boyutu, boşluk, yazı tipi
+  boyutu, harf aralığı, kenar boşluğu) ve **buton sayısı** doğrudan **kaynaktan okunuyor**; stil
+  değişirse test de birlikte değişir.
+  - **Test 1 eski mutlak yerleşimin gerçekten çakıştığını kanıtlıyor:** 6 ekrandan **4'ünde**
+    (320, 360, 393, 430 px — yani tüm telefonlar) çakışma var, tabletlerde yok. Kullanıcının
+    bildirdiği tabloyla birebir uyuşuyor.
+  - Test 2-3: mutlak konumlandırma kaldırılmış, butonlar JSX'te başlıktan önce.
+  - Test 4: yeni yerleşim 6 ekran genişliğinde de çakışmıyor.
+  - Test 5: **ileriye dönük koruma** — en dar ekranda 4. bir buton için de yer var; biri eklenip
+    sığmazsa test uyarır.
+  - Test 6: buton satırı ile başlık arasında en az 8px boşluk.
+- **Testin dişi kanıtlandı:** üç kasıtlı kırılma (mutlak konumlandırmanın geri gelmesi, butonların
+  başlıktan sonraya alınması, nefes payının 4px'e düşürülmesi) denendi; **üçü de yakalandı**.
+
+### 📁 Değiştirilen Dosyalar
+- [`app/index.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/app/index.js)
+- [`tests/homeHeaderLayout.test.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/tests/homeHeaderLayout.test.js) [NEW]
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- `tests/` altındaki **23 test dosyasının tamamı** geçti.
+- 108 kaynak dosya `babel-preset-expo` ile sözdizimi denetiminden geçti; kırık import yok.
+- **Cihazda doğrulanmadı:** yerleşimin telefon ve tablette görsel olarak doğru durduğu test edilmeli.
+
+---
+
 ## 📅 [2026-10-02] - Otomatik Veri Gönderimi İçin Aç/Kapa Ayarları + Rehber Tutarlılık Testi
 
 ### 🔍 Kapsam
