@@ -44,6 +44,8 @@ import { recognizeHandwriting, recognizeSelectedStrokes } from '../../services/h
 import { getPrivacySettings } from '../../services/privacySettingsService';
 import * as Haptics from 'expo-haptics';
 import { applyScribbleErase, revertScribbleErase } from '../../utils/scribbleDetection';
+// GECICI (tesshis): kok neden bulununca kaldirilacak
+import { dlog, len, textLen } from '../../utils/diagnosticLog';
 import {
   getDrawingPreferences,
   isScribbleEraseEnabled,
@@ -229,6 +231,12 @@ export default function PageViewScreen() {
     }
     const pending = pendingSaveRef.current;
     pendingSaveRef.current = null;
+    // GECICI (tesshis): diske GERCEKTEN ne yaziliyor
+    dlog('screen:flush', {
+      fields: pending ? Object.keys(pending).join('|') : '-',
+      blocks: pending ? len(pending.textBlocks) : '-',
+      chars: pending && pending.textBlocks ? textLen(pending.textBlocks) : '-',
+    });
     if (!pending || !pageId) return;
     try {
       await StorageService.updatePage(pageId, pending);
@@ -243,6 +251,12 @@ export default function PageViewScreen() {
    */
   const scheduleSave = useCallback(
     (updates, delay = 500) => {
+      // GECICI (tesshis): bekleyen yukte hangi alanlar birikiyor
+      dlog('screen:scheduleSave', {
+        fields: Object.keys(updates).join('|'),
+        pendingBefore: Object.keys(pendingSaveRef.current || {}).join('|') || '-',
+        delay,
+      });
       pendingSaveRef.current = { ...(pendingSaveRef.current || {}), ...updates };
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = setTimeout(() => {
@@ -326,6 +340,13 @@ export default function PageViewScreen() {
   const handleTextBlocksChange = useCallback(
     (newTextBlocks) => {
       // Guncelleyici SAF
+      // GECICI (tesshis)
+      dlog('screen:textBlocksChange', {
+        blocks: len(newTextBlocks),
+        chars: textLen(newTextBlocks),
+        prevBlocks: len(pageRef.current?.textBlocks),
+        prevChars: textLen(pageRef.current?.textBlocks),
+      });
       setPage((prev) => (prev ? { ...prev, textBlocks: newTextBlocks } : prev));
       scheduleSave({ textBlocks: newTextBlocks }, 400);
     },

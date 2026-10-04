@@ -13,6 +13,8 @@ import {
   eraseCharactersFromBlock,
 } from '../../utils/lassoGeometry';
 import { evaluateScribbleErase } from '../../utils/scribbleDetection';
+// GECICI (tesshis): kok neden bulununca bu import ve dlog cagrilari kaldirilacak
+import { dlog, len, textLen } from '../../utils/diagnosticLog';
 import { useZoomableCanvas } from './ZoomableCanvas';
 
 const triggerHaptic = () => {
@@ -79,7 +81,13 @@ export default function DrawingCanvas({
   onSelectionChange,
   style,
 }) {
-  const { scale: zoomScale, pageToCanvas, screenToCanvas, isDrawingActive } = useZoomableCanvas();
+  const {
+    scale: zoomScale,
+    pageToCanvas,
+    screenToCanvas,
+    isDrawingActive,
+    isStickerDragging,
+  } = useZoomableCanvas();
   const [currentPath, setCurrentPath] = useState('');
   const [lassoPath, setLassoPath] = useState('');
   const [hiddenStrokeIds, setHiddenStrokeIds] = useState(new Set());
@@ -336,6 +344,13 @@ export default function DrawingCanvas({
 
       if (erasedIndices.length > 0) {
         const result = eraseCharactersFromBlock(block, erasedIndices);
+        // GECICI (tesshis)
+        dlog('eraser:charsHit', {
+          blockId: block.id,
+          erased: erasedIndices.length,
+          changed: result.changed,
+          willDeleteBlock: result.shouldDeleteBlock,
+        });
         if (result.changed) {
           session.hasChanges = true;
           session.textBlocksChanged = true;
@@ -422,6 +437,16 @@ export default function DrawingCanvas({
     }
 
     // 2. Metin kutularını tek seferde güncelle
+    // GECICI (tesshis)
+    dlog('eraser:commit', {
+      textBlocksChanged: session.textBlocksChanged,
+      deletedStrokes: session.deletedDrawingIds.size,
+      sessionBlocks: len(session.currentTextBlocks),
+      sessionChars: textLen(session.currentTextBlocks),
+      propBlocks: len(state.textBlocks),
+      propChars: textLen(state.textBlocks),
+      hasHandler: !!state.onTextBlocksChange,
+    });
     if (session.textBlocksChanged && state.onTextBlocksChange) {
       stateRef.current.textBlocks = session.currentTextBlocks;
       state.onTextBlocksChange(session.currentTextBlocks);
@@ -456,6 +481,13 @@ export default function DrawingCanvas({
       }
 
       if (state.tool === 'eraser') {
+        // GECICI (tesshis)
+        dlog('eraser:sessionStart', {
+          drawings: len(state.drawings),
+          textBlocks: len(state.textBlocks),
+          chars: textLen(state.textBlocks),
+          hasOnTextBlocksChange: !!state.onTextBlocksChange,
+        });
         eraserSessionRef.current = {
           drawings: [...state.drawings],
           deletedDrawingIds: new Set(),
@@ -710,16 +742,30 @@ export default function DrawingCanvas({
     .enabled(isDrawingMode)
     .onBegin(() => {
       'worklet';
+      // Cizim modunda bir cikartma uzun basisla surukleniyorsa cizim baslamaz.
+      // Paylasilan deger worklet icinde DOGRUDAN okunur; stateRef'e eklenmez,
+      // boylece uc-liste senkronizasyonu (drawingCanvasStateRef testi) bozulmaz.
+      if (isStickerDragging && isStickerDragging.value) {
+        return;
+      }
       if (isDrawingActive) {
         isDrawingActive.value = true;
       }
     })
     .onStart((event) => {
       'worklet';
+      // onBegin'den erken donmek sonraki geri cagrilari engellemez; bayrak
+      // burada da gozetilmeli, yoksa cikartma suruklenirken cizgi baslar.
+      if (isStickerDragging && isStickerDragging.value) {
+        return;
+      }
       runOnJS(handleTouchStart)(event.absoluteX, event.absoluteY, event.x, event.y);
     })
     .onUpdate((event) => {
       'worklet';
+      if (isStickerDragging && isStickerDragging.value) {
+        return;
+      }
       runOnJS(handleTouchMove)(event.absoluteX, event.absoluteY, event.x, event.y);
     })
     .onEnd(() => {
@@ -742,6 +788,9 @@ export default function DrawingCanvas({
     .enabled(isDrawingMode && tool !== 'lasso')
     .onEnd((event) => {
       'worklet';
+      if (isStickerDragging && isStickerDragging.value) {
+        return;
+      }
       runOnJS(handleDotTap)(event.x, event.y);
     });
 

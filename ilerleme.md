@@ -4,6 +4,86 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-04] - Çizim Modunda Çıkartma Sürükleme (SORUN 3) + Geçici Tanı Logları (SORUN 2/4)
+
+### 🐛 SORUN 3 — Kök Neden (önceki turda kanıtlanmıştı)
+Jest yarışı. `DrawingCanvas` çizim modunda `pointerEvents: 'auto'` alıyor ve pan'ı **±1px**'te
+aktifleşiyor (satır 706-707, 763); `DraggableSticker` pan'ı **±5px** istiyordu (satır 62-63).
+Çizim jesti mesafe yarışını **her zaman** kazanıyordu. Üçü de bu oturumdan çok önce geldi
+(`cde8554d`, `6af95bba`, `5e58fb3b`) — gerileme değil, tasarım davranışı.
+
+### ✅ Çözüm — Seçenek (B), kullanıcı kararı
+Çizim modunda çıkartma **uzun basışla** sürüklenir. Böylece **ikisi birlikte yaşıyor**:
+beklemeden hareket edersen **çizersin** (çıkartmanın ÜZERİNE çizme korunur), basılı tutarsan
+**sürüklersin**.
+
+- `DraggableSticker`: çizim modunda mesafe eşiği pratikte devre dışı (`±9999`) ve
+  `.activateAfterLongPress(300ms)` devrede. Çizim modu **dışında** eski **±5px** davranışı aynen korundu.
+- `ZoomableCanvas`: bağlama **`isStickerDragging`** paylaşılan değeri eklendi
+  (mevcut `isDrawingActive` deseniyle birebir aynı yaklaşım).
+- `DraggableSticker`: sürükleme başlayınca bayrağı kaldırıyor, **`onFinalize` ile her durumda**
+  bırakıyor — jest iptal edilse bile çizim kalıcı kilitlenmesin.
+- `DrawingCanvas`: `onBegin`, `onStart`, `onUpdate` **ve** `dotTap` bayrağa saygı duyuyor.
+  **`onBegin`'den erken dönmek sonraki geri çağrıları engellemiyor**, bu yüzden dördüne de koruma kondu.
+- `StickerCanvas`: `isDrawingMode` çıkartmaya iletiliyor (yoksa kural hiç devreye girmez).
+
+**SORUN 1'in sınıfına dikkat edildi:** `isStickerDragging` paylaşılan değer olarak **worklet içinde
+doğrudan** okunuyor, `stateRef`'e **eklenmedi** — böylece üç-liste senkronizasyonu bozulmadı
+(`drawingCanvasStateRef` testi ve yeni testin Test 8'i bunu doğruluyor).
+
+### 🧪 Eklenen Test
+**`tests/stickerDragInDrawingMode.test.js`** [NEW] — 8 doğrulama. Eşikler ve uzun basış süresi
+**kaynaktan okunuyor**.
+- **Test 1 eski halde çizim jestinin mesafe yarışını her zaman kazandığını kanıtlıyor** (1px vs 5px,
+  eşit eşikte bile).
+- Test 3 yeni modeli simüle ediyor: `(0px, 350ms) → sürükleme`, `(10px, 50ms) → çizim`.
+- Test 2 çizim modu **dışında** 5px davranışının korunduğunu (gerileme olmadığını) şart koşuyor.
+- Test 5 bayrağın `onFinalize` ile her durumda bırakıldığını denetliyor.
+- Test 6 çizim jestinin **4** geri çağrısının korunduğunu sayıyor.
+- Test 8 `stateRef` üç-liste senkronizasyonunun bozulmadığını doğruluyor.
+- **Dişi kanıtlandı:** altı kasıtlı kırılma denendi. **İlk turda 5/6 yakalandı**;
+  `activateAfterLongPress` satırının kaldırılması **yakalanmadı** — bu gerçek bir boşluktu,
+  o satırı arayan bir iddia eklendi ve artık **6/6** yakalanıyor.
+
+### 🔍 SORUN 2 ve 4 — Geçici Tanı Logları (teşhis, düzeltme DEĞİL)
+Kök neden kanıtlanamadığı için tahminle düzeltme yapılmadı. Yerine izleme eklendi:
+**`utils/diagnosticLog.js`** [NEW, GEÇİCİ] — `dlog(etiket, veri)`, çağrı sayacı ve açılıştan beri
+geçen ms ile `[AJANDA-TANI]` önekli satır yazar. `DIAGNOSTICS_ENABLED` ile tek yerden kapatılabilir.
+
+Yerleştirilen izler:
+
+| Etiket | Yer | Ne söyler |
+|---|---|---|
+| `eraser:sessionStart` | `DrawingCanvas` silgi oturumu açılışı | Oturum hangi veriyle başladı, `onTextBlocksChange` bağlı mı |
+| `eraser:charsHit` | Karakter silme anı | Kaç karakter seçildi, `changed`, kutu silinecek mi |
+| `eraser:commit` | Silgi commit | Oturum vs prop karakter sayısı, işleyici var mı |
+| `screen:textBlocksChange` | Sayfa ekranı | Yeni/önceki blok ve karakter sayısı |
+| `screen:scheduleSave` | `scheduleSave` | Hangi alanlar birikiyor, önceki bekleyen yük, gecikme |
+| `screen:flush` | `flushPendingSave` | Diske **gerçekten** ne yazıldı |
+
+`tests/pendingSaveFlush.test.js` güncellendi: `scheduleSave`/`flushPendingSave` gövdesini kaynaktan
+çıkarıp çalıştırdığı için `dlog`/`len`/`textLen` no-op olarak enjekte ediliyor. Loglar kaldırılınca
+bu enjeksiyonlar da silinecek.
+
+### 📁 Değiştirilen Dosyalar
+- `components/stickers/DraggableSticker.js`, `components/stickers/StickerCanvas.js`
+- `components/drawing/ZoomableCanvas.js`, `components/drawing/DrawingCanvas.js`
+- `app/ajandam/[pageId].js`, `app/todolist/[pageId].js` (yalnızca tanı logları)
+- `utils/diagnosticLog.js` **[NEW, GEÇİCİ]**
+- `tests/stickerDragInDrawingMode.test.js` [NEW], `tests/pendingSaveFlush.test.js`
+- `ilerleme.md`
+
+### ✅ Doğrulama
+- **26/26** test dosyası geçti · 112 dosya sözdizimi temiz · ölü referans yok · 430 anahtar tam parite
+- **Cihazda doğrulanmadı.**
+
+### 📝 Kaldırılacaklar (kök neden bulununca)
+`utils/diagnosticLog.js`, tüm `dlog(` çağrıları (`grep -rn "dlog(" .`),
+`pendingSaveFlush.test.js`'teki üç no-op enjeksiyonu. Ayrıca `app/pdf-probe.js` ve ana menüdeki
+geçici PDF butonu (PDF özelliği uygulanınca).
+
+---
+
 ## 📅 [2026-10-04] - Karalayarak Silmenin Hiç Çalışmaması: stateRef Köprüsünde Eksik Alan (SORUN 1)
 
 ### 🐛 Kök Neden (kanıtlı)

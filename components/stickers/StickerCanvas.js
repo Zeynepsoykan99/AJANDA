@@ -74,6 +74,7 @@ export default function StickerCanvas({
 
       {(stickers || []).map((sticker) => (
         <DraggableSticker
+          isDrawingMode={isDrawingMode}
           key={sticker.id}
           sticker={sticker}
           isSelected={selectedStickerId === sticker.id}

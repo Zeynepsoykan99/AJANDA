@@ -59,6 +59,12 @@ const buildSaver = (source, label) => {
     'pageId',
     'StorageService',
     'console',
+    // GECICI: ekranlardaki teshis loglari (utils/diagnosticLog) bu
+    // fonksiyonlarin govdesinde cagriliyor. Loglar kaldirilinca bu uc
+    // enjeksiyon da silinecek.
+    'dlog',
+    'len',
+    'textLen',
     body + '\nreturn { flushPendingSave, scheduleSave };'
   )(
     refs.saveTimeoutRef,
@@ -71,7 +77,10 @@ const buildSaver = (source, label) => {
         Object.assign(disk, updates);
       },
     },
-    console
+    console,
+    () => {},
+    () => 0,
+    () => 0
   );
 
   return { ...api, disk, refs, getWriteCount: () => writeCount };

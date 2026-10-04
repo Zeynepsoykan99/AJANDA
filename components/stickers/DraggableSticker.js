@@ -19,6 +19,9 @@ const triggerHaptic = () => {
   } catch (e) {}
 };
 
+/** Cizim modunda cikartmayi surukleyebilmek icin gereken basili tutma suresi (ms) */
+const STICKER_DRAG_LONG_PRESS_MS = 300;
+
 export default function DraggableSticker({
   sticker,
   isSelected,
@@ -30,8 +33,9 @@ export default function DraggableSticker({
   canvasWidth = 0,
   canvasHeight = 0,
   onSnapChange,
+  isDrawingMode = false,
 }) {
-  const { scale: canvasScale } = useZoomableCanvas();
+  const { scale: canvasScale, isStickerDragging } = useZoomableCanvas();
   const translateX = useSharedValue(sticker.x || 0);
   const translateY = useSharedValue(sticker.y || 0);
   const scale = useSharedValue(sticker.scale || 1);
@@ -57,14 +61,23 @@ export default function DraggableSticker({
   }, [smartSnapping, sticker.id]);
 
   // Sürükleme gesture'ı + Akıllı Hizalama (Snapping)
+  // Cizim modunda (kalem/fosforlu/silgi secili) cizim katmani dokunuslari
+  // yakalar ve pan'i 1px'te aktifleştirir; cikartmanin 5px esigi bu yarisi
+  // her zaman kaybeder. Bu yuzden cizim modunda cikartma UZUN BASISLA
+  // suruklenir: boylece hem cikartma tasinabilir hem cikartmanin UZERINE
+  // cizilebilir (ikisinden birini feda etmeden).
   const panGesture = Gesture.Pan()
     .maxPointers(1)
-    .activeOffsetX([-5, 5])
-    .activeOffsetY([-5, 5])
+    .activeOffsetX(isDrawingMode ? [-9999, 9999] : [-5, 5])
+    .activeOffsetY(isDrawingMode ? [-9999, 9999] : [-5, 5])
+    .activateAfterLongPress(isDrawingMode ? STICKER_DRAG_LONG_PRESS_MS : 0)
     .onStart(() => {
       'worklet';
       savedTranslateX.value = translateX.value;
       savedTranslateY.value = translateY.value;
+      if (isStickerDragging) {
+        isStickerDragging.value = true;
+      }
       isActive.value = true;
       isSnappedV.value = false;
       isSnappedH.value = false;
@@ -164,6 +177,13 @@ export default function DraggableSticker({
       }
       if (onDeselect) {
         runOnJS(onDeselect)();
+      }
+    })
+    // Bayrak HER durumda birakilir: jest iptal edilse bile cizim kilitli kalmasin
+    .onFinalize(() => {
+      'worklet';
+      if (isStickerDragging) {
+        isStickerDragging.value = false;
       }
     });
 

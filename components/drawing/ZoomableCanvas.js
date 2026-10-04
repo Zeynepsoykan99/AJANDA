@@ -31,6 +31,7 @@ export const ZoomableCanvasContext = createContext({
   translateX: { value: 0 },
   translateY: { value: 0 },
   isDrawingActive: { value: false },
+  isStickerDragging: { value: false },
   screenToCanvas: (x, y) => ({ x, y }),
   canvasToScreen: (x, y) => ({ x, y }),
   pageToCanvas: (x, y) => ({ x, y }),
@@ -74,6 +75,9 @@ const ZoomableCanvas = forwardRef(function ZoomableCanvas(
 
   const isPinching = useSharedValue(false);
   const isDrawingActive = useSharedValue(false);
+  // Cizim modunda bir cikartma uzun basisla surukleniyorken cizim jestinin
+  // ayni dokunusu kapmasini engeller (bkz. DraggableSticker + DrawingCanvas).
+  const isStickerDragging = useSharedValue(false);
 
   const viewportWidth = useSharedValue(0);
   const viewportHeight = useSharedValue(0);
@@ -384,6 +388,7 @@ const ZoomableCanvas = forwardRef(function ZoomableCanvas(
     translateX,
     translateY,
     isDrawingActive,
+    isStickerDragging,
     screenToCanvas,
     canvasToScreen,
     pageToCanvas,
