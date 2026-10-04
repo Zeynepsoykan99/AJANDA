@@ -79,17 +79,21 @@ export default function DraggableSticker({
   // her zaman kaybeder. Bu yuzden cizim modunda cikartma UZUN BASISLA
   // suruklenir: boylece hem cikartma tasinabilir hem cikartmanin UZERINE
   // cizilebilir (ikisinden birini feda etmeden).
-  const panGesture = Gesture.Pan()
-    // GECICI (teshis/SORUN A): dokunus cikartmaya ULASTI mi? Bu satir hic
-    // gorulmuyorsa dokunus cizim katmaninda kaliyor demektir.
-    .onTouchesDown(() => {
-      'worklet';
-      runOnJS(dlog)('sticker:touchDown', { drawingMode: isDrawingMode });
-    })
-    .maxPointers(1)
-    .activeOffsetX(isDrawingMode ? [-9999, 9999] : [-5, 5])
-    .activeOffsetY(isDrawingMode ? [-9999, 9999] : [-5, 5])
-    .activateAfterLongPress(isDrawingMode ? STICKER_DRAG_LONG_PRESS_MS : 0)
+  // Cizim modu DISINDA jest yapilandirmasi a40ab0ca ile BIREBIR AYNI olmak
+  // zorunda. Bu yuzden uzun basisa ozgu ayarlar zincire KOSULLU eklenir;
+  // `activateAfterLongPress(0)` gibi "etkisiz" gorunen cagrilar bile
+  // yapilandirmaya anahtar ekledigi ve `onTouchesDown` needsPointerData'yi
+  // actigi icin kosulsuz uygulanmazlar.
+  const panBase = isDrawingMode
+    ? Gesture.Pan()
+        .maxPointers(1)
+        // Mesafeyle aktiflesme pratikte devre disi; aktiflesmeyi uzun basis saglar
+        .activeOffsetX([-9999, 9999])
+        .activeOffsetY([-9999, 9999])
+        .activateAfterLongPress(STICKER_DRAG_LONG_PRESS_MS)
+    : Gesture.Pan().maxPointers(1).activeOffsetX([-5, 5]).activeOffsetY([-5, 5]);
+
+  const panGesture = panBase
     .onStart(() => {
       'worklet';
       savedTranslateX.value = translateX.value;
@@ -214,8 +218,13 @@ export default function DraggableSticker({
       if (isStickerDragging) {
         isStickerDragging.value = false;
       }
-      // GECICI (teshis/SORUN A)
-      runOnJS(dlog)('sticker:panFinalize');
+      // GECICI (teshis/SORUN A): onFinalize jest AKTIFLESMESE de cagrilir.
+      // `wasActive=false` gorunuyorsa secim, hic surukleme olmadan kalkiyor
+      // demektir (hipotez a).
+      runOnJS(dlog)('sticker:panFinalize', {
+        drawingMode: isDrawingMode,
+        deselectCalled: !!onDeselect,
+      });
     });
 
   // Seçim (Tap) gesture'ı - Sadece parmak 5px'den az hareket ettiğinde çalışır
@@ -223,6 +232,9 @@ export default function DraggableSticker({
     .maxDuration(250)
     .maxDistance(5)
     .onEnd((_event, success) => {
+      // GECICI (teshis/SORUN A): bu satir goruluyorsa dokunus cikartmaya
+      // ULASTI ve secim jesti kazandi demektir.
+      runOnJS(dlog)('sticker:tapEnd', { success: !!success, drawingMode: isDrawingMode });
       if (success) {
         runOnJS(triggerHaptic)();
         if (onSelect) {
@@ -239,6 +251,10 @@ export default function DraggableSticker({
   const resizePanGesture = Gesture.Pan()
     .maxPointers(1)
     .onStart(() => {
+      // GECICI (teshis/hipotez b): bu satir goruluyorsa buyutme tutamaci
+      // render edilmis VE dokunusu almis demektir. Gorulmuyorsa sorun
+      // buyutmede degil SECIMDEDIR (tutamac hic render edilmiyor).
+      runOnJS(dlog)('sticker:resizeStart', { drawingMode: isDrawingMode });
       savedScale.value = scale.value;
     })
     .onUpdate((event) => {

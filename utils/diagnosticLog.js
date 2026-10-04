@@ -12,6 +12,7 @@
  *   - app/todolist/[pageId].js                (dlog)
  *   - components/drawing/DrawingCanvas.js     (dlog + ölçüm kovaları + renderCountRef)
  *   - components/stickers/DraggableSticker.js (runOnJS(dlog))
+ *   - components/stickers/StickerCanvas.js      (dlog)
  *   - tests/pendingSaveFlush.test.js          (dlog/len/textLen no-op enjeksiyonu)
  * Bulmak için: grep -rn "diagnosticLog" --include=*.js .
  *
@@ -28,11 +29,11 @@
  * Her tanı turunda elle güncellenir; Metro'ya bağlandığınızda açılışta yazılır.
  * Konsolda bu damgayı görmüyorsanız cihaz ESKİ paketi çalıştırıyor demektir.
  */
-export const BUILD_STAMP = 'tani-2026-10-04-A';
+export const BUILD_STAMP = 'tani-2026-10-04-B';
 
 /** Bu damgada neler var (rapordaki adımlarla eşleşsin diye) */
 export const BUILD_NOTES =
-  'SORUN A: iki onFinalize birlestirildi | SORUN B: hareket olcumu | SORUN C: zincir izleri';
+  'CIKARTMA: pan zinciri cizim modu disinda a40ab0ca ile ayni + secim/buyutme/mod izleri';
 
 /** Teşhis loglarını tek yerden kapatmak için. Kaldırmadan önce false yapılabilir. */
 export const DIAGNOSTICS_ENABLED = true;

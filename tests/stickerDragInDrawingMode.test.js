@@ -29,12 +29,21 @@ console.log('--- Cizim Modunda Cikartma Suruklemesi Testleri ---');
 
 // ─── Kaynaktan okunan gerçek eşikler ────────────────────────────────
 const drawingOffset = Number(/\.activeOffsetX\(\[-(\d+), \d+\]\)/.exec(CANVAS)[1]);
-const stickerOffsetMatch = /\.activeOffsetX\(isDrawingMode \? \[-(\d+), \d+\] : \[-(\d+), \d+\]\)/.exec(
-  STICKER
-);
-assert.ok(stickerOffsetMatch, 'cikartma activeOffsetX cizim moduna gore kosullu olmali');
-const stickerOffsetDrawing = Number(stickerOffsetMatch[1]);
-const stickerOffsetNormal = Number(stickerOffsetMatch[2]);
+// Zincir artik builder duzeyinde KOSULLU kuruluyor (cizim modu disinda
+// yapilandirma a40ab0ca ile birebir ayni kalsin diye). Esikler bu yuzden iki
+// ayri daldan okunur. Yapilandirmanin TAMAMI ayrica
+// tests/stickerGestureConfig.test.js icinde gercek zincir kurularak dogrulanir.
+const panSection = /const panBase = isDrawingMode[\s\S]*?;\n/.exec(STICKER);
+assert.ok(panSection, 'kosullu panBase bolumu bulunmali');
+const drawingBranch = panSection[0].slice(0, panSection[0].indexOf('    : Gesture.Pan()'));
+const normalBranch = panSection[0].slice(panSection[0].indexOf('    : Gesture.Pan()'));
+
+const drawOffsetMatch = /\.activeOffsetX\(\[-(\d+), \d+\]\)/.exec(drawingBranch);
+const normOffsetMatch = /\.activeOffsetX\(\[-(\d+), \d+\]\)/.exec(normalBranch);
+assert.ok(drawOffsetMatch, 'cizim modu dalinda activeOffsetX olmali');
+assert.ok(normOffsetMatch, 'normal dalda activeOffsetX olmali');
+const stickerOffsetDrawing = Number(drawOffsetMatch[1]);
+const stickerOffsetNormal = Number(normOffsetMatch[1]);
 
 const longPressMatch = /const STICKER_DRAG_LONG_PRESS_MS = (\d+);/.exec(STICKER);
 assert.ok(longPressMatch, 'uzun basis suresi tek bir sabitte olmali');
@@ -85,9 +94,15 @@ console.log(
   // ASIL MEKANIZMA: uzun basisla aktiflesme jest zincirinde GERCEKTEN kurulu olmali.
   // Bu satir olmadan mesafe esigi devre disi kalir ama hicbir sey suruklemeyi
   // baslatmaz; yani cizim modunda cikartma TAMAMEN hareketsiz olur.
+  // Uzun basis YALNIZCA cizim modu dalinda kurulmali; normal dalda hic
+  // cagrilmamali (0 ile bile - yapilandirmaya anahtar ekler).
   assert.ok(
-    /\.activateAfterLongPress\(isDrawingMode \? STICKER_DRAG_LONG_PRESS_MS : 0\)/.test(STICKER),
-    'pan zincirinde activateAfterLongPress(isDrawingMode ? SABIT : 0) olmali'
+    /\.activateAfterLongPress\(STICKER_DRAG_LONG_PRESS_MS\)/.test(drawingBranch),
+    'cizim modu dalinda activateAfterLongPress(SABIT) olmali'
+  );
+  assert.ok(
+    !/activateAfterLongPress/.test(normalBranch),
+    'normal dalda activateAfterLongPress HIC olmamali'
   );
   console.log(
     'OK Test 2: cizim modunda surukleme mesafeyle degil ' + longPressMs +
@@ -145,7 +160,7 @@ console.log(
     'cikartma bayragi baglamdan almali'
   );
 
-  const panChain = /const panGesture = Gesture\.Pan\(\)[\s\S]*?\n    \}\);/.exec(STICKER);
+  const panChain = /const panGesture = panBase[\s\S]*?\n    \}\);/.exec(STICKER);
   assert.ok(panChain, 'pan jest zinciri bulunmali');
   const chain = panChain[0];
 
@@ -284,7 +299,7 @@ console.log(
   );
 
   // Pan zincirinde, YALNIZCA uzun basis yolunda (cizim modunda) tetiklenmeli
-  const panChain = /const panGesture = Gesture\.Pan\(\)[\s\S]*?\n    \}\);/.exec(STICKER);
+  const panChain = /const panGesture = panBase[\s\S]*?\n    \}\);/.exec(STICKER);
   assert.ok(panChain, 'pan jest zinciri bulunmali');
   assert.ok(
     /if \(isDrawingMode\) \{\s*\n\s*runOnJS\(triggerDragHaptic\)\(\);\s*\n\s*\}/.test(panChain[0]),

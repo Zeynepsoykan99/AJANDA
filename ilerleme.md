@@ -4,6 +4,90 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-04] - Çıkartma Etkileşimi: Çizim Modu Dışı Yapılandırma Geri Getirildi
+
+### 1️⃣ Gerileme Analizi — `a40ab0ca` → HEAD
+`git diff` ile çıkartma ile ilgili tüm dosyalar karşılaştırıldı:
+`ZoomableCanvas.js` +5 (yalnızca `isStickerDragging` paylaşılan değeri),
+`StickerCanvas.js` +1 (`isDrawingMode` iletimi), `DraggableSticker.js` +57/-3.
+
+`a40ab0ca`'daki pan zinciri: `maxPointers(1)`, `activeOffsetX/Y([-5,5])`, `onStart`, `onUpdate`,
+`onEnd`, `onFinalize`. **`activateAfterLongPress` ve `onTouchesDown` YOKTU.**
+
+**Çizim modu KAPALI iken bile davranışı değiştiren üç fark bulundu:**
+1. `.onTouchesDown(...)` **koşulsuz** eklenmişti → RNGH'de bu `config.needsPointerData = true`
+   yapıyor (`gestures/gesture.js:121`).
+2. `.activateAfterLongPress(isDrawingMode ? 300 : 0)` **koşulsuz** çağrılıyordu.
+3. `.activeOffsetX/Y(isDrawingMode ? ... : [-5,5])` — değer aynı ama çağrı tek üçlü ifadeden.
+
+### 2️⃣ Hipotezler — Kanıt / Çürütme
+
+| # | Hipotez | Sonuç |
+|---|---|---|
+| **a** | Birleştirilen `onFinalize`'ın `onDeselect()` çağırması seçimi hemen kaldırıyor | ⚠️ **Kısmen çürütüldü:** `onFinalize` içindeki `onDeselect` **`a40ab0ca`'da da vardı** ve çalışıyordu. Yeni bir şey değil. Yine de `onFinalize` jest aktifleşmese de çalıştığı için iz eklendi |
+| **b** | Büyütme ayrı bir jestte ve `isSelected`'a bağlı | ✅ **Kanıtlandı:** `resizePanGesture` kendi `GestureDetector`'ında ve **`{isSelected && (...)}`** bloğunun içinde. Yani **seçim bozulursa büyütme de bozulur** — iki belirti aynı zincire bağlı. Test 5 bunu sabitliyor |
+| **c** | `activateAfterLongPress(300)` aynı detector'daki tap/pinch'i bloklayabilir | ⚠️ **Kısmen:** `activateAfterLongPress(0)` Android'de **etkisiz** (`PanGestureHandler.kt:135,186` → `> 0` kontrolü), yani normal modda aktifleştirme bozulmuyor. **Ama** çağrının kendisi yapılandırmaya anahtar ekliyor; "çizim modu dışı hiç değişmemeli" şartını ihlal ediyor |
+| **d** | Dokunuş çıkartmaya ulaşmıyor (üstteki katman) | ✅ **Çürütüldü:** `StickerCanvas` **container** stili (`styles.canvas`, satır 61) `zIndex: 60`, `DrawingCanvas` çizim modunda 50; JSX'te StickerCanvas **sonra**. Z-sırası ve kardeş sırası ikisi de çıkartmadan yana. `GestureDetector` sarmalaması doğru (`mainGesture`) |
+| **e** | Tuval dönüşümü koordinatı kaydırıyor | ✅ **Çürütüldü (kısmen):** StickerCanvas her iki ekranda da `ZoomableCanvas` **içinde** (ajandam 1377→1478, NotebookPagesView 1568→1718), yani `isStickerDragging` **gerçek** bir shared value. Worklet içinden donmuş nesneye yazma riski yok. Koordinat kayması cihaz logu olmadan ayırt edilemez |
+
+### ✅ Yapılan Düzeltme
+Pan zinciri **builder düzeyinde koşullu** hale getirildi: çizim modu **dışında** yapılandırma
+`a40ab0ca` ile **birebir aynı**. `onTouchesDown` tamamen kaldırıldı; `activateAfterLongPress`
+yalnızca çizim modu dalında çağrılıyor.
+
+Bu, kök nedenin kesin kanıtı değil — **kullanıcının açık şartının (çizim modu dışı hiç
+değişmemeli) kanıtlanabilir ihlalinin** giderilmesidir.
+
+### 3️⃣ Test — Gerçek Jest Zinciri Kurularak
+**`tests/stickerGestureConfig.test.js`** [NEW] — 6 doğrulama.
+
+**Dürüst sınır:** RNGH'nin jest yardımcıları (`fireGestureHandler`, `getByGestureTestId`) bu
+projede **kullanılamıyor**: `jest`, `@testing-library/react-native` ve
+`react-native-gesture-handler/jest-utils` **kurulu değil** (devDependencies yalnızca
+`babel-preset-expo`, `npm test` script'i yok). Gerçek dokunuş olayları tetiklenemiyor.
+
+Bunun yerine bir adım öteye gidildi: regex ile metin aramak yerine **jest zinciri gerçekten
+kuruluyor**. `Gesture.Pan()` bir Proxy kaydediciyle değiştirilip zincirdeki her çağrı ve argümanı
+toplanıyor; aynı kayıt `a40ab0ca` kaynağı için de üretilip **karşılaştırılıyor**.
+- Test 2: çizim modu dışında yapılandırma **ve geri çağrı kümesi** çalışan sürümle birebir aynı.
+- Test 4: normal dalda `activateAfterLongPress` **hiç** çağrılmıyor (0 ile bile).
+- Test 6: her geri çağrının en fazla bir kez çağrıldığı **gerçek kayıtla** doğrulanıyor.
+
+**KAPSAMADIĞI:** gerçek dokunuşun native tarafta nasıl çözümlendiği — jest yarışı, `Exclusive`
+önceliği, `activateAfterLongPress` zamanlayıcısı. Bunlar yalnızca cihazda ölçülebilir.
+
+**Dişi kanıtlandı:** üç kasıtlı kırılma (koşulsuz `activateAfterLongPress(0)`, koşulsuz
+`onTouchesDown`, çizim modunda uzun basışın kaldırılması) denendi; **üçü de yakalandı**.
+
+`tests/stickerDragInDrawingMode.test.js` yeni koşullu yapıya uyarlandı (eşikler iki daldan okunuyor).
+
+### 🔧 Eklenen Tanı Logları (GEÇİCİ) — mod ayrımı için
+Damga **`tani-2026-10-04-B`**.
+
+| Etiket | Ne söyler |
+|---|---|
+| `stickerCanvas:mode` | `isDrawingMode`'un **gerçek** değeri (senaryoları ayırmak için) |
+| `stickerCanvas:selection` | Seçim ne zaman oluştu/kalktı |
+| `stickerCanvas:deselectByMode` | Seçim **mod yüzünden** mi kalkıyor (hipotez a) |
+| `sticker:tapEnd` | Dokunuş çıkartmaya **ulaştı** ve seçim jesti kazandı mı |
+| `sticker:panStart` | Sürükleme aktifleşti mi |
+| `sticker:panFinalize` | `onFinalize` aktifleşme olmadan da çalışıyor mu |
+| `sticker:resizeStart` | **Büyütme tutamacı render edildi ve dokunuşu aldı mı** |
+| `drawing:blockedBySticker` | Çizim jesti engellendi mi |
+
+### 📁 Değiştirilen Dosyalar
+- `components/stickers/DraggableSticker.js` (**düzeltme** + izler)
+- `components/stickers/StickerCanvas.js` (izler)
+- `utils/diagnosticLog.js` (damga B + kaldırma listesi)
+- `tests/stickerGestureConfig.test.js` [NEW], `tests/stickerDragInDrawingMode.test.js`
+- `ilerleme.md`
+
+### ✅ Doğrulama
+- **27/27** test dosyası geçti · 112 dosya sözdizimi temiz · ölü referans yok
+- **Cihazda doğrulanmadı.**
+
+---
+
 ## 📅 [2026-10-04] - İkinci `onFinalize` Hatası (SORUN A) + Tanı Altyapısı (A, B, C)
 
 ### 🐛 KANITLANAN HATA — Zincirde İkinci `onFinalize` Birincinin Üzerine Yazıyor
