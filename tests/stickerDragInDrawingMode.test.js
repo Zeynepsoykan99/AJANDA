@@ -239,4 +239,41 @@ console.log(
   console.log('OK Test 8: stateRef uc-liste senkronizasyonu bozulmadi (' + a.length + ' anahtar)');
 }
 
+// --- Test 9: Uzun basis aktiflesince dokunsal geri bildirim ---------
+{
+  // Projedeki desen: try/catch sarmali kucuk bir yardimci
+  assert.ok(
+    /const triggerDragHaptic = \(\) => \{\s*\n\s*try \{\s*\n\s*Haptics\.impactAsync\(Haptics\.ImpactFeedbackStyle\.Medium\);\s*\n\s*\} catch \(e\) \{\}\s*\n\};/.test(
+      STICKER
+    ),
+    'triggerDragHaptic projedeki try/catch desenine uymali ve Medium kullanmali'
+  );
+
+  // Secimdeki Light'tan AYRI olmali: aksi halde "aldim" hissi secimle karisir
+  assert.ok(
+    /Haptics\.impactAsync\(Haptics\.ImpactFeedbackStyle\.Light\);/.test(STICKER),
+    'secim icin kullanilan Light yardimcisi korunmali'
+  );
+
+  // Pan zincirinde, YALNIZCA uzun basis yolunda (cizim modunda) tetiklenmeli
+  const panChain = /const panGesture = Gesture\.Pan\(\)[\s\S]*?\n    \}\);/.exec(STICKER);
+  assert.ok(panChain, 'pan jest zinciri bulunmali');
+  assert.ok(
+    /if \(isDrawingMode\) \{\s*\n\s*runOnJS\(triggerDragHaptic\)\(\);\s*\n\s*\}/.test(panChain[0]),
+    'geri bildirim yalnizca cizim modunda (uzun basis yolunda) tetiklenmeli'
+  );
+
+  // Worklet icinden JS'e gecis: runOnJS olmadan calismaz
+  const hapticIdx = panChain[0].indexOf('triggerDragHaptic');
+  assert.ok(
+    panChain[0].slice(Math.max(0, hapticIdx - 40), hapticIdx).includes('runOnJS'),
+    'worklet icinden runOnJS ile cagrilmali'
+  );
+
+  // Bayrak kaldirildiktan SONRA gelmeli (surukleme gercekten devraldiginda)
+  const flagIdx = panChain[0].indexOf('isStickerDragging.value = true;');
+  assert.ok(flagIdx > -1 && flagIdx < hapticIdx, 'geri bildirim bayrak kaldirildiktan sonra olmali');
+  console.log('OK Test 9: uzun basis aktiflesince Medium dokunsal geri bildirim veriliyor');
+}
+
 console.log('--- TUM CIKARTMA SURUKLEME TESTLERI BASARIYLA GECTI! ---');

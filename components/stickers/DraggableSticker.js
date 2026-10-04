@@ -19,6 +19,17 @@ const triggerHaptic = () => {
   } catch (e) {}
 };
 
+/**
+ * Uzun basisla surukleme AKTIFLESTIGINDE "cikartmayi aldim" geri bildirimi.
+ * Secimdeki Light'tan ayirmak icin Medium: kullanici hareketi baslatmadan once
+ * suruklemenin devraldigini parmaginda hissetmeli.
+ */
+const triggerDragHaptic = () => {
+  try {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  } catch (e) {}
+};
+
 /** Cizim modunda cikartmayi surukleyebilmek icin gereken basili tutma suresi (ms) */
 const STICKER_DRAG_LONG_PRESS_MS = 300;
 
@@ -77,6 +88,11 @@ export default function DraggableSticker({
       savedTranslateY.value = translateY.value;
       if (isStickerDragging) {
         isStickerDragging.value = true;
+      }
+      // Yalnizca UZUN BASIS yolunda: cizim modu disinda surukleme dogrudan
+      // basladigi icin ek bir geri bildirim gereksiz olurdu.
+      if (isDrawingMode) {
+        runOnJS(triggerDragHaptic)();
       }
       isActive.value = true;
       isSnappedV.value = false;

@@ -4,6 +4,50 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-04] - Uzun Basışla Sürüklemede Dokunsal Geri Bildirim
+
+### 🔍 İhtiyaç
+Çizim modunda çıkartma uzun basışla sürükleniyor (SORUN 3 çözümü) ama aktifleşme **sessizdi**:
+kullanıcı parmağını ne zaman oynatabileceğini bilemiyordu.
+
+### ✅ Yapılan
+`components/stickers/DraggableSticker.js` içine **`triggerDragHaptic`** eklendi.
+Projedeki mevcut desenle birebir aynı: `try { Haptics.impactAsync(...) } catch (e) {}` sarmalı.
+
+**Neden `Medium`, `Light` değil:** Dosyadaki mevcut `triggerHaptic` **seçim** için `Light`
+kullanıyor. Sürüklemenin devraldığı an bundan **ayırt edilebilir** olmalı; aynı şiddet kullanılsa
+"seçtim" ile "aldım" hissi karışırdı.
+
+**Neden yalnızca çizim modunda:** Çizim modu dışında sürükleme zaten doğrudan başlıyor; orada ek
+bir geri bildirim gereksiz olur ve mevcut hissi değiştirirdi. Bu yüzden `if (isDrawingMode)` koşullu.
+
+**Yerleşim:** `panGesture.onStart` içinde, `isStickerDragging` bayrağı kaldırıldıktan **sonra** —
+geri bildirim ancak sürükleme gerçekten devraldığında veriliyor. Worklet içinden `runOnJS` ile.
+
+### 🧪 Test
+**`tests/stickerDragInDrawingMode.test.js`** → **Test 9** eklendi (toplam 9 doğrulama):
+yardımcının projedeki try/catch desenine uyduğu, `Medium` kullandığı, seçimdeki `Light`'ın
+korunduğu, yalnızca çizim modunda tetiklendiği, `runOnJS` ile çağrıldığı ve bayrak kaldırıldıktan
+**sonra** geldiği denetleniyor.
+
+**Dişi kanıtlandı:** dört kasıtlı kırılma (çağrının tamamen kaldırılması, `runOnJS`'in çıkarılması,
+`Medium` → `Light`, çizim modu koşulunun kaldırılması) denendi; **dördü de yakalandı**.
+
+### 📁 Değiştirilen Dosyalar
+- `components/stickers/DraggableSticker.js`
+- `tests/stickerDragInDrawingMode.test.js`
+- `ilerleme.md`
+
+### ✅ Doğrulama
+- **26/26** test dosyası geçti · 112 dosya sözdizimi temiz
+- **Cihazda doğrulanmadı:** titreşimin doğru anda ve doğru şiddette hissedildiği test edilmeli.
+
+### 📝 Not
+300 ms uzun basış süresi kullanıcı tarafından cihazda değerlendirilecek; tek sabitten
+(`STICKER_DRAG_LONG_PRESS_MS`) ayarlanabiliyor.
+
+---
+
 ## 📅 [2026-10-04] - Çizim Modunda Çıkartma Sürükleme (SORUN 3) + Geçici Tanı Logları (SORUN 2/4)
 
 ### 🐛 SORUN 3 — Kök Neden (önceki turda kanıtlanmıştı)
