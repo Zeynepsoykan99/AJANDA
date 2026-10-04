@@ -128,6 +128,18 @@ export default function HomeScreen() {
           ))}
         </View>
 
+        {/* ⚠️ GECICI: Cikartma teshis ekrani. Kok neden bulununca BU BLOK
+            ve app/sticker-probe.js SILINECEK. */}
+        <TouchableOpacity
+          activeOpacity={0.6}
+          onPress={() => router.push('/sticker-probe')}
+          style={styles.privacyLink}
+        >
+          <Text style={[styles.privacyLinkText, { color: colors.accent }]}>
+            Çıkartma teşhisi (geçici)
+          </Text>
+        </TouchableOpacity>
+
         {/* ⚠️ GECICI: PDF kutuphane dogrulamasi. Dogrulama bitince BU BLOK
             ve app/pdf-probe.js SILINECEK. Kalici bir ozellik degildir. */}
         <TouchableOpacity

@@ -4,6 +4,52 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-04] - Çıkartma Etkileşimi: İzole Probe Ekranı + Kök Neden Avı (yalnızca teşhis)
+
+Üretim koduna **dokunulmadı**. Tek ekleme: geçici probe ekranı ve ana menü bağlantısı.
+
+### 🔬 Kod Düzeyinde Kök Neden Avı — kanıt/çürütme
+
+| # | Hipotez | Sonuç |
+|---|---|---|
+| **a** | Jest geri çağrılarında `runOnJS` eksik (renk çarkı kategorisi) | ❌ **ÇÜRÜTÜLDÜ.** Tüm geri çağrılar tarandı: `'worklet'` direktifi olmayan **beş** geri çağrı var (`tapGesture.onEnd:234`, `resizePan.onStart:253/onUpdate:260/onEnd:267`, `deleteTap.onEnd:275`) — ve bunlar tam olarak bozuk olan özellikler. **Ama** hepsindeki JS çağrıları (`onSelect`, `onResize`, `onDelete`, `triggerHaptic`, `dlog`) **zaten `runOnJS` ile sarılı**; geri kalan işlemler yalnızca shared value okuma/yazma. Eksik `runOnJS` **yok** |
+| **b** | Babel worklet eklentisi yanlış/eksik (Reanimated 4 geçişi) | ❌ **ÇÜRÜTÜLDÜ.** `babel.config.js` `react-native-reanimated/plugin` kullanıyor; `node_modules/react-native-reanimated/plugin/index.js` **`require('react-native-worklets/plugin')`**'i yeniden dışa aktarıyor — geçerli. Eklenti listede **sonda** ✓. Sürümler: reanimated **4.1.7**, worklets **0.5.1**, gesture-handler **2.28.0** |
+| **c** | Jest ağacı yanlış kökte / Modal içinde | ❌ **ÇÜRÜTÜLDÜ.** `app/_layout.js` kökte `GestureHandlerRootView` sarıyor; çıkartmalar sayfa ağacında, Modal içinde değil |
+| **d** | Seçim state'i sıfırlanıyor / bileşen remount oluyor | ❌ **Kısmen çürütüldü.** `key={sticker.id}` **stabil** (`StickerCanvas.js:93`), remount yok. **Ama** bir mekanizma bulundu: `onSelect` **toggle** (`:96`), `panGesture.onFinalize` → `onDeselect()` → `setSelectedStickerId(null)`. RNGH `onFinalize`'ı jest **başarısız/iptal olduğunda da** çağırır. Basit bir dokunuşta pan aktifleşmeden başarısız olur → `onFinalize` → **seçim anında kalkar**. Seçim kalkınca büyütme tutamacı (`{isSelected && ...}`) hiç render edilmez → **büyütme de çalışmaz**. **Sıralamanın gerçekte ne olduğu kodda kanıtlanamaz**; cihaz verisi gerekiyor |
+| **e** | Bozulmanın başladığı commit | ⚠️ **Daraltıldı ama kesinleşmedi.** `Exclusive(pan, tap)` + `onFinalize→onDeselect` ikilisi **`5e58fb3b` (16 Eyl)** ile birlikte geldi — benim değişikliklerimden çok önce. Yani (d)'deki mekanizma varsa **uzun süredir** var. Cihazsız daha fazla daraltılamaz |
+
+**En güçlü hipotez: (d).** Tek bir mekanizma üç belirtiyi de açıklıyor: seçim anında kalkıyor → tutamaçlar render edilmiyor → büyütme ve silme yok. Sürüklemenin de çalışmaması bu mekanizmayla **tam açıklanmıyor**; probe bunu ayıracak.
+
+### 🧪 Probe Ekranı — `app/sticker-probe.js` [NEW, GEÇİCİ]
+Ana menüde **"Çıkartma teşhisi (geçici)"** bağlantısı. **Gerçek `DraggableSticker`** bileşeni üç
+sarmalayıcıda çalıştırılıyor; StickerCanvas, depolama ve kaydetme **yok**:
+- **(a) Çıplak** — yalnızca DraggableSticker
+- **(b) + ZoomableCanvas**
+- **(c) + DrawingCanvas** (çizim modu **kapalı**)
+
+Ekranda canlı sayaçlar: `seç`, `seçimKalk`, `taşı`, `büyüt` + `seçili: EVET/hayır` + son 10 olay.
+Her olay ayrıca `[AJANDA-TANI] probe:*` olarak Metro'ya yazılıyor.
+
+**Probe uyarısı (ölçüm artefaktı olmasın diye):** Varyant (a)'da sağlayıcı yoktur; `useZoomableCanvas()`
+**varsayılan bağlamı** döndürür ve oradaki `isStickerDragging` **gerçek bir shared value değil**,
+düz bir nesnedir. Worklet içinden düz nesneye yazmak hata verebilir. Ekranda bunu gösteren bir
+**"bağlam: gerçek sağlayıcı / VARSAYILAN"** satırı var; (a) başarısız olup (b) çalışırsa sebep
+büyük olasılıkla budur ve bu **üretim için de bir uyarıdır** (varsayılan bağlam değerleri tuzak).
+
+### 📁 Değiştirilen Dosyalar
+- `app/sticker-probe.js` **[NEW, GEÇİCİ]**
+- `app/index.js` (yalnızca geçici bağlantı)
+- `utils/diagnosticLog.js` (damga `tani-2026-10-04-C` + kaldırma listesi)
+- `ilerleme.md`
+
+**Üretim koduna (DraggableSticker, StickerCanvas, DrawingCanvas, ZoomableCanvas) dokunulmadı.**
+
+### ✅ Doğrulama
+- **27/27** test dosyası geçti · 113 dosya sözdizimi temiz · ölü referans yok
+- **Cihazda doğrulanmadı.**
+
+---
+
 ## 📅 [2026-10-04] - Çıkartma Etkileşimi: Çizim Modu Dışı Yapılandırma Geri Getirildi
 
 ### 1️⃣ Gerileme Analizi — `a40ab0ca` → HEAD

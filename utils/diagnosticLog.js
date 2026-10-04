@@ -13,6 +13,8 @@
  *   - components/drawing/DrawingCanvas.js     (dlog + ölçüm kovaları + renderCountRef)
  *   - components/stickers/DraggableSticker.js (runOnJS(dlog))
  *   - components/stickers/StickerCanvas.js      (dlog)
+ *   - app/sticker-probe.js                      (TUM DOSYA + ana menu baglantisi)
+ *   - app/pdf-probe.js                          (TUM DOSYA + ana menu baglantisi)
  *   - tests/pendingSaveFlush.test.js          (dlog/len/textLen no-op enjeksiyonu)
  * Bulmak için: grep -rn "diagnosticLog" --include=*.js .
  *
@@ -29,11 +31,11 @@
  * Her tanı turunda elle güncellenir; Metro'ya bağlandığınızda açılışta yazılır.
  * Konsolda bu damgayı görmüyorsanız cihaz ESKİ paketi çalıştırıyor demektir.
  */
-export const BUILD_STAMP = 'tani-2026-10-04-B';
+export const BUILD_STAMP = 'tani-2026-10-04-C';
 
 /** Bu damgada neler var (rapordaki adımlarla eşleşsin diye) */
 export const BUILD_NOTES =
-  'CIKARTMA: pan zinciri cizim modu disinda a40ab0ca ile ayni + secim/buyutme/mod izleri';
+  'CIKARTMA TESHIS: izole probe ekrani (a/b/c varyantlari) + mevcut izler';
 
 /** Teşhis loglarını tek yerden kapatmak için. Kaldırmadan önce false yapılabilir. */
 export const DIAGNOSTICS_ENABLED = true;
