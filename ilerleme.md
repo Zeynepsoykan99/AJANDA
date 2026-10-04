@@ -4,6 +4,79 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-04] - Karalayarak Silmenin Hiç Çalışmaması: stateRef Köprüsünde Eksik Alan (SORUN 1)
+
+### 🐛 Kök Neden (kanıtlı)
+`components/drawing/DrawingCanvas.js` içinde `stateRef`, prop'ları jest işleyicilerine taşıyan köprü.
+**Üç** yerde listelenir: (1) `useRef({...})` ilk değeri, (2) her render'da yeniden kuran efektin
+**gövdesi**, (3) o efektin **bağımlılık dizisi**.
+
+`5ba43388`'de eklenen `stickers`, `scribbleEraseEnabled` ve `onScribbleErase` alanları
+**(1) ve (3)'e eklendi, (2)'ye EKLENMEDİ.** `useEffect` ilk render'dan sonra da çalıştığı için
+`stateRef.current` daha ilk anda bu üç alan **olmadan** yeniden kuruldu:
+
+```js
+// handleTouchEnd içinde
+if (state.scribbleEraseEnabled && state.tool === 'pen' && state.onScribbleErase && ...)
+//     ^ undefined -> falsy -> blok HİÇ çalışmadı
+```
+
+Sonuç: özellik **ilk render'dan itibaren ölü**. Hiçbir hata fırlatılmadığı için sessizce çalışmadı
+ve 20 birim testi geçmeye devam etti — testler saf fonksiyonları doğruluyordu, **köprüyü değil.**
+
+**Neden oluştu:** Entegrasyonu yapan betiğin çapası 4 boşluk girintiliydi; efekt gövdesi ise
+6 boşluk girintili. Dolayısıyla "ilk iki eşleşme" = `useRef` ilk değeri + **bağımlılık dizisi**;
+gövde hiç eşleşmedi.
+
+### ✅ Düzeltme
+Efekt gövdesine üç alan eklendi. Doğrulama: üç listenin hepsi artık **20 anahtar, birebir aynı**.
+
+### 🧪 Eklenen Test
+**`tests/drawingCanvasStateRef.test.js`** [NEW] — 8 doğrulama. Bu hata **sınıfının tamamını** kapatır:
+üç listeyi kaynaktan ayrıştırıp **aynı olmalarını** şart koşar. Yeni bir prop ileride yine
+yalnızca iki yere eklenirse test düşer ve hangi listede eksik olduğunu söyler.
+- Test 2 eksik alanın **sessizce** öldürdüğünü (hata fırlatmadığını) kanıtlıyor — birim testlerinin
+  neden yakalamadığının açıklaması.
+- Test 6 `handleTouchEnd` içinde sıralamayı denetliyor: silgi → kement → **karalama** → çizgi ekleme.
+- Test 7-8 varsayılanların açık olduğunu ve üç ekranın prop'ları gerçekten geçtiğini doğruluyor.
+- **Dişi kanıtlandı:** tam o hata geri konuldu, test "EFEKT GOVDESINDE eksik anahtar(lar):
+  onScribbleErase, scribbleEraseEnabled, stickers" diyerek yakaladı.
+
+### 🔍 Diğer Üç Sorun İçin Gerileme Analizi (kod değişikliği YAPILMADI)
+`5ba43388`'in dokunduğu her dosya incelendi:
+- `utils/lassoGeometry.js` — diff **yalnızca `export` kelimesi**. Silgi/metin fonksiyonları
+  (`getErasedCharacterIndices`, `eraseCharactersFromBlock`, `calculateCharacterBoxes`) **bayt bayt aynı**.
+- `components/drawing/DrawingToolbar.js` — tamamen **ekleyici** (yeni state + efekt + buton).
+- `components/drawing/DrawingCanvas.js` — yukarıdaki üç alan + `handleTouchEnd`'e tek blok. Jest
+  tanımına, `pointerEvents`'e, silgi oturumuna, karakter kutusu önbelleğine **dokunulmadı**.
+- `ed287f89`'un `package-lock.json` diff'i **26 ekleme / 0 silme** — mevcut hiçbir paket sürümü değişmedi.
+
+**Sonuç: SORUN 2, 3 ve 4 `5ba43388` kaynaklı DEĞİL.**
+
+**SORUN 3 (kalem seçiliyken sticker sürüklenmiyor) — mekanizma kanıtlandı, düzeltilmedi:**
+Jest yarışı. `DrawingCanvas` çizim modunda `pointerEvents: 'auto'` alıyor ve pan'ı
+`activeOffset ±1px`'te aktifleşiyor (satır 706-707, 763); `DraggableSticker` pan'ı ise `±5px`
+(satır 62-63). Çizim jesti yarışı **her zaman** kazanıyor. Üçü de bu oturumdan çok önce gelmiş:
+`cde8554d` (pointerEvents), `6af95bba` (±1px), `5e58fb3b` (±5px). Yani **gerileme değil, uzun
+süredir var olan tasarım davranışı**. Düzeltmek bir tasarım ödünü gerektiriyor (sticker'a öncelik
+verilirse sticker ÜZERİNE çizmek kaybedilir) → kullanıcı kararına bırakıldı.
+
+**SORUN 2 ve 4 — kök neden KANITLANAMADI.** Silgi oturumu kendi `eraserSessionRef`'inde tamamen
+yalıtık; karakter kutusu önbelleği `text/x/y/width/fontSize` ile doğru şekilde geçersiz kılınıyor;
+bu bölgenin son değişiklikleri `2d8b4e6d`, `5d217fc3`, `944ea04a` — hepsi bu oturumdan önce.
+Tahminle düzeltme yapılmadı; kullanıcıdan tekrar üretme adımları istendi.
+
+### 📁 Değiştirilen Dosyalar
+- [`components/drawing/DrawingCanvas.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/components/drawing/DrawingCanvas.js) (3 satır)
+- [`tests/drawingCanvasStateRef.test.js`](file:///c:/Users/Zeynep/Desktop/AJANDA/tests/drawingCanvasStateRef.test.js) [NEW]
+- [`ilerleme.md`](file:///c:/Users/Zeynep/Desktop/AJANDA/ilerleme.md)
+
+### ✅ Doğrulama
+- **25/25** test dosyası geçti · 111 dosya sözdizimi temiz · çözümlenemeyen tanımlayıcı yok
+- **Cihazda doğrulanmadı:** karalayarak silmenin artık çalıştığı cihazda test edilmeli.
+
+---
+
 ## 📅 [2026-10-03] - Karalayarak Silme + PDF Kütüphanesi Doğrulaması
 
 ### 🎯 Karalayarak Silme (uygulandı)
