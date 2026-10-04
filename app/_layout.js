@@ -16,6 +16,8 @@ import {
 import { startSessionAutoLock } from '../services/biometricService';
 import { cleanupLegacyPlaintextPins } from '../services/securityService';
 import { loadPrivacySettings } from '../services/privacySettingsService';
+// GECICI (teshis): kaldirilacak
+import { logBuildStamp } from '../utils/diagnosticLog';
 
 /**
  * GlobalErrorBoundary - React Render Ağacındaki Tüm Ölümcül Hataları Yakalayan Kalkan
@@ -138,6 +140,11 @@ function ThemedApp() {
   // bekleyerek okudugu icin kapali bir ayar ilk cizimde bile atlanmaz.
   useEffect(() => {
     loadPrivacySettings();
+  }, []);
+
+  // GECICI (teshis): cihazin hangi JS paketini calistirdigini acilista yazar
+  useEffect(() => {
+    logBuildStamp();
   }, []);
 
   // Bildirim altyapısını ve dinleyicilerini başlat (Web ortamında güvenli)

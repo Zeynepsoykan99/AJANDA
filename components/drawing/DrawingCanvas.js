@@ -14,7 +14,15 @@ import {
 } from '../../utils/lassoGeometry';
 import { evaluateScribbleErase } from '../../utils/scribbleDetection';
 // GECICI (tesshis): kok neden bulununca bu import ve dlog cagrilari kaldirilacak
-import { dlog, len, textLen } from '../../utils/diagnosticLog';
+import {
+  dlog,
+  len,
+  textLen,
+  createTimingBucket,
+  addTiming,
+  summarizeTiming,
+  nowMs,
+} from '../../utils/diagnosticLog';
 import { useZoomableCanvas } from './ZoomableCanvas';
 
 const triggerHaptic = () => {
@@ -108,6 +116,13 @@ export default function DrawingCanvas({
 
   // Karakter koordinatları önbelleği (gereksiz re-calculation yükünü önler)
   const charBoxesCacheRef = useRef(new Map());
+
+  // GECICI (teshis): SORUN B olcumu. Sicak yolda LOG YAZILMAZ, yalnizca
+  // sure biriktirilir ve hareket bitiminde tek satir ozet yazilir.
+  const moveTimingRef = useRef(createTimingBucket());
+  const pathTimingRef = useRef(createTimingBucket());
+  const renderCountRef = useRef(0);
+  renderCountRef.current += 1;
 
   const triggerThrottledHaptic = useCallback(() => {
     const now = Date.now();
@@ -522,6 +537,8 @@ export default function DrawingCanvas({
 
   const handleTouchMove = useCallback(
     (absX, absY, locX, locY) => {
+      // GECICI (teshis/SORUN B): sure biriktirilir, LOG YAZILMAZ
+      const __t0 = nowMs();
       const state = stateRef.current;
       let coordX = locX;
       let coordY = locY;
@@ -558,8 +575,13 @@ export default function DrawingCanvas({
 
       const elapsed = Date.now() - strokeStartTimeRef.current;
       pointsRef.current.push({ x: coordX, y: coordY, timestamp: elapsed });
+      // GECICI (teshis/SORUN B): SVG yolu yeniden hesaplamanin maliyeti ayri olculur.
+      // Bu is her harekette TUM noktalar uzerinde donuyor -> bir cizgi boyunca O(n^2).
+      const __p0 = nowMs();
       const newPath = pointsToSvgPath(pointsRef.current);
+      addTiming(pathTimingRef.current, nowMs() - __p0);
       setCurrentPath(newPath);
+      addTiming(moveTimingRef.current, nowMs() - __t0);
     },
     [eraseBetweenPoints]
   );
@@ -607,9 +629,38 @@ export default function DrawingCanvas({
       return;
     }
 
+    // GECICI (teshis/SORUN B): hareket bitiminde TEK ozet satiri
+    {
+      const mv = summarizeTiming(moveTimingRef.current);
+      const pt = summarizeTiming(pathTimingRef.current);
+      dlog('perf:strokeEnd', {
+        tool: state.tool,
+        points: pointsRef.current.length,
+        moveN: mv.n,
+        moveAvgMs: mv.avg,
+        moveMaxMs: mv.max,
+        moveTotalMs: mv.total,
+        pathAvgMs: pt.avg,
+        pathMaxMs: pt.max,
+        pathTotalMs: pt.total,
+        renders: renderCountRef.current,
+      });
+    }
+
     // Karalayarak silme: cizgi sayfaya EKLENMEDEN once degerlendirilir.
     // Yalnizca `pen` aracinda calisir; fosforlu kalemde vurgulama hareketi
     // zaten ustunu cizmeye benzedigi icin kapsam disidir.
+    // GECICI (teshis/SORUN C): kapinin HER kosulunun gercek degeri
+    dlog('scribble:gate', {
+      enabled: state.scribbleEraseEnabled,
+      tool: state.tool,
+      hasHandler: !!state.onScribbleErase,
+      points: pointsRef.current.length,
+      drawings: len(state.drawings),
+      textBlocks: len(state.textBlocks),
+      stickers: len(state.stickers),
+    });
+
     if (
       state.scribbleEraseEnabled &&
       state.tool === 'pen' &&
@@ -623,9 +674,42 @@ export default function DrawingCanvas({
         stickers: state.stickers,
       });
 
+      // GECICI (teshis/SORUN C): her olcutun GERCEK degeri + koordinat uzayi.
+      // Esikleri tahminle degistirmeden once bu satiri gercek cihaz verisiyle
+      // gormek gerekir.
+      {
+        const a = verdict.analysis || {};
+        const first = pointsRef.current[0] || {};
+        const last = pointsRef.current[pointsRef.current.length - 1] || {};
+        dlog('scribble:analysis', {
+          isScribble: a.isScribble,
+          reason: a.reason || '-',
+          reversals: a.reversals,
+          intersections: a.selfIntersections,
+          density: typeof a.densityRatio === 'number' ? a.densityRatio.toFixed(2) : a.densityRatio,
+          criteria: a.criteriaMet,
+          pathLen: typeof a.pathLength === 'number' ? Math.round(a.pathLength) : a.pathLength,
+          rawPoints: pointsRef.current.length,
+          thinned: a.points ? a.points.length : '-',
+          firstXY: Math.round(first.x) + ',' + Math.round(first.y),
+          lastXY: Math.round(last.x) + ',' + Math.round(last.y),
+          zoom: state.zoomScale && typeof state.zoomScale.value === 'number'
+            ? state.zoomScale.value.toFixed(2)
+            : '-',
+        });
+        dlog('scribble:targets', {
+          shouldErase: verdict.shouldErase,
+          strokes: verdict.targets ? verdict.targets.strokeIds.length : '-',
+          stickers: verdict.targets ? verdict.targets.stickerIds.length : '-',
+          textEdits: verdict.targets ? verdict.targets.textEdits.length : '-',
+          total: verdict.targets ? verdict.targets.total : '-',
+        });
+      }
+
       // Karalama bir seye degmediyse hicbir sey silinmez ve cizgi normal
       // sekilde islenmeye devam eder (asagiya duser).
       if (verdict.shouldErase) {
+        dlog('scribble:dispatch', { total: verdict.targets.total });
         state.onScribbleErase(verdict.targets);
         pointsRef.current = [];
         setCurrentPath('');
@@ -746,6 +830,8 @@ export default function DrawingCanvas({
       // Paylasilan deger worklet icinde DOGRUDAN okunur; stateRef'e eklenmez,
       // boylece uc-liste senkronizasyonu (drawingCanvasStateRef testi) bozulmaz.
       if (isStickerDragging && isStickerDragging.value) {
+        // GECICI (teshis/SORUN A)
+        runOnJS(dlog)('drawing:blockedBySticker');
         return;
       }
       if (isDrawingActive) {

@@ -138,25 +138,51 @@ console.log(
   console.log('OK Test 4: isStickerDragging baglamda eksiksiz kurulu');
 }
 
-// --- Test 5: Cikartma bayragi set ediyor VE her durumda birakiyor ----
+// --- Test 5: Bayrak set ediliyor VE TEK onFinalize ile birakiliyor ---
 {
   assert.ok(
     /const \{ scale: canvasScale, isStickerDragging \} = useZoomableCanvas\(\);/.test(STICKER),
     'cikartma bayragi baglamdan almali'
   );
+
   const panChain = /const panGesture = Gesture\.Pan\(\)[\s\S]*?\n    \}\);/.exec(STICKER);
   assert.ok(panChain, 'pan jest zinciri bulunmali');
-  assert.ok(
-    /isStickerDragging\.value = true;/.test(panChain[0]),
-    'surukleme baslayinca bayrak kaldirilmali'
-  );
-  assert.ok(
-    /\.onFinalize\(\(\) => \{\s*\n\s*'worklet';\s*\n\s*if \(isStickerDragging\) \{\s*\n\s*isStickerDragging\.value = false;/.test(
-      panChain[0]
-    ),
-    'bayrak onFinalize ile HER durumda birakilmali (iptal dahil), yoksa cizim kalici kilitlenir'
-  );
-  console.log('OK Test 5: bayrak suruklemede kaldiriliyor ve onFinalize ile her durumda birakiliyor');
+  const chain = panChain[0];
+
+  assert.ok(/isStickerDragging\.value = true;/.test(chain), 'surukleme baslayinca bayrak kaldirilmali');
+
+  // ASIL DEGISMEZ: react-native-gesture-handler'da her geri cagri TEK SLOT'tur
+  // (gesture.js: `this.handlers.onFinalize = callback`). Ayni zincirde ikinci bir
+  // .onFinalize() birincinin UZERINE YAZAR ve onun govdesi sessizce kaybolur.
+  // Bu tam olarak cd7484c2'de yasandi: bayrak birakma ayri bir onFinalize olarak
+  // eklenince snap kilavuzu/isActive/onDeselect temizligi yok oldu.
+  // Yorum satirlarindaki ornek metinler (.onFinalize() gibi) sayima girmesin
+  const chainNoComments = chain.replace(/^[ \t]*\/\/.*$/gm, '');
+  const CALLBACKS = ['onBegin', 'onStart', 'onUpdate', 'onEnd', 'onFinalize', 'onTouchesDown'];
+  CALLBACKS.forEach((cb) => {
+    const count = (chainNoComments.match(new RegExp('\\.' + cb + '\\(', 'g')) || []).length;
+    assert.ok(
+      count <= 1,
+      'pan zincirinde ' + cb + ' ' + count + ' kez cagrilmis. Her geri cagri TEK SLOT: ' +
+        'ikincisi birincinin uzerine yazar ve o govde sessizce kaybolur. Tek govdede birlestir.'
+    );
+  });
+
+  // Tek onFinalize govdesi HEM eski temizligi HEM bayrak birakmayi icermeli
+  const finalize = /\.onFinalize\(\(\) => \{[\s\S]*?\n    \}\);/.exec(chain);
+  assert.ok(finalize, 'onFinalize govdesi bulunmali');
+  [
+    ['isStickerDragging.value = false;', 'bayrak birakma'],
+    ['isActive.value = false;', 'isActive sifirlama'],
+    ['guideLineXVisible.value = 0;', 'snap kilavuzu temizligi'],
+    ['runOnJS(onDeselect)();', 'secim kaldirma'],
+  ].forEach(([needle, label]) => {
+    assert.ok(
+      finalize[0].includes(needle),
+      'onFinalize govdesinde ' + label + ' olmali (uzerine yazilma sonucu kaybolmus olabilir)'
+    );
+  });
+  console.log('OK Test 5: pan zincirinde TEK onFinalize var ve tum temizligi birlikte yapiyor');
 }
 
 // --- Test 6: Cizim jesti bayraga saygi duyuyor ----------------------
@@ -167,7 +193,9 @@ console.log(
   );
 
   // onBegin'den donmek sonraki geri cagrilari engellemez: hepsinde koruma olmali
-  const guard = /if \(isStickerDragging && isStickerDragging\.value\) \{\s*\n\s*return;\s*\n\s*\}/g;
+  // Govde degil KOSUL sayilir: koruma govdesine teshis logu gibi satirlar
+  // eklenebilir; degismez olan kosulun varligidir.
+  const guard = /if \(isStickerDragging && isStickerDragging\.value\)/g;
   const guardCount = (CANVAS.match(guard) || []).length;
   assert.ok(
     guardCount >= 4,

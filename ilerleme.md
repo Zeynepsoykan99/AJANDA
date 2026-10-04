@@ -4,6 +4,99 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-04] - İkinci `onFinalize` Hatası (SORUN A) + Tanı Altyapısı (A, B, C)
+
+### 🐛 KANITLANAN HATA — Zincirde İkinci `onFinalize` Birincinin Üzerine Yazıyor
+`cd7484c2`'de `isStickerDragging` bayrağını bırakmak için `panGesture` zincirine **ikinci bir
+`.onFinalize()`** eklemiştim. react-native-gesture-handler'da her geri çağrı **TEK SLOT**'tur:
+
+```js
+// node_modules/react-native-gesture-handler/lib/commonjs/handlers/gestures/gesture.js:109-110
+onFinalize(callback) {
+  this.handlers.onFinalize = callback;   // <- atama, EKLEME degil
+```
+
+Yani ikinci çağrı birincinin **üzerine yazdı** ve özgün temizlik **sessizce kayboldu**:
+`isActive.value = false`, snap kılavuzlarının gizlenmesi (`guideLineXVisible/YVisible`) ve
+`onDeselect()`. Sonuç: ilk sürüklemeden sonra `isActive` kalıcı `true`, snap kılavuzları ekranda
+takılı, seçim kalkmıyor.
+
+**Düzeltme:** iki gövde **tek** `onFinalize` içinde birleştirildi.
+
+### 🧪 Test Güçlendirildi — Hata Sınıfını Kapatıyor
+`tests/stickerDragInDrawingMode.test.js` → **Test 5** yeniden yazıldı: pan zincirinde
+`onBegin`/`onStart`/`onUpdate`/`onEnd`/`onFinalize`/`onTouchesDown` geri çağrılarının her birinin
+**en fazla bir kez** çağrıldığını denetliyor (yorum satırları sayımdan ayıklanıyor) ve tek
+`onFinalize` gövdesinin **dört temizliği birlikte** yaptığını şart koşuyor. Aynı sınıfta bir hata
+tekrar eklenirse test hangi geri çağrının kaç kez çağrıldığını söyleyerek düşer.
+
+### 🔍 SORUN A — Çürütülen Hipotez + Kalan Şüpheli
+**Kullanıcının `pointerEvents` hipotezi ÇÜRÜTÜLDÜ:** `StickerCanvas`'ın **container** stili
+(`styles.canvas`, satır 61'de kullanılıyor) **`zIndex: 60`** taşıyor; `DrawingCanvas` çizim modunda
+**`zIndex: 50`**. Üstelik JSX'te StickerCanvas **sonra** geliyor. Yani z-sırası ve kardeş sırası
+**ikisi de** çıkartma katmanından yana; dokunuş çıkartmaya ulaşabiliyor olmalı.
+`GestureDetector` sarmalaması ve dokunma alanı da doğru (`mainGesture`, `styles.wrapper` mutlak).
+
+**Kalan şüpheli (cihaz verisi gerekiyor):** RNGH'de **ağaçlar arası jest yarışı**. `DrawingCanvas`
+pan'ı **±1px**'te aktifleşiyor; parmak basılı tutulurken 1px'lik titreme bile çizim jestini
+**300 ms'den çok önce** aktifleştirip dokunuşu sahiplenebilir — bu durumda çıkartmanın
+`activateAfterLongPress(300)` zamanlayıcısı hiç ateşlenmez. Doğru çözüm
+`blocksExternalGesture` / `requireExternalGestureToFail` ile bileşenler arası ilişki kurmaktır,
+**ama bu bir tasarım ödünü getirir** (çıkartma üstünde başlayan her çizgi 300 ms gecikir).
+Tahminle uygulanmadı; kullanıcı kararı ve cihaz logu bekleniyor.
+
+### 🔍 SORUN C — Kod düzeyinde ikinci bir kopukluk bulunamadı
+`handleTouchEnd` akışı doğru (silgi → kement → **karalama** → çizgi ekleme), kapı koşulu doğru,
+`stateRef` üç listesi senkron (20 anahtar). Kalan olasılıklar yalnızca **çalışma zamanı
+değerleriyle** ayırt edilebilir: `scribbleEraseEnabled` gerçekte false mu (araç çubuğundan
+kapatılmış olabilir), gerçek kalem verisi eşikleri geçiyor mu, koordinat uzayı doğru mu.
+Tahminle eşik değiştirilmedi.
+
+### 🔧 Eklenen Tanı Altyapısı (GEÇİCİ)
+**Yapım damgası:** `utils/diagnosticLog.js` → `BUILD_STAMP` + `logBuildStamp()`, `app/_layout.js`
+açılışında yazılıyor. Cihazın güncel JS paketini çalıştırdığı tek bakışta görülüyor.
+
+**SORUN B ölçümü — sıcak yolda LOG YOK:** `createTimingBucket`/`addTiming`/`summarizeTiming`/`nowMs`
+eklendi. `handleTouchMove` süresi ve **SVG yolu yeniden hesaplama** süresi ayrı ayrı biriktiriliyor;
+**yalnızca hareket bitiminde** tek `perf:strokeEnd` satırı yazılıyor (adet, ortalama, maksimum,
+toplam ms + nokta sayısı + render sayısı). Böylece logların kendisi ölçümü bozmuyor —
+kullanıcının 2. hipotezi (logların yavaşlık kaynağı olması) bu tasarımla baştan dışlandı.
+
+**Yerleştirilen izler:**
+
+| Etiket | Nerede | Ne söyler |
+|---|---|---|
+| `YAPIM DAMGASI` | Açılış | Cihaz hangi JS paketini çalıştırıyor |
+| `sticker:touchDown` | Çıkartma pan `onTouchesDown` | **Dokunuş çıkartmaya ULAŞTI mı** (SORUN A'nın ilk halkası) |
+| `sticker:panStart` | Çıkartma pan `onStart` | **Uzun basış AKTİFLEŞTİ mi** |
+| `sticker:panFinalize` | Çıkartma pan `onFinalize` | Bayrak bırakıldı mı |
+| `drawing:blockedBySticker` | Çizim `onBegin` | Çizim jesti engellendi mi |
+| `perf:strokeEnd` | `handleTouchEnd` | Hareket/yol süreleri, nokta ve render sayısı |
+| `scribble:gate` | `handleTouchEnd` | `enabled`, `tool`, `hasHandler`, nokta/içerik sayıları |
+| `scribble:analysis` | Kapı geçilince | Dönüş, kesişme, yoğunluk, ölçüt, **ham/seyreltilmiş nokta**, ilk/son koordinat, zoom |
+| `scribble:targets` | Kapı geçilince | `shouldErase` + hedef sayıları |
+| `scribble:dispatch` | Silme tetiklenince | `onScribbleErase` gerçekten çağrıldı mı |
+
+### 📁 Değiştirilen Dosyalar
+- `components/stickers/DraggableSticker.js` (**gerçek düzeltme** + izler)
+- `components/drawing/DrawingCanvas.js` (ölçüm + izler)
+- `utils/diagnosticLog.js` (damga, ölçüm yardımcıları, kaldırma listesi)
+- `app/_layout.js` (açılışta damga)
+- `tests/stickerDragInDrawingMode.test.js` (Test 5 güçlendirildi, Test 6 gevşetildi)
+- `ilerleme.md`
+
+### ✅ Doğrulama
+- **26/26** test dosyası geçti · 112 dosya sözdizimi temiz · ölü referans yok
+- **Cihazda doğrulanmadı.**
+
+### 📝 Kaldırma Listesi (diagnosticLog.js başında da güncel)
+`utils/diagnosticLog.js` · `app/_layout.js` · `app/ajandam/[pageId].js` ·
+`app/todolist/[pageId].js` · `components/drawing/DrawingCanvas.js` ·
+`components/stickers/DraggableSticker.js` · `tests/pendingSaveFlush.test.js` no-op enjeksiyonu ·
+`app/pdf-probe.js` + ana menüdeki geçici PDF butonu
+
+---
+
 ## 📅 [2026-10-04] - Uzun Basışla Sürüklemede Dokunsal Geri Bildirim
 
 ### 🔍 İhtiyaç

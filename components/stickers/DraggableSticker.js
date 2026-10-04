@@ -11,6 +11,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useZoomableCanvas } from '../drawing/ZoomableCanvas';
+// GECICI (teshis): kaldirilacak
+import { dlog } from '../../utils/diagnosticLog';
 import { useSmartSnapping } from '../canvas/SmartSnappingContext';
 
 const triggerHaptic = () => {
@@ -78,6 +80,12 @@ export default function DraggableSticker({
   // suruklenir: boylece hem cikartma tasinabilir hem cikartmanin UZERINE
   // cizilebilir (ikisinden birini feda etmeden).
   const panGesture = Gesture.Pan()
+    // GECICI (teshis/SORUN A): dokunus cikartmaya ULASTI mi? Bu satir hic
+    // gorulmuyorsa dokunus cizim katmaninda kaliyor demektir.
+    .onTouchesDown(() => {
+      'worklet';
+      runOnJS(dlog)('sticker:touchDown', { drawingMode: isDrawingMode });
+    })
     .maxPointers(1)
     .activeOffsetX(isDrawingMode ? [-9999, 9999] : [-5, 5])
     .activeOffsetY(isDrawingMode ? [-9999, 9999] : [-5, 5])
@@ -86,6 +94,8 @@ export default function DraggableSticker({
       'worklet';
       savedTranslateX.value = translateX.value;
       savedTranslateY.value = translateY.value;
+      // GECICI (teshis/SORUN A): buraya ulasildiysa uzun basis AKTIFLESTI
+      runOnJS(dlog)('sticker:panStart', { drawingMode: isDrawingMode });
       if (isStickerDragging) {
         isStickerDragging.value = true;
       }
@@ -179,6 +189,12 @@ export default function DraggableSticker({
         runOnJS(onDeselect)();
       }
     })
+    // DIKKAT: Bir jest zincirinde `onFinalize` TEK SLOT'tur
+    // (react-native-gesture-handler/gesture.js: `this.handlers.onFinalize = callback`).
+    // Ikinci bir .onFinalize() cagrisi birincinin UZERINE YAZAR. Daha once
+    // bayrak birakma ayri bir .onFinalize() olarak eklenmis ve asagidaki
+    // temizligi (isActive, snap kilavuzlari, onDeselect) sessizce yok etmisti.
+    // Bu yuzden hepsi TEK govdede toplanmistir.
     .onFinalize(() => {
       'worklet';
       isActive.value = false;
@@ -194,13 +210,12 @@ export default function DraggableSticker({
       if (onDeselect) {
         runOnJS(onDeselect)();
       }
-    })
-    // Bayrak HER durumda birakilir: jest iptal edilse bile cizim kilitli kalmasin
-    .onFinalize(() => {
-      'worklet';
+      // Jest iptal edilse bile cizim kalici kilitlenmesin
       if (isStickerDragging) {
         isStickerDragging.value = false;
       }
+      // GECICI (teshis/SORUN A)
+      runOnJS(dlog)('sticker:panFinalize');
     });
 
   // Seçim (Tap) gesture'ı - Sadece parmak 5px'den az hareket ettiğinde çalışır

@@ -5,15 +5,34 @@
  * üzerinde çalışmıyor) sorunlarının kök nedeni kanıtlanamadı. Bu modül,
  * cihazda bir kez tetiklenecek akışların izini çıkarmak için eklendi.
  *
- * Kök neden bulunup düzeltildikten sonra:
- *   - bu dosya silinecek,
- *   - `dlog(` çağrılarının tamamı kaldırılacak (`grep -rn "dlog(" .` ile bulunur).
+ * Kök neden bulunup düzeltildikten sonra bu dosya silinecek ve aşağıdaki
+ * dosyalardaki tanı çağrıları kaldırılacak:
+ *   - app/_layout.js                          (logBuildStamp)
+ *   - app/ajandam/[pageId].js                 (dlog)
+ *   - app/todolist/[pageId].js                (dlog)
+ *   - components/drawing/DrawingCanvas.js     (dlog + ölçüm kovaları + renderCountRef)
+ *   - components/stickers/DraggableSticker.js (runOnJS(dlog))
+ *   - tests/pendingSaveFlush.test.js          (dlog/len/textLen no-op enjeksiyonu)
+ * Bulmak için: grep -rn "diagnosticLog" --include=*.js .
  *
  * Çıktı `console.log` ile yazılır; Metro terminalinde görünür.
  * Her satır `[AJANDA-TANI]` ile başlar, böylece kolay süzülür:
  *   npx expo start  →  terminalde logları izle
  *   veya: adb logcat -s ReactNativeJS | findstr AJANDA-TANI
  */
+
+/**
+ * ⚠️ GEÇİCİ — YAPIM DAMGASI
+ *
+ * Cihazın GERÇEKTEN güncel JS paketini çalıştırdığını tek bakışta görmek için.
+ * Her tanı turunda elle güncellenir; Metro'ya bağlandığınızda açılışta yazılır.
+ * Konsolda bu damgayı görmüyorsanız cihaz ESKİ paketi çalıştırıyor demektir.
+ */
+export const BUILD_STAMP = 'tani-2026-10-04-A';
+
+/** Bu damgada neler var (rapordaki adımlarla eşleşsin diye) */
+export const BUILD_NOTES =
+  'SORUN A: iki onFinalize birlestirildi | SORUN B: hareket olcumu | SORUN C: zincir izleri';
 
 /** Teşhis loglarını tek yerden kapatmak için. Kaldırmadan önce false yapılabilir. */
 export const DIAGNOSTICS_ENABLED = true;
@@ -49,5 +68,60 @@ export const len = (arr) => (Array.isArray(arr) ? arr.length : arr === undefined
 /** Metin kutularının toplam karakter sayısı — kısmi silmeyi izlemek için */
 export const textLen = (blocks) =>
   Array.isArray(blocks) ? blocks.reduce((sum, b) => sum + (b?.text ? b.text.length : 0), 0) : 0;
+
+/**
+ * Açılışta yapım damgasını yazar. `app/_layout.js` içinden bir kez çağrılır.
+ */
+export const logBuildStamp = () => {
+  if (!DIAGNOSTICS_ENABLED) return;
+  console.log('[AJANDA-TANI] ===== YAPIM DAMGASI: ' + BUILD_STAMP + ' =====');
+  console.log('[AJANDA-TANI] icerik: ' + BUILD_NOTES);
+};
+
+/**
+ * Sıcak yollarda (her hareket olayı) log YAZMAZ; süreleri biriktirir ve
+ * yalnızca hareket bitiminde tek bir özet satırı yazar.
+ *
+ * Neden: Metro'ya giden her log WebSocket üzerinden gider ve geliştirme
+ * derlemesinde ölçmek istediğimiz yavaşlığı KENDİSİ yaratır.
+ */
+export const createTimingBucket = () => ({ count: 0, totalMs: 0, maxMs: 0 });
+
+/**
+ * Bir ölçüm kovasına süre ekler.
+ * @param {object} bucket
+ * @param {number} ms
+ */
+export const addTiming = (bucket, ms) => {
+  if (!bucket) return;
+  bucket.count += 1;
+  bucket.totalMs += ms;
+  if (ms > bucket.maxMs) bucket.maxMs = ms;
+};
+
+/**
+ * Kovayı özetler ve sıfırlar.
+ * @param {object} bucket
+ * @returns {{ n: number, avg: string, max: string, total: string }}
+ */
+export const summarizeTiming = (bucket) => {
+  if (!bucket || bucket.count === 0) return { n: 0, avg: '0.00', max: '0.00', total: '0.00' };
+  const out = {
+    n: bucket.count,
+    avg: (bucket.totalMs / bucket.count).toFixed(2),
+    max: bucket.maxMs.toFixed(2),
+    total: bucket.totalMs.toFixed(2),
+  };
+  bucket.count = 0;
+  bucket.totalMs = 0;
+  bucket.maxMs = 0;
+  return out;
+};
+
+/** Yüksek çözünürlüklü saat; yoksa Date.now()'a düşer */
+export const nowMs = () =>
+  typeof global !== 'undefined' && global.performance && global.performance.now
+    ? global.performance.now()
+    : Date.now();
 
 export default { dlog, len, textLen, DIAGNOSTICS_ENABLED };
