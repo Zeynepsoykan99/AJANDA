@@ -15,7 +15,7 @@
  *
  * Kök neden bulunup düzeltilince BU DOSYA ve ana menüdeki bağlantı silinecek.
  */
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DraggableSticker from '../components/stickers/DraggableSticker';
@@ -159,7 +159,10 @@ export default function StickerProbeScreen() {
     if (variant === 'b') {
       return (
         <ZoomableCanvas style={styles.stage}>
-          <View style={StyleSheet.absoluteFill}>{stickerNode}</View>
+          <View style={StyleSheet.absoluteFill}>
+            <RefProbe />
+            {stickerNode}
+          </View>
         </ZoomableCanvas>
       );
     }
@@ -178,6 +181,7 @@ export default function StickerProbeScreen() {
               stickers={[]}
               style={[StyleSheet.absoluteFill, { zIndex: 20 }]}
             />
+            <RefProbe />
             <StickerCanvas
               stickers={[TEST_STICKER]}
               isDrawingMode={false}
@@ -203,6 +207,7 @@ export default function StickerProbeScreen() {
             stickers={[]}
             style={[StyleSheet.absoluteFill, { zIndex: drawingOn ? 50 : 20 }]}
           />
+          <RefProbe />
           {drawingOn ? stickerNodeDrawing : stickerNode}
         </View>
       </ZoomableCanvas>
@@ -289,6 +294,33 @@ export default function StickerProbeScreen() {
  * Worklet içinden düz nesneye yazmak hata verebilir. Bu satır, sonucun
  * yanlış yorumlanmaması için durumu ekranda gösterir.
  */
+/**
+ * GECICI (teshis). Cizim pan jestinin RNGH handlerTag'ini SAGLAYICININ ICINDEN
+ * okur. Duzeltmenin tamami bu referansin gercek bir tag'e cozumlenmesine bagli:
+ *   tag > 0  -> blocksExternalGesture iliskisi native tarafa gitti
+ *   YOK / -1 -> iliski ETKISIZ, duzeltme devrede DEGIL
+ * RNGH tag'leri mikrotask icinde cikardigi icin (attachHandlers.js:25,39)
+ * olcum setTimeout(0) ile mount sonrasina birakilir.
+ */
+function RefProbe() {
+  const { drawingGestureRef } = useZoomableCanvas();
+  const [tag, setTag] = useState('...');
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setTag(String(drawingGestureRef?.current?.handlerTag ?? 'YOK'));
+    }, 0);
+    return () => clearTimeout(t);
+  }, [drawingGestureRef]);
+  const ok = Number(tag) > 0;
+  return (
+    <View style={styles.refProbe} pointerEvents="none">
+      <Text style={[styles.refProbeText, { color: ok ? '#2E7D32' : '#E53935' }]}>
+        çizimJesti tag: {tag} {ok ? '(iliski kurulu)' : '(ETKISIZ)'}
+      </Text>
+    </View>
+  );
+}
+
 function ContextProbe() {
   const { colors } = useTheme();
   const ctx = useZoomableCanvas();
@@ -304,6 +336,16 @@ const styles = StyleSheet.create({
   safe: { flex: 1, padding: 14, gap: 10 },
   title: { fontSize: 15, fontWeight: '700' },
   legend: { fontSize: 10, lineHeight: 14 },
+  refProbe: {
+    position: 'absolute',
+    top: 2,
+    left: 2,
+    zIndex: 999,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    paddingHorizontal: 4,
+    borderRadius: 3,
+  },
+  refProbeText: { fontSize: 10, fontWeight: '700' },
   tabs: { flexDirection: 'row', gap: 5 },
   tab: {
     flex: 1,

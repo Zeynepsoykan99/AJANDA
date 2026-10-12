@@ -32,6 +32,9 @@ export const ZoomableCanvasContext = createContext({
   translateY: { value: 0 },
   isDrawingActive: { value: false },
   isStickerDragging: { value: false },
+  // Cizim pan jestinin RNGH referansi. Saglayici disinda `current` null kalir;
+  // RNGH convertToHandlerTag ile -1 uretip iliskiyi filtreler, yani zararsizdir.
+  drawingGestureRef: { current: null },
   screenToCanvas: (x, y) => ({ x, y }),
   canvasToScreen: (x, y) => ({ x, y }),
   pageToCanvas: (x, y) => ({ x, y }),
@@ -78,6 +81,12 @@ const ZoomableCanvas = forwardRef(function ZoomableCanvas(
   // Cizim modunda bir cikartma uzun basisla surukleniyorken cizim jestinin
   // ayni dokunusu kapmasini engeller (bkz. DraggableSticker + DrawingCanvas).
   const isStickerDragging = useSharedValue(false);
+  // DrawingCanvas'in pan jesti bu referansa `withRef` ile baglanir; DraggableSticker
+  // ayni referansi `blocksExternalGesture` ile kullanir. Referans (jest NESNESI degil)
+  // tasindigi icin bayatlamaz: RNGH `initialize()` her eklemede
+  // `config.ref.current = this` yazar (gesture.js:287-288) ve handlerTag her
+  // `updateGestureHandler` cagrisinda yeniden cozumlenir.
+  const drawingGestureRef = useRef(null);
 
   const viewportWidth = useSharedValue(0);
   const viewportHeight = useSharedValue(0);
@@ -389,6 +398,7 @@ const ZoomableCanvas = forwardRef(function ZoomableCanvas(
     translateY,
     isDrawingActive,
     isStickerDragging,
+    drawingGestureRef,
     screenToCanvas,
     canvasToScreen,
     pageToCanvas,

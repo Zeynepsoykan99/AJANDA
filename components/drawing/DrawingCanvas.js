@@ -95,6 +95,7 @@ export default function DrawingCanvas({
     screenToCanvas,
     isDrawingActive,
     isStickerDragging,
+    drawingGestureRef,
   } = useZoomableCanvas();
   const [currentPath, setCurrentPath] = useState('');
   const [lassoPath, setLassoPath] = useState('');
@@ -824,6 +825,7 @@ export default function DrawingCanvas({
     .shouldCancelWhenOutside(false)
     .averageTouches(false)
     .enabled(isDrawingMode)
+    .withRef(drawingGestureRef)
     .onBegin(() => {
       'worklet';
       // Cizim modunda bir cikartma uzun basisla surukleniyorsa cizim baslamaz.

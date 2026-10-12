@@ -31,11 +31,11 @@
  * Her tanı turunda elle güncellenir; Metro'ya bağlandığınızda açılışta yazılır.
  * Konsolda bu damgayı görmüyorsanız cihaz ESKİ paketi çalıştırıyor demektir.
  */
-export const BUILD_STAMP = 'tani-2026-10-12-D';
+export const BUILD_STAMP = 'duzeltme-2026-10-12-E';
 
 /** Bu damgada neler var (rapordaki adımlarla eşleşsin diye) */
 export const BUILD_NOTES =
-  'CIKARTMA TESHIS: probe a/b/c/d/e - d=cizim modu ACIK, e=gercek StickerCanvas';
+  'P0 DUZELTME: blocksExternalGesture + probe a/b/c/d/e (RefProbe tag gosterir)';
 
 /** Teşhis loglarını tek yerden kapatmak için. Kaldırmadan önce false yapılabilir. */
 export const DIAGNOSTICS_ENABLED = true;

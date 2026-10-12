@@ -83,6 +83,12 @@ const createRecorder = () => {
 };
 
 /**
+ * Jest referansi yerine gecen nobetci. Zincire bu NESNENIN kendisinin
+ * gectigini dogrulayabilmek icin kimligi onemli.
+ */
+const DRAWING_REF_SENTINEL = { current: { handlerTag: 77 } };
+
+/**
  * Kaynaktan pan jestinin kurulduğu bölümü çıkarıp verilen `isDrawingMode` ile
  * GERÇEKTEN çalıştırır; zincirdeki çağrı listesini döndürür.
  */
@@ -135,6 +141,7 @@ const recordPanChain = (source, isDrawingMode) => {
     'prepareSnapTargets',
     'triggerDragHaptic',
     'sticker',
+    'drawingGestureRef',
     body + '\nreturn panGesture;'
   );
 
@@ -164,7 +171,8 @@ const recordPanChain = (source, isDrawingMode) => {
     noop,
     noop,
     noop,
-    { id: 's1', x: 0, y: 0, scale: 1 }
+    { id: 's1', x: 0, y: 0, scale: 1 },
+    DRAWING_REF_SENTINEL
   );
 
   return rec.calls;

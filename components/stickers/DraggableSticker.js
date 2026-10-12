@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import ImageWithSkeleton from '../ui/ImageWithSkeleton';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -48,7 +48,23 @@ export default function DraggableSticker({
   onSnapChange,
   isDrawingMode = false,
 }) {
-  const { scale: canvasScale, isStickerDragging } = useZoomableCanvas();
+  const { scale: canvasScale, isStickerDragging, drawingGestureRef } = useZoomableCanvas();
+
+  // GECICI (teshis): kaldirilacak. Duzeltmenin TAMAMI bu referansin gercek bir
+  // handlerTag'e cozumlenmesine bagli. RNGH tag'leri mikrotask icinde cikarir
+  // (attachHandlers.js:25,39 "all refs should be initialized"), bu yuzden
+  // olcum setTimeout(0) ile mount sonrasina birakilir.
+  //   tag > 0  -> iliski native tarafa gitti
+  //   'YOK'/-1 -> iliski ETKISIZ, duzeltme devrede DEGIL
+  useEffect(() => {
+    const t = setTimeout(() => {
+      dlog('sticker:blockRef', {
+        tag: drawingGestureRef?.current?.handlerTag ?? 'YOK',
+        mod: isDrawingMode ? 'cizim' : 'normal',
+      });
+    }, 0);
+    return () => clearTimeout(t);
+  }, [isDrawingMode, drawingGestureRef]);
   const translateX = useSharedValue(sticker.x || 0);
   const translateY = useSharedValue(sticker.y || 0);
   const scale = useSharedValue(sticker.scale || 1);
@@ -91,6 +107,14 @@ export default function DraggableSticker({
         .activeOffsetX([-9999, 9999])
         .activeOffsetY([-9999, 9999])
         .activateAfterLongPress(STICKER_DRAG_LONG_PRESS_MS)
+        // Cizim pan'i +-1 nokta'da aktiflesiyor (DrawingCanvas: activeOffsetX);
+        // bizim esigimiz ise mesafeyle ASLA aktiflesmiyor, yalnizca 300 ms
+        // zamanlayicisi var. RNGH Android PanGestureHandler.kt:135 geregi parmak
+        // scaledTouchSlop (~8dp) kadar kayarsa zamanlayici IPTAL edilir. Bu
+        // yuzden cizim her zaman once kazaniyor ve uzun basis hic atesleneMIYOR.
+        // blocksExternalGesture ile cizim jesti, bu jest basarisiz olana kadar
+        // BEKLEMEK zorunda kalir; yaris artik esik buyuklugune gore cozulmez.
+        .blocksExternalGesture(drawingGestureRef)
     : Gesture.Pan().maxPointers(1).activeOffsetX([-5, 5]).activeOffsetY([-5, 5]);
 
   const panGesture = panBase
@@ -250,6 +274,11 @@ export default function DraggableSticker({
   // Yeniden boyutlandırma (Resize) gesture'ı
   const resizePanGesture = Gesture.Pan()
     .maxPointers(1)
+    // Tutamak varsayilan esikle (~8dp scaledTouchSlop) aktiflesiyor, cizim pan'i
+    // +-1 nokta'da; yani cizim 8x daha erken kazanip tutamagi iptal ediyordu.
+    // Kosulsuz uygulanir: cizim modu kapaliyken cizim jesti .enabled(false)
+    // oldugu icin iliski etkisizdir - bu yuzden takassizdir.
+    .blocksExternalGesture(drawingGestureRef)
     .onStart(() => {
       // GECICI (teshis/hipotez b): bu satir goruluyorsa buyutme tutamaci
       // render edilmis VE dokunusu almis demektir. Gorulmuyorsa sorun

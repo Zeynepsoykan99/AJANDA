@@ -4,6 +4,103 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-12] - P0-a + P0-b: Çıkartma Jestleri Çizim Pan'ine Karşı Yarışı Kazanıyor
+
+Kök neden `e13ae484`'te kanıtlanmıştı; bu girdi **düzeltmeyi** uygular. Karar: gövde sürükleme
+için **(i)** — 300 ms uzun basış + `blocksExternalGesture`, ≤300 ms gecikme kabul edildi.
+
+### 🧩 Kök Neden Özeti
+Çizim pan'i **±1 nokta**'da aktifleşiyor (`DrawingCanvas.js:822-823`); çıkartma katmanındaki her
+şey **8-24× daha yüksek** eşikte. Üstüne RNGH Android `PanGestureHandler.kt:135`,
+`activateAfterLongPress` kullanan bir pan'ı parmak `scaledTouchSlop` (~8dp) kayarsa **başarısız
+kılıp zamanlayıcısını iptal ediyor**. Sonuç: çizim modunda tek parmak hareketi gerektiren **her**
+çıkartma jesti kaybediyordu (gövde sürükleme **ve** köşe tutamağı), 300 ms hiç ateşlenmiyordu.
+
+Eksik olan şey **niyetin beyan edilmemesiydi**: yarış yalnızca eşik büyüklüğüne bakılarak
+çözülüyordu. RNGH'nin çapraz-ağaç ilişkileri projede hiç kullanılmamıştı.
+
+### 🔧 Değişiklikler
+**`components/drawing/ZoomableCanvas.js`**
+- `const drawingGestureRef = useRef(null)` — tek, stabil referans
+- `contextValue`'ya eklendi (mevcut `isStickerDragging` deseniyle aynı yol)
+- **Varsayılan bağlama** `drawingGestureRef: { current: null }` eklendi: sağlayıcı dışında
+  `convertToHandlerTag` `-1` üretip ilişkiyi filtreler, yani çökme yok
+
+**`components/drawing/DrawingCanvas.js`**
+- `drawingGestureRef` bağlamdan alınıyor
+- Çizim pan jestine **`.withRef(drawingGestureRef)`**
+- **`stateRef`'e EKLENMEDİ**: jest kurulum anında kullanılıyor, worklet içinde `state.*` olarak
+  okunmuyor → üç-liste senkronizasyonu bozulmadı (`drawingCanvasStateRef` 20 anahtarla geçiyor)
+
+**`components/stickers/DraggableSticker.js`**
+- Gövde pan'ı, **yalnızca çizim modu dalında**: `.blocksExternalGesture(drawingGestureRef)`,
+  `activateAfterLongPress(300)` **korundu**
+- `resizePanGesture`: **koşulsuz** `.blocksExternalGesture(drawingGestureRef)`. Çizim modu
+  kapalıyken çizim jesti `.enabled(false)` olduğu için ilişki etkisizdir → **takas yok**
+- **GEÇİCİ tanı:** `sticker:blockRef` — referansın gerçek bir `handlerTag`'e çözümlendiğini yazar
+
+**`app/sticker-probe.js`** (geçici)
+- **`RefProbe`**: (b)(c)(d)(e) sahnelerinin **içine**, sağlayıcının gördüğü yere. Ekranda
+  `çizimJesti tag: N` gösterir — yeşil = ilişki kurulu, kırmızı `ETKISIZ` = düzeltme devrede değil.
+  (Mevcut `ContextProbe` sahnenin **dışındaydı**, sağlayıcıyı göremiyordu.)
+- (d) sekmesi ayrı bir iş gerektirmedi: referans bağlam üzerinden aktığı için otomatik alıyor
+
+Damga: **`duzeltme-2026-10-12-E`**
+
+### 🔒 Referansın Bayatlamadığının Kanıtı (kaynaktan)
+`GestureDetector/utils.js:29-39` — `convertToHandlerTag`:
+- `ref instanceof BaseGesture` → `ref.handlerTag` (**o anki nesneye kilitlenir**)
+- aksi halde → `ref.current?.handlerTag ?? -1` (**her çıkarımda yeniden çözümlenir**)
+
+`gesture.js:281-289` — `initialize()` her eklemede `handlerTag`'i **yeniden üretir** ve
+`config.ref.current = this` yazar. `attachHandlers.js:46` her `updateGestureHandler` çağrısında
+`extractGestureRelations` ile tag'leri **yeniden** çıkarır. `useMountReactions.js:21-38` geç
+mount durumunu onarır: ilişkideki jest sonradan mount olursa dedektörü günceller.
+
+**Sonuç:** jest **nesnesi** taşınırsa bayatlar, **referans** taşınırsa bayatlamaz. Referans taşındı.
+
+### ✅ Testler
+**`tests/stickerBlocksDrawingGesture.test.js` [NEW]** — 7 test, Proxy kaydedici ile zincir
+**gerçekten** kurulur:
+1. Çizim modunda gövde pan `blocksExternalGesture`'ı **tam 1 kez** ve **nöbetçi referansın
+   kendisiyle** çağırıyor + `activateAfterLongPress(300)` korunmuş
+2. Çizim modu **dışında** ilişki **yok** (a40ab0ca korunuyor)
+3. Köşe tutamağı koşulsuz ilişki kuruyor
+4. Referans zinciri kurulu (ZoomableCanvas → bağlam → DrawingCanvas, varsayılan bağlam dahil)
+5. **Bayatlama**: argüman `current` alanı olan bir referans, `handlerTag` taşıyan bir jest nesnesi
+   **değil**; kaynakta `blocksExternalGesture(drawingGesture)` geçmiyor
+6. **RNGH sözleşmesi** `node_modules`'ten doğrulanıyor — sürüm yükseltmesi sessizce bozamaz
+7. Tanı izleri yerinde (`sticker:panStart`, `drawing:blockedBySticker`, `sticker:blockRef`)
+
+**Kasıtlı kırılmalar: 11/11 yakalandı** (P1-P8 + G1-G3). P3, P4 ve P7 **birden fazla** test
+dosyası tarafından yakalandı.
+
+**Düzeltilen kırılgan iddialar:** `stickerDragInDrawingMode.test.js`'te üç iddia kaynakta
+**birebir komşuluk** varsayıyordu ve araya yeni bir alan girince kırılıyordu (biri yorum satırı
+sonundaki `;` yüzünden tembel regex'i erken bitiriyordu). Üçü de **üyelik** kontrolüne çevrildi;
+G1-G3 kırılmaları bunların **hâlâ dişli** olduğunu kanıtlıyor.
+
+### ⚠️ Bu Testlerin KAPSAMADIĞI (yalnızca cihazda ölçülebilir)
+- Native tarafta **gerçek dokunuş çözümlemesi** ve yarışın **sonucu**
+- ~8dp `scaledTouchSlop` toleransının insan eliyle pratikte tutulabilirliği
+- 300 ms zamanlayıcısının gerçekten ateşlenmesi
+- `blocksExternalGesture`'ın gecikme maliyeti (seçili çıkartma üstünde ≤300 ms)
+- **iOS**: kanıt Android'in `PanGestureHandler.kt`'sinden; iOS davranışı **doğrulanmadı**
+
+### 📁 Değiştirilen Dosyalar
+- `components/drawing/ZoomableCanvas.js`, `components/drawing/DrawingCanvas.js`,
+  `components/stickers/DraggableSticker.js`
+- `app/sticker-probe.js` (geçici), `utils/diagnosticLog.js` (damga)
+- `tests/stickerBlocksDrawingGesture.js` **[NEW]**, `tests/stickerGestureConfig.test.js`,
+  `tests/stickerDragInDrawingMode.test.js`
+- `ilerleme.md`
+
+### ✅ Doğrulama
+- **28/28** test geçti · 113 dosya sözdizimi temiz · ölü referans yok · stateRef 20 anahtar
+- **Cihazda doğrulanmadı.** Tanı kodu ve probe ekranı, doğrulama gelene kadar **kalıyor**.
+
+---
+
 ## 📅 [2026-10-12] - Çıkartma Sürükleme: KÖK NEDEN KANITLANDI (yalnızca teşhis)
 
 Üretim koduna **dokunulmadı**. Cihaz sonuçları + RNGH kaynak kodu ile kök neden kesinleşti.

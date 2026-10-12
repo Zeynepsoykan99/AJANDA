@@ -33,7 +33,10 @@ const drawingOffset = Number(/\.activeOffsetX\(\[-(\d+), \d+\]\)/.exec(CANVAS)[1
 // yapilandirma a40ab0ca ile birebir ayni kalsin diye). Esikler bu yuzden iki
 // ayri daldan okunur. Yapilandirmanin TAMAMI ayrica
 // tests/stickerGestureConfig.test.js icinde gercek zincir kurularak dogrulanir.
-const panSection = /const panBase = isDrawingMode[\s\S]*?;\n/.exec(STICKER);
+// Yorum satirlari ATILIR: aksi halde icinde `;` ile biten bir aciklama satiri
+// asagidaki tembel (non-greedy) eslesmeyi erken bitirir ve dallar bos kalir.
+const STICKER_NC = STICKER.replace(/^[ \t]*\/\/.*$/gm, '');
+const panSection = /const panBase = isDrawingMode[\s\S]*?;\n/.exec(STICKER_NC);
 assert.ok(panSection, 'kosullu panBase bolumu bulunmali');
 const drawingBranch = panSection[0].slice(0, panSection[0].indexOf('    : Gesture.Pan()'));
 const normalBranch = panSection[0].slice(panSection[0].indexOf('    : Gesture.Pan()'));
@@ -146,18 +149,31 @@ console.log(
     /const isStickerDragging = useSharedValue\(false\);/.test(ZOOMABLE),
     'paylasilan deger olusturulmali'
   );
+  const ctxIdx = ZOOMABLE.indexOf('const contextValue = {');
+  assert.ok(ctxIdx > -1, 'contextValue bloku bulunmali');
+  const ctxBlock = ZOOMABLE.slice(ctxIdx, ZOOMABLE.indexOf('};', ctxIdx));
   assert.ok(
-    /isDrawingActive,\s*\n\s*isStickerDragging,\s*\n\s*screenToCanvas,/.test(ZOOMABLE),
+    /^\s*isStickerDragging,\s*$/m.test(ctxBlock),
     'baglam degerine eklenmeli, yoksa tuketiciler undefined okur'
+  );
+  assert.ok(
+    /^\s*isDrawingActive,\s*$/m.test(ctxBlock),
+    'isDrawingActive de baglam degerinde olmali'
   );
   console.log('OK Test 4: isStickerDragging baglamda eksiksiz kurulu');
 }
 
 // --- Test 5: Bayrak set ediliyor VE TEK onFinalize ile birakiliyor ---
 {
+  const stickerDestr = /const \{([^}]*)\} = useZoomableCanvas\(\);/.exec(STICKER);
+  assert.ok(stickerDestr, 'cikartma baglamdan okumali');
   assert.ok(
-    /const \{ scale: canvasScale, isStickerDragging \} = useZoomableCanvas\(\);/.test(STICKER),
+    /\bisStickerDragging\b/.test(stickerDestr[1]),
     'cikartma bayragi baglamdan almali'
+  );
+  assert.ok(
+    /\bscale: canvasScale\b/.test(stickerDestr[1]),
+    'tuval olcegi de baglamdan alinmali'
   );
 
   const panChain = /const panGesture = panBase[\s\S]*?\n    \}\);/.exec(STICKER);
@@ -202,8 +218,10 @@ console.log(
 
 // --- Test 6: Cizim jesti bayraga saygi duyuyor ----------------------
 {
+  const canvasDestr = /const \{([^}]*)\} = useZoomableCanvas\(\);/.exec(CANVAS);
+  assert.ok(canvasDestr, 'DrawingCanvas baglamdan okumali');
   assert.ok(
-    /isStickerDragging,\s*\n\s*\} = useZoomableCanvas\(\);/.test(CANVAS),
+    /\bisStickerDragging\b/.test(canvasDestr[1]),
     'DrawingCanvas bayragi baglamdan almali'
   );
 
