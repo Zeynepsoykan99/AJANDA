@@ -4,6 +4,78 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-12] - Çıkartma Sürükleme: KÖK NEDEN KANITLANDI (yalnızca teşhis)
+
+Üretim koduna **dokunulmadı**. Cihaz sonuçları + RNGH kaynak kodu ile kök neden kesinleşti.
+
+### 📱 Cihaz Bulguları (kullanıcı)
+| Ortam | Sonuç |
+|---|---|
+| (a)(b)(c) probe, çizim modu **KAPALI** | seç ✓ sürükle ✓ büyüt ✓ |
+| **(e) gerçek StickerCanvas**, mod kapalı | hepsi ✓ (StickerCanvas suçlu **değil**) |
+| **(d) izole, çizim modu AÇIK** | seç ✓ · **sürükle ✗** · **köşeden büyüt ✗** |
+| Gerçek sayfa, **kalem seçili** | ekle ✓ seç ✓ "pinch" ✓ · **sürükle ✗** |
+
+Sorun **yalnızca çizim modunda** ve **yalnızca tek parmak hareketi** gerektiren jestlerde.
+
+### 🔑 Önemli Olgu Düzeltmesi: `DraggableSticker` içinde `Gesture.Pinch()` YOKTUR
+`grep Gesture\.` → yalnızca `Pan` (88, 94, 251) ve `Tap` (231, 274). Tek `Gesture.Pinch()`
+**`ZoomableCanvas.js:197`**'de, yani **tuvalin kendi yakınlaştırması**. Gerçek sayfada "pinch ile
+büyüyor" denen davranış çıkartmanın `scale` alanını **değiştirmiyor**; tuvali yakınlaştırıyor ve
+çıkartma her şeyle birlikte büyümüş görünüyor. Çıkartmanın **gerçek** boyutlandırması
+`resizePanGesture` (251) — **köşe tutamağına tek parmakla pan** — ve o da (d)'de **çalışmıyor**.
+
+### 🧪 KÖK NEDEN — iki satır
+**1. `DrawingCanvas.js:822-823`** — çizim pan'i **±1 nokta**'da aktifleşiyor:
+```js
+.activeOffsetX([-1, 1]).activeOffsetY([-1, 1])
+```
+**2. `PanGestureHandler.kt:72, 135`** (RNGH 2.28, Android) — `activateAfterLongPress` kullanan bir
+pan, parmak **sistem dokunma toleransı** kadar kayarsa **başarısız olur ve zamanlayıcısını iptal
+eder**:
+```kotlin
+defaultMinDist = vc.scaledTouchSlop.toFloat()          // ~8dp
+if (activateAfterLongPress > 0 && dx*dx + dy*dy > defaultMinDist*defaultMinDist) {
+  handler?.removeCallbacksAndMessages(null); return true   // BASARISIZ
+}
+```
+**Aktifleşme eşikleri (çizim modu):**
+
+| Jest | Eşik | Sonuç |
+|---|---|---|
+| **Çizim** pan | **±1 nokta** | **daima önce aktifleşir** |
+| Çıkartma **gövde** pan | mesafeyle **asla** (`±9999`), yalnızca **300 ms** zamanlayıcı | çizim 1 nokta'da kazanıp **iptal ediyor**; 300 ms hiç gelmiyor |
+| Çıkartma **köşe** pan | **varsayılan ~8dp** (`scaledTouchSlop`) | çizim **8× daha erken** aktifleşiyor → iptal |
+| Çıkartma **tap** | `maxDistance(5)`, hareket ≈ 0 | hareket yok → yarış yok → **çalışıyor** |
+| Tuval **pinch** | **2 parmak** | çizim pan'inde `.maxPointers(1)` (**821**) → **yapısal olarak yarışmıyor** → **çalışıyor** |
+
+**Tek mekanizma tüm gözlemleri açıklıyor:** çizim pan'inin ±1 nokta eşiği, çıkartma katmanındaki
+her şeyden **8-24× daha düşük**. Bu yüzden çizim modunda tek parmak hareketi gerektiren **her**
+çıkartma jesti kaybediyor (gövde sürükleme **ve** köşe büyütme), hareket gerektirmeyen jestler
+(tap) ve iki parmaklı jestler (tuval pinch) çalışıyor.
+
+**Benim `activateAfterLongPress(300)` yaklaşımı bu yüzden işe yaramadı:** satır 135 nedeniyle uzun
+basış zamanlayıcısı, çizim pan'i 1 nokta'da kazanıp jesti iptal ettiği için hiç ateşlenemiyor.
+
+### 🧰 Eksik Olan: RNGH çapraz-ağaç jest ilişkileri
+`blocksExternalGesture` (`gestures/gesture.js:255`), `requireExternalGestureToFail` (243) ve
+`simultaneousWithExternalGesture` (231) RNGH 2.28'de **mevcut**; projede **hiç kullanılmıyor**
+(`grep` → 0 sonuç). Yarış şu an **yalnızca eşik büyüklüğüyle** çözülüyor; niyet hiçbir yerde
+beyan edilmemiş.
+
+### 📝 Ayrı, Düşük Öncelikli Not — pinch animasyon tuhaflığı
+(e) sekmesinde **pinch ile küçültürken bir an büyüyüp sonra küçülme** gözlendi. Bu, çıkartma değil
+**`ZoomableCanvas` tuval yakınlaştırması** (`ZoomableCanvas.js:197`). Bu turda **dokunulmadı**,
+ayrı bir iş olarak kayda alındı. Kök neden incelenmedi.
+
+### 📁 Değiştirilen Dosyalar
+- `ilerleme.md` (yalnızca kayıt)
+
+**Üretim koduna dokunulmadı. Cihazda doğrulanmadı — yukarıdaki kök neden kaynak koddan kanıtlandı,
+düzeltme henüz uygulanmadı.**
+
+---
+
 ## 📅 [2026-10-12] - Çıkartma Teşhisi: Probe'a (d) Çizim Modu AÇIK ve (e) Gerçek StickerCanvas Sekmeleri
 
 Üretim koduna **dokunulmadı**. Yalnızca geçici probe ekranı genişletildi.
