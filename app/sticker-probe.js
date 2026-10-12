@@ -19,6 +19,7 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DraggableSticker from '../components/stickers/DraggableSticker';
+import StickerCanvas from '../components/stickers/StickerCanvas';
 import ZoomableCanvas from '../components/drawing/ZoomableCanvas';
 import DrawingCanvas from '../components/drawing/DrawingCanvas';
 import { useZoomableCanvas } from '../components/drawing/ZoomableCanvas';
@@ -26,10 +27,22 @@ import { useTheme } from '../context/ThemeContext';
 import { dlog } from '../utils/diagnosticLog';
 
 const VARIANTS = [
-  { id: 'a', label: 'a) Çıplak' },
-  { id: 'b', label: 'b) + Zoomable' },
-  { id: 'c', label: 'c) + Drawing' },
+  { id: 'a', label: 'a)Çıplak' },
+  { id: 'b', label: 'b)Zoom' },
+  { id: 'c', label: 'c)Draw-' },
+  { id: 'd', label: 'd)Draw+' },
+  { id: 'e', label: 'e)Canvas' },
 ];
+
+/**
+ * Varyant (e) GERÇEK StickerCanvas'i kullanir. Probe'un (a-d) kurulumunda
+ * OLMAYAN ve yalnizca StickerCanvas'ta bulunan dort sey vardir:
+ *   1. useAnimatedReaction(isDrawingActive) -> secimi aninda kaldirir
+ *   2. useEffect: isDrawingMode/isExporting degisince secimi kaldirir
+ *   3. backdropTapGesture: secili iken TUM tuvali kaplayan bir dokunma katmani
+ *   4. canvasWidth/Height onLayout'tan gelir
+ * (e) sekmesi bu dordunu birlikte olcer.
+ */
 
 const TEST_STICKER = {
   id: 'probe_sticker',
@@ -113,6 +126,32 @@ export default function StickerProbeScreen() {
     [selectedId, bump]
   );
 
+  // (d) icin ayni cikartma ama isDrawingMode={true}: uzun basis yolu devreye girer
+  const stickerNodeDrawing = useMemo(
+    () => (
+      <DraggableSticker
+        key="probe-draw"
+        sticker={TEST_STICKER}
+        isSelected={selectedId === TEST_STICKER.id}
+        isDrawingMode
+        onSelect={(id) => {
+          setSelectedId((prev) => (prev === id ? null : id));
+          bump('select');
+        }}
+        onDeselect={() => {
+          setSelectedId(null);
+          bump('deselect');
+        }}
+        onMove={() => bump('move')}
+        onResize={(_id, sc) => bump('resize', 'scale=' + Number(sc).toFixed(2))}
+        onDelete={() => bump('finalize', 'delete')}
+        canvasWidth={320}
+        canvasHeight={420}
+      />
+    ),
+    [selectedId, bump]
+  );
+
   const stage = (() => {
     if (variant === 'a') {
       return <View style={styles.stage}>{stickerNode}</View>;
@@ -124,18 +163,47 @@ export default function StickerProbeScreen() {
         </ZoomableCanvas>
       );
     }
+    if (variant === 'e') {
+      // GERCEK StickerCanvas: secimi KENDISI yonetir, bu yuzden sec/secimKalk
+      // sayaclari artmaz. Belirleyici sinyal `tasi` ve `buyut` sayaclari ile
+      // ekranda gorunen kesikli secim cercevesidir.
+      return (
+        <ZoomableCanvas style={styles.stage} isDrawingMode={false}>
+          <View style={StyleSheet.absoluteFill}>
+            <DrawingCanvas
+              isDrawingMode={false}
+              tool="pen"
+              drawings={[]}
+              textBlocks={[]}
+              stickers={[]}
+              style={[StyleSheet.absoluteFill, { zIndex: 20 }]}
+            />
+            <StickerCanvas
+              stickers={[TEST_STICKER]}
+              isDrawingMode={false}
+              onStickerMove={() => bump('move')}
+              onStickerResize={(_id, sc) => bump('resize', 'scale=' + Number(sc).toFixed(2))}
+              onStickerDelete={() => bump('finalize', 'delete')}
+            />
+          </View>
+        </ZoomableCanvas>
+      );
+    }
+
+    // (c) cizim modu KAPALI, (d) cizim modu ACIK
+    const drawingOn = variant === 'd';
     return (
-      <ZoomableCanvas style={styles.stage}>
+      <ZoomableCanvas style={styles.stage} isDrawingMode={drawingOn}>
         <View style={StyleSheet.absoluteFill}>
           <DrawingCanvas
-            isDrawingMode={false}
+            isDrawingMode={drawingOn}
             tool="pen"
             drawings={[]}
             textBlocks={[]}
             stickers={[]}
-            style={[StyleSheet.absoluteFill, { zIndex: 20 }]}
+            style={[StyleSheet.absoluteFill, { zIndex: drawingOn ? 50 : 20 }]}
           />
-          {stickerNode}
+          {drawingOn ? stickerNodeDrawing : stickerNode}
         </View>
       </ZoomableCanvas>
     );
@@ -145,6 +213,11 @@ export default function StickerProbeScreen() {
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <Text style={[styles.title, { color: colors.textPrimary }]}>
         Çıkartma Teşhis Ekranı (geçici)
+      </Text>
+
+      <Text style={[styles.legend, { color: colors.textSecondary }]}>
+        a: çıplak · b: +Zoomable · c: +Drawing (mod KAPALI) · d: +Drawing (mod AÇIK) ·
+        e: gerçek StickerCanvas
       </Text>
 
       <View style={styles.tabs}>
@@ -177,6 +250,7 @@ export default function StickerProbeScreen() {
         </Text>
         <Text style={[styles.counterText, { color: colors.textSecondary }]}>
           seçili: {selectedId ? 'EVET' : 'hayır'}
+          {variant === 'e' ? '  (e: seçimi StickerCanvas yönetir, bu sayaç artmaz)' : ''}
         </Text>
       </View>
 
@@ -229,15 +303,16 @@ function ContextProbe() {
 const styles = StyleSheet.create({
   safe: { flex: 1, padding: 14, gap: 10 },
   title: { fontSize: 15, fontWeight: '700' },
-  tabs: { flexDirection: 'row', gap: 8 },
+  legend: { fontSize: 10, lineHeight: 14 },
+  tabs: { flexDirection: 'row', gap: 5 },
   tab: {
     flex: 1,
     borderWidth: 1,
     borderRadius: 10,
-    paddingVertical: 9,
+    paddingVertical: 8,
     alignItems: 'center',
   },
-  tabText: { fontSize: 12, fontWeight: '600' },
+  tabText: { fontSize: 10, fontWeight: '700' },
   counters: { borderWidth: 1, borderRadius: 10, padding: 10, gap: 3 },
   counterText: { fontSize: 12, fontWeight: '600' },
   stageWrap: { flex: 1, borderWidth: 1, borderRadius: 10, overflow: 'hidden' },

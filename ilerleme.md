@@ -4,6 +4,58 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-12] - Çıkartma Teşhisi: Probe'a (d) Çizim Modu AÇIK ve (e) Gerçek StickerCanvas Sekmeleri
+
+Üretim koduna **dokunulmadı**. Yalnızca geçici probe ekranı genişletildi.
+
+### 🔎 Probe Sonucu (kullanıcı, cihazda)
+**(a) çıplak · (b) +ZoomableCanvas · (c) +DrawingCanvas (mod KAPALI) — üçünde de seç/sürükle/büyüt
+sorunsuz.** Yani `DraggableSticker`, `ZoomableCanvas` ve `DrawingCanvas` **tek tek suçlu değil.**
+Kalan iki ihtimal: çizim modu **AÇIK** iken davranış, veya `StickerCanvas` / sayfa bağlamı.
+
+### 🧩 Kod Karşılaştırması — Probe'da OLMAYAN, StickerCanvas'ta OLAN dört şey
+`components/stickers/StickerCanvas.js` satır satır probe kurulumuyla karşılaştırıldı:
+
+| # | Fark | Satır | Neden önemli |
+|---|---|---|---|
+| **1** | `useAnimatedReaction(() => isDrawingActive?.value, ...)` → `runOnJS(setSelectedStickerId)(null)` | 41-49 | `isDrawingActive` **herhangi bir** nedenle true olursa seçim **anında** kalkar. Probe'da böyle bir reaksiyon **yok**, dolayısıyla (a)-(c) bunu **göremezdi**. Ayrıca **bağımlılık dizisi yok** — `selectedStickerId`'yi hangi render'dan yakaladığı belirsiz |
+| **2** | `useEffect` → `isDrawingMode \|\| isExporting` olunca seçimi kaldır | 57-64 | Probe `isDrawingMode={false}` sabitliyor ve bu efekt probe'da yok |
+| **3** | **`backdropTapGesture`** — seçili iken **tüm tuvali kaplayan** `StyleSheet.absoluteFill` View, kendi `GestureDetector`'ında | 65-72, 84-88 | Seçim oluşur **oluşmaz** ekranı kaplayan ikinci bir dokunma katmanı doğuyor. Probe'da **hiç yok**. Çıkartmanın seçiliyken `zIndex: 100` olması onu üstte tutuyor olsa da, bu **ikinci bir jest yarışçısı** demek |
+| **4** | `canvasWidth/Height` `onLayout`'tan gelir | 78-82 | Probe 320/420 sabitliyor. Sınır/snap hesapları etkilenebilir |
+
+**Değerlendirmem:** #1 ve #3 probe'un yapısal olarak göremediği iki fark ve ikisi de "seçim anında
+kalkıyor" belirtisini açıklayabilir. #3 ayrıca "seçtikten sonra sürükleyemiyorum" belirtisini
+açıklayabilir. **Hangisi olduğu kodda kanıtlanamaz** — (e) sekmesi bunu ölçecek.
+
+### 🧪 Probe Genişletildi — `app/sticker-probe.js`
+Beş sekme (hepsi **gerçek** bileşenlerle):
+- **(a) Çıplak** · **(b) +Zoom** · **(c) Draw−** (mod kapalı) — önceki tur, hepsi çalıştı
+- **(d) Draw+** — aynı yığın ama **çizim modu AÇIK** (`ZoomableCanvas`, `DrawingCanvas` ve
+  `DraggableSticker` üçüne de `isDrawingMode` veriliyor; `DrawingCanvas` `zIndex: 50` alıyor,
+  üretimdeki gibi). Uzun basış yolu burada devreye girer.
+- **(e) Canvas** — **gerçek `StickerCanvas`** + Zoomable + Drawing (mod kapalı). Yukarıdaki dört
+  farkın tamamını birlikte ölçer.
+
+Ekrana sekmelerin ne olduğunu anlatan bir açıklama satırı eklendi; etiketler dar ekranda sığacak
+şekilde kısaltıldı.
+
+**(e) için not:** `StickerCanvas` seçimi **kendisi** yönettiği için `seç`/`seçimKalk` sayaçları
+artmaz — belirleyici sinyal **`taşı`/`büyüt`** sayaçları ve ekranda görünen **kesikli seçim
+çerçevesi**. Bu, ekranda ayrıca yazılı.
+
+Damga: **`tani-2026-10-12-D`**.
+
+### 📁 Değiştirilen Dosyalar
+- `app/sticker-probe.js` (geçici probe)
+- `utils/diagnosticLog.js` (damga)
+- `ilerleme.md`
+
+### ✅ Doğrulama
+- **27/27** test dosyası geçti · 113 dosya sözdizimi temiz · ölü referans yok
+- **Cihazda doğrulanmadı.**
+
+---
+
 ## 📅 [2026-10-04] - Çıkartma Etkileşimi: İzole Probe Ekranı + Kök Neden Avı (yalnızca teşhis)
 
 Üretim koduna **dokunulmadı**. Tek ekleme: geçici probe ekranı ve ana menü bağlantısı.
