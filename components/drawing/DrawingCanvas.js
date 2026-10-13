@@ -140,6 +140,16 @@ export default function DrawingCanvas({
   const lastFrameAtRef = useRef(0);
   const longFrameCountRef = useRef(0);
   const strokeRenderStartRef = useRef(0);
+  const flushDelayRef = useRef(createTimingBucket());  // kare birlestirmenin ekledigi gecikme
+  const lastMoveAtRef = useRef(0);
+  const strokeFirstEventAtRef = useRef(0);
+  const strokeLastEventAtRef = useRef(0);
+  // KONTROL olcumu: cizginin ILK olayinda UI->JS gonderim gecikmesi. JS thread
+  // o anda (hareket kuyrugu birikmeden once) en bos haldedir. Buyuk cikarsa
+  // lag olcumunun SAAT TABANI supheli; kucuk cikarsa 47 ms gercek kuyruk
+  // beklemesidir. Iki calisma zamani da Date.now() kullanir.
+  const dispatchControlRef = useRef(0);
+  const strokeActiveRef = useRef(false);
 
   const triggerThrottledHaptic = useCallback(() => {
     const now = Date.now();
@@ -504,6 +514,55 @@ export default function DrawingCanvas({
   }, []);
 
   /**
+   * GECICI (teshis/SORUN B): BOSTA taban cizgisi. Ekran acildiktan sonra
+   * ~3 sn boyunca hic dokunmadan rAF araliklarini olcer ve TEK satir yazar.
+   *
+   * Neden onemli: bu olcum YALNIZCA JS tarafindaki rAF saatini kullanir, iki
+   * calisma zamani arasinda saat tabani karsilastirmasi YAPMAZ. Yani cizim
+   * sirasindaki lag/frame degerlerinin saat artefakti olup olmadigini bagimsiz
+   * olarak dogrular.
+   *   Bosta da ~80 ms  -> JS thread SUREKLI yavas (gelistirme derlemesi vb.)
+   *   Yalnizca cizimde -> cizimin tetikledigi is var
+   */
+  useEffect(() => {
+    if (!isDrawingMode) return undefined;
+    const bucket = createTimingBucket();
+    let raf = null;
+    let longFrames = 0;
+    let last = nowMs();
+    const startedAt = last;
+    let done = false;
+    const tick = () => {
+      if (done) return;
+      const t = nowMs();
+      const gap = t - last;
+      last = t;
+      addTiming(bucket, gap);
+      if (gap > 32) longFrames += 1;
+      // Cizim baslarsa olcumu bitir: iki rAF dongusu birbirini etkilemesin
+      if (strokeActiveRef.current || t - startedAt >= 3000) {
+        done = true;
+        const sum = summarizeTiming(bucket);
+        dlog('perf:idleBaseline', {
+          frameN: sum.n,
+          frameAvgMs: sum.avg,
+          frameMaxMs: sum.max,
+          longFrames,
+          durationMs: Math.round(t - startedAt),
+          abortedByStroke: strokeActiveRef.current ? 1 : 0,
+        });
+        return;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => {
+      done = true;
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [isDrawingMode]);
+
+  /**
    * GECICI (teshis/SORUN B): cizgi suresince kare araliklarini olcer.
    * 32 ms'yi (iki kare) asan araliklar JS thread'in bloke oldugunu gosterir.
    * Log YAZMAZ, yalnizca biriktirir; ozet cizgi bitiminde tek satir olarak cikar.
@@ -530,8 +589,12 @@ export default function DrawingCanvas({
   }, []);
 
   const handleTouchStart = useCallback(
-    (absX, absY, locX, locY) => {
+    (absX, absY, locX, locY, uiSentAt) => {
       const state = stateRef.current;
+      // GECICI (teshis/SORUN B): KONTROL. Bkz. dispatchControlRef aciklamasi.
+      dispatchControlRef.current = uiSentAt ? Date.now() - uiSentAt : -1;
+      strokeFirstEventAtRef.current = uiSentAt || Date.now();
+      strokeLastEventAtRef.current = strokeFirstEventAtRef.current;
       let coordX = locX;
       let coordY = locY;
 
@@ -585,13 +648,17 @@ export default function DrawingCanvas({
       pathBuilderRef.current.reset();
       pathBuilderRef.current.push({ x: coordX, y: coordY });
       setCurrentPath(pathBuilderRef.current.toPath());
-      // GECICI (teshis/SORUN B): her cizgi icin AYRI ozet. Sifirlanmazsa
-      // perf:strokeEnd mount'tan beri birikmis deger yazar.
+      // GECICI (teshis/SORUN B): her cizgi icin AYRI ozet.
+      // summarizeTiming kovayi zaten kendisi sifirlar; bu satirlar IPTAL edilen
+      // cizgi icin gerekli (o yolda perf:strokeEnd hic yazilmaz, kova dolu kalir).
       resetTiming(moveTimingRef.current);
       resetTiming(pathTimingRef.current);
       resetTiming(eventLagRef.current);
       resetTiming(frameGapRef.current);
+      resetTiming(flushDelayRef.current);
+      lastMoveAtRef.current = nowMs();
       strokeRenderStartRef.current = renderCountRef.current;
+      strokeActiveRef.current = true;
       startFrameMonitor();
     },
     [processEraseAt, startFrameMonitor]
@@ -604,7 +671,11 @@ export default function DrawingCanvas({
       // UI thread'de olayin olustugu an ile JS'te islendigi an arasindaki fark.
       // Buyukse gecikme JS thread'in mesguliyetinden, kucukse render hattindan
       // geliyor demektir - iki kaynagi ayirmanin tek yolu.
-      if (uiSentAt) addTiming(eventLagRef.current, Date.now() - uiSentAt);
+      if (uiSentAt) {
+        addTiming(eventLagRef.current, Date.now() - uiSentAt);
+        strokeLastEventAtRef.current = uiSentAt;
+      }
+      lastMoveAtRef.current = __t0;
       const state = stateRef.current;
       let coordX = locX;
       let coordY = locY;
@@ -657,6 +728,9 @@ export default function DrawingCanvas({
       if (!pathRafIdRef.current) {
         pathRafIdRef.current = requestAnimationFrame(() => {
           pathRafIdRef.current = null;
+          // GECICI (teshis/SORUN B): kare birlestirmenin EKLEDIGI gecikme.
+          // Son hareketin JS'te islenmesi ile ekrana basma arasindaki fark.
+          addTiming(flushDelayRef.current, nowMs() - lastMoveAtRef.current);
           setCurrentPath(pathBuilderRef.current.toPath());
         });
       }
@@ -674,6 +748,7 @@ export default function DrawingCanvas({
       pathRafIdRef.current = null;
     }
     stopFrameMonitor();
+    strokeActiveRef.current = false;
     if (state.tool === 'eraser') {
       if (eraseRafIdRef.current) {
         cancelAnimationFrame(eraseRafIdRef.current);
@@ -721,6 +796,7 @@ export default function DrawingCanvas({
       const pt = summarizeTiming(pathTimingRef.current);
       const lag = summarizeTiming(eventLagRef.current);
       const fg = summarizeTiming(frameGapRef.current);
+      const fl = summarizeTiming(flushDelayRef.current);
       dlog('perf:strokeEnd', {
         tool: state.tool,
         points: pointsRef.current.length,
@@ -738,7 +814,17 @@ export default function DrawingCanvas({
         // Cizgi suresince kare araliklari ve 32 ms'yi asan kare sayisi
         frameAvgMs: fg.avg,
         frameMaxMs: fg.max,
+        // Kare ornek sayisi: 1 ise frameAvg/frameMax ISTATISTIK DEGIL
+        frameN: fg.n,
         longFrames: longFrameCountRef.current,
+        // Cizginin ilk ve son olayi arasindaki sure: olay HIZINI verir
+        // (points / strokeDurationMs). Seyreltme olup olmadigini ayirir.
+        strokeDurationMs: Math.max(0, strokeLastEventAtRef.current - strokeFirstEventAtRef.current),
+        // Kare birlestirmemizin ekledigi gecikme
+        flushAvgMs: fl.avg,
+        flushMaxMs: fl.max,
+        // KONTROL: ilk olayin UI->JS gonderim gecikmesi (saat tabani denetimi)
+        dispatchCtrlMs: dispatchControlRef.current,
         // Bu CIZGI boyunca yapilan React render sayisi (kare birlestirme sonrasi
         // nokta sayisindan cok daha kucuk olmali)
         rendersThisStroke: renderCountRef.current - strokeRenderStartRef.current,
@@ -859,6 +945,7 @@ export default function DrawingCanvas({
       pathRafIdRef.current = null;
     }
     stopFrameMonitor();
+    strokeActiveRef.current = false;
     if (state.tool === 'eraser') {
       if (eraseRafIdRef.current) {
         cancelAnimationFrame(eraseRafIdRef.current);
@@ -948,7 +1035,8 @@ export default function DrawingCanvas({
       if (isStickerDragging && isStickerDragging.value) {
         return;
       }
-      runOnJS(handleTouchStart)(event.absoluteX, event.absoluteY, event.x, event.y);
+      // GECICI (teshis/SORUN B): UI thread zaman damgasi (kontrol olcumu)
+      runOnJS(handleTouchStart)(event.absoluteX, event.absoluteY, event.x, event.y, Date.now());
     })
     .onUpdate((event) => {
       'worklet';

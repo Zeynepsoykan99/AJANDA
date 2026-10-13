@@ -23,6 +23,11 @@
  *   - app/pdf-probe.js                        (TUM DOSYA + ana menu baglantisi;
  *                                              tam PDF özelliği turunda silinecek)
  *   - tests/pendingSaveFlush.test.js          (dlog/len/textLen no-op enjeksiyonu)
+ *   - eas.json "preview" profili             (SORUN B icin gercek kullanici
+ *                                              derlemesi olcumu; ileride acilacak
+ *                                              "production" profili taniyi
+ *                                              ICERMEMELIDIR - DIAGNOSTICS_ENABLED
+ *                                              false yapilmali veya bu dosya silinmeli)
  * Bulmak için: grep -rn "diagnosticLog" --include=*.js .
  *
  * Çıktı `console.log` ile yazılır; Metro terminalinde görünür.
@@ -38,11 +43,11 @@
  * Her tanı turunda elle güncellenir; Metro'ya bağlandığınızda açılışta yazılır.
  * Konsolda bu damgayı görmüyorsanız cihaz ESKİ paketi çalıştırıyor demektir.
  */
-export const BUILD_STAMP = 'perf-2026-10-13-F';
+export const BUILD_STAMP = 'perf-2026-10-13-G';
 
 /** Bu damgada neler var (rapordaki adımlarla eşleşsin diye) */
 export const BUILD_NOTES =
-  'SORUN B: artimli SVG yol + kare birlestirme; iz gecikmesi olcumu eklendi';
+  'SORUN B: idleBaseline + strokeDuration/flushDelay/frameN + kontrol olcumu';
 
 /** Teşhis loglarını tek yerden kapatmak için. Kaldırmadan önce false yapılabilir. */
 export const DIAGNOSTICS_ENABLED = true;
@@ -103,8 +108,13 @@ export const createTimingBucket = () => ({ count: 0, totalMs: 0, maxMs: 0 });
  * @param {number} ms
  */
 /**
- * ⚠️ GEÇİCİ — Kovayı sıfırlar. Her çizgi için ayrı özet çıkarmak gerekir;
- * sıfırlanmazsa `perf:strokeEnd` mount'tan beri birikmiş değer yazar.
+ * ⚠️ GEÇİCİ — Kovayı sıfırlar.
+ *
+ * NOT: `summarizeTiming` özet alırken kovayı **kendisi** sıfırlar, yani
+ * `perf:strokeEnd` yazılan her çizgide ölçüler zaten çizgi başınadır.
+ * Bu yardımcı, özetin HİÇ alınmadığı yol için gereklidir: çizgi iptal
+ * edilirse (`handleTouchCancel`) `perf:strokeEnd` yazılmaz ve kova dolu
+ * kalır; bir sonraki çizgi iptal edilenin ölçülerini devralırdı.
  */
 export const resetTiming = (bucket) => {
   if (!bucket) return;
