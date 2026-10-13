@@ -1,20 +1,24 @@
 /**
  * ⚠️ GEÇİCİ — TEŞHİS AMAÇLI — KALDIRILACAK
  *
- * SORUN 2 (yazarken metin kaybolup geri geliyor) ve SORUN 4 (silgi metin
- * üzerinde çalışmıyor) sorunlarının kök nedeni kanıtlanamadı. Bu modül,
- * cihazda bir kez tetiklenecek akışların izini çıkarmak için eklendi.
+ * SORUN 4 (silgi metin üzerinde çalışmıyor) ve SORUN B (kalemle yazma
+ * yavaşlığı) henüz kapanmadı. Bu modül, cihazda bir kez tetiklenecek
+ * akışların izini çıkarmak için duruyor.
  *
- * Kök neden bulunup düzeltildikten sonra bu dosya silinecek ve aşağıdaki
- * dosyalardaki tanı çağrıları kaldırılacak:
+ * ✅ KAPANDI ve tanıları KALDIRILDI:
+ *   - Çıkartma etkileşimi (sticker:*, stickerCanvas:*, drawing:blockedBySticker)
+ *     ve app/sticker-probe.js — kök neden: çizim pan'inin ±1 nokta eşiği;
+ *     düzeltme blocksExternalGesture, cihazda doğrulandı.
+ *   - Karalama ile silme (ayrı tur) — scribble:* izleri SORUN B için duruyor.
+ *
+ * ⏳ KALAN tanı çağrıları (kök neden bulununca kaldırılacak):
  *   - app/_layout.js                          (logBuildStamp)
  *   - app/ajandam/[pageId].js                 (dlog)
  *   - app/todolist/[pageId].js                (dlog)
- *   - components/drawing/DrawingCanvas.js     (dlog + ölçüm kovaları + renderCountRef)
- *   - components/stickers/DraggableSticker.js (runOnJS(dlog))
- *   - components/stickers/StickerCanvas.js      (dlog)
- *   - app/sticker-probe.js                      (TUM DOSYA + ana menu baglantisi)
- *   - app/pdf-probe.js                          (TUM DOSYA + ana menu baglantisi)
+ *   - components/drawing/DrawingCanvas.js     (perf:/scribble:/eraser: +
+ *                                              ölçüm kovaları + renderCountRef)
+ *   - app/pdf-probe.js                        (TUM DOSYA + ana menu baglantisi;
+ *                                              tam PDF özelliği turunda silinecek)
  *   - tests/pendingSaveFlush.test.js          (dlog/len/textLen no-op enjeksiyonu)
  * Bulmak için: grep -rn "diagnosticLog" --include=*.js .
  *

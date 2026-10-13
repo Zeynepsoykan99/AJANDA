@@ -4,6 +4,109 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-13] - Çıkartmalarda Hizalama Kaldırıldı (serbest yerleşim) + Çıkartma Tanıları Temizlendi
+
+Çıkartma sürükleme/boyutlandırma düzeltmesi (`f81d6a24`) **cihazda doğrulandı** — kalem seçiliyken
+de rahat çalışıyor. Bu girdi iki iş yapar: (1) çıkartmalarda hizalama/yapışmanın kaldırılması,
+(2) kapanan soruna ait geçici tanı kodunun temizlenmesi.
+
+### 🎯 Karar
+Yalnızca **çıkartmalar** için hizalama çizgileri ve yapışma **tamamen kalktı**; serbest yerleşim,
+çıkartma parmağın bıraktığı koordinatta durur. Metin kutusu, kement ve çizim tarafındaki akıllı
+hizalamaya **dokunulmadı**. Ayar/anahtar eklenmedi — düz kaldırma.
+
+### 🔧 `components/stickers/DraggableSticker.js`
+Kaldırılanlar (10 iz):
+- `useSmartSnapping` import'u ve `smartSnapping` bağlam okuması
+- `snapTargetsX/Y`, `prepareSnapTargets`, `getSnapTargets` çağrısı
+- `onUpdate` içindeki `calculateSnapping` bloğu ve `guideLineX/Y` + `guideLineX/YVisible` yazımları
+- `isSnappedV/H` paylaşılan değerleri ve yapışma anındaki dokunsal geri bildirim
+- `onSnapChange` prop'u — **üretimde hiç geçirilmiyordu**, yalnızca test koşum takımları
+  enjekte ediyordu; yani çıkartma için zaten ölüydü
+- `onEnd` ve `onFinalize`'daki kılavuz gizleme adımları
+
+`onUpdate` artık tek şey yapıyor:
+```js
+translateX.value = savedTranslateX.value + event.translationX / s;
+translateY.value = savedTranslateY.value + event.translationY / s;
+```
+
+**DOKUNULMAYANLAR (cihazda doğrulanmış davranış):** `blocksExternalGesture(drawingGestureRef)`,
+`activateAfterLongPress(300)`, `isStickerDragging` bayrağı, **tek** `onFinalize` gövdesi ve
+içindeki `isActive` / `onDeselect` / `isStickerDragging` temizliği, seçim/tap mantığı,
+`resizePanGesture`. Kullanılmayan `useCallback`/`useEffect` import'ları düştü (306 satır).
+
+**Köşe boyutlandırmada kaldırılacak bir şey yoktu:** `resizePanGesture` hiç hizalama kullanmıyordu
+(kaynakta doğrulandı).
+
+### 🔎 Bulgu (değiştirilmedi, karar kullanıcıya bırakıldı)
+**Çıkartmalar, BAŞKA öğeler için hâlâ hizalama hedefi.**
+`components/canvas/SmartSnappingContext.js:187-199` — `getSnapTargets` "3. Diğer Çıkartmalar"
+bölümü her çıkartmanın sol/merkez/sağ ve üst/merkez/alt kenarlarını hedef listesine ekliyor.
+Yani **metin kutusu taşınırken çıkartmaya göre mavi çizgi çıkar.** Bu çıkartma tarafı değil
+`TextCanvas` tarafının davranışı; talimat gereği **değiştirilmedi**.
+
+Ayrıca: hizalamanın **yalnızca iki tüketicisi** var — `DraggableSticker` (artık yok) ve
+`TextCanvas`. **Çoklu seçim grup taşıma hizalama kullanmıyor** (`guideLine` tüketicisi yok), yani
+orada korunacak bir şey de yoktu. `AlignmentGuidesOverlay` üç ekranda duruyor, metin için gerekli.
+
+### 🧹 Tanı Temizliği (kapanan sorun)
+Kaldırıldı:
+- `app/sticker-probe.js` **(tüm dosya)** ve ana menüdeki "Çıkartma teşhisi (geçici)" bağlantısı
+- `DraggableSticker`: `sticker:blockRef`, `sticker:panStart`, `sticker:panFinalize`,
+  `sticker:tapEnd`, `sticker:resizeStart` + `dlog` import'u (dosyada `dlog` kalmadı)
+- `StickerCanvas`: `stickerCanvas:selection`, `stickerCanvas:mode`,
+  `stickerCanvas:deselectByMode` + `dlog` import'u. **`deselectByMode` efektinin kendisi
+  korundu** — o gerçek mantık, yalnızca içindeki log satırı gitti
+- `DrawingCanvas`: `drawing:blockedBySticker`
+
+**DOKUNULMAYANLAR:** `perf:`, `scribble:`, `eraser:`, `screen:` izleri (SORUN B ve SORUN 4 hâlâ
+açık), `utils/diagnosticLog.js` ve yapım damgası, `app/pdf-probe.js` ve menüdeki PDF bağlantısı.
+Kaldırma listesi buna göre güncellendi (kapandı / kalan ayrımıyla).
+
+### ✅ Testler — 29/29
+**`tests/stickerNoSnapping.test.js` [NEW]** — 6 test. Test 1 **önce** `f81d6a24` sürümünü git'ten
+okuyup 10 hizalama izinin **gerçekten var olduğunu** gösteriyor (yoksa "kaldırıldı" iddiası boş
+olurdu), sonra mevcut sürümde hiçbirinin kalmadığını doğruluyor. Ayrıca taşımanın doğrudan jest
+ötelemesinden geldiği, köşe yolunda iz olmadığı, **doğrulanmış jest davranışının bozulmadığı** ve
+**metin tarafı hizalamasının ayakta** olduğu.
+
+**Kırılan iki iddia ve gerekçeleri:**
+1. `stickerDragInDrawingMode` Test 5 — `onFinalize` gövdesinde `guideLineXVisible.value = 0`
+   arıyordu. Kılavuz **kasıtlı** kaldırıldığı için kırıldı. Yalnızca o satır listeden çıkarıldı;
+   **çekirdek değişmez korundu** (her geri çağrı TEK SLOT, tüm temizlik aynı gövdede,
+   `isActive` + `onDeselect` + `isStickerDragging` hâlâ zorunlu).
+2. `stickerBlocksDrawingGesture` Test 7 — "tanı izleri yerinde" diyordu. İzler **kasıtlı**
+   kaldırıldı. Test **tersine çevrildi**: artık çıkartma tanılarının geri **sızmamasını** ve
+   `perf:`/`scribble:`/`eraser:` izlerinin **korunmasını** zorunlu kılıyor.
+
+Çizim modu kapalıyken jest yapılandırmasının değişmediğini kanıtlayan iddialar (`stickerGestureConfig`
+Test 2 ve Test 4) **dokunulmadan geçiyor**.
+
+**Kasıtlı kırılmalar: 11/11 yakalandı** — hizalamanın geri sızması (S1-S4), doğrulanmış davranışın
+bozulması (K1-K4), metin tarafının kaldırılması (M1), korunan izlerin silinmesi (T1), tanının geri
+sızması (T2). M1 **ilk denemede kaçırıldı**: Test 6 `includes('useSmartSnapping')` kullanıyordu ve
+import silinse de aşağıdaki çağrı eşleşmeye devam ediyordu; iddia import satırını **ayrıca**
+kontrol edecek şekilde sıkılaştırıldı.
+
+### ⚠️ Kapsamadıkları
+Ekranda gerçekten çizgi çizilip çizilmediği (render) **yalnızca cihazda** görülebilir; testler
+kaynak düzeyinde çağrı yokluğunu kanıtlar.
+
+### 📁 Değiştirilen Dosyalar
+- `components/stickers/DraggableSticker.js`, `components/stickers/StickerCanvas.js`,
+  `components/drawing/DrawingCanvas.js`, `app/index.js`
+- `app/sticker-probe.js` **(SİLİNDİ)**, `utils/diagnosticLog.js` (kaldırma listesi)
+- `tests/stickerNoSnapping.test.js` **[NEW]**, `tests/stickerDragInDrawingMode.test.js`,
+  `tests/stickerBlocksDrawingGesture.test.js`
+- `ilerleme.md`
+
+### ✅ Doğrulama
+- **29/29** test geçti · 112 dosya sözdizimi temiz · ölü referans yok
+- **Cihazda doğrulanmadı.**
+
+---
+
 ## 📅 [2026-10-12] - P0-a + P0-b: Çıkartma Jestleri Çizim Pan'ine Karşı Yarışı Kazanıyor
 
 Kök neden `e13ae484`'te kanıtlanmıştı; bu girdi **düzeltmeyi** uygular. Karar: gövde sürükleme

@@ -832,8 +832,6 @@ export default function DrawingCanvas({
       // Paylasilan deger worklet icinde DOGRUDAN okunur; stateRef'e eklenmez,
       // boylece uc-liste senkronizasyonu (drawingCanvasStateRef testi) bozulmaz.
       if (isStickerDragging && isStickerDragging.value) {
-        // GECICI (teshis/SORUN A)
-        runOnJS(dlog)('drawing:blockedBySticker');
         return;
       }
       if (isDrawingActive) {

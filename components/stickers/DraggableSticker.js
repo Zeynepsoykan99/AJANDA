@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import ImageWithSkeleton from '../ui/ImageWithSkeleton';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -11,9 +11,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useZoomableCanvas } from '../drawing/ZoomableCanvas';
-// GECICI (teshis): kaldirilacak
-import { dlog } from '../../utils/diagnosticLog';
-import { useSmartSnapping } from '../canvas/SmartSnappingContext';
 
 const triggerHaptic = () => {
   try {
@@ -45,26 +42,9 @@ export default function DraggableSticker({
   onDelete,
   canvasWidth = 0,
   canvasHeight = 0,
-  onSnapChange,
   isDrawingMode = false,
 }) {
   const { scale: canvasScale, isStickerDragging, drawingGestureRef } = useZoomableCanvas();
-
-  // GECICI (teshis): kaldirilacak. Duzeltmenin TAMAMI bu referansin gercek bir
-  // handlerTag'e cozumlenmesine bagli. RNGH tag'leri mikrotask icinde cikarir
-  // (attachHandlers.js:25,39 "all refs should be initialized"), bu yuzden
-  // olcum setTimeout(0) ile mount sonrasina birakilir.
-  //   tag > 0  -> iliski native tarafa gitti
-  //   'YOK'/-1 -> iliski ETKISIZ, duzeltme devrede DEGIL
-  useEffect(() => {
-    const t = setTimeout(() => {
-      dlog('sticker:blockRef', {
-        tag: drawingGestureRef?.current?.handlerTag ?? 'YOK',
-        mod: isDrawingMode ? 'cizim' : 'normal',
-      });
-    }, 0);
-    return () => clearTimeout(t);
-  }, [isDrawingMode, drawingGestureRef]);
   const translateX = useSharedValue(sticker.x || 0);
   const translateY = useSharedValue(sticker.y || 0);
   const scale = useSharedValue(sticker.scale || 1);
@@ -74,22 +54,8 @@ export default function DraggableSticker({
   const savedScale = useSharedValue(sticker.scale || 1);
   const isActive = useSharedValue(false);
 
-  const isSnappedV = useSharedValue(false);
-  const isSnappedH = useSharedValue(false);
 
-  const smartSnapping = useSmartSnapping();
-  const snapTargetsX = useSharedValue([]);
-  const snapTargetsY = useSharedValue([]);
-
-  const prepareSnapTargets = useCallback(() => {
-    if (smartSnapping?.getSnapTargets) {
-      const { targetsX, targetsY } = smartSnapping.getSnapTargets(sticker.id);
-      snapTargetsX.value = targetsX;
-      snapTargetsY.value = targetsY;
-    }
-  }, [smartSnapping, sticker.id]);
-
-  // Sürükleme gesture'ı + Akıllı Hizalama (Snapping)
+  // Sürükleme gesture'ı (serbest yerleşim; hizalama/yapışma yoktur)
   // Cizim modunda (kalem/fosforlu/silgi secili) cizim katmani dokunuslari
   // yakalar ve pan'i 1px'te aktifleştirir; cikartmanin 5px esigi bu yarisi
   // her zaman kaybeder. Bu yuzden cizim modunda cikartma UZUN BASISLA
@@ -122,8 +88,6 @@ export default function DraggableSticker({
       'worklet';
       savedTranslateX.value = translateX.value;
       savedTranslateY.value = translateY.value;
-      // GECICI (teshis/SORUN A): buraya ulasildiysa uzun basis AKTIFLESTI
-      runOnJS(dlog)('sticker:panStart', { drawingMode: isDrawingMode });
       if (isStickerDragging) {
         isStickerDragging.value = true;
       }
@@ -133,82 +97,19 @@ export default function DraggableSticker({
         runOnJS(triggerDragHaptic)();
       }
       isActive.value = true;
-      isSnappedV.value = false;
-      isSnappedH.value = false;
-      runOnJS(prepareSnapTargets)();
     })
     .onUpdate((event) => {
       'worklet';
+      // SERBEST YERLEŞİM: çıkartma için hizalama kılavuzu ve yapışma YOKTUR;
+      // parmağın bıraktığı koordinata gider. Metin kutusu tarafındaki akıllı
+      // hizalama (TextCanvas + SmartSnappingContext) olduğu gibi durur.
       const s = (canvasScale && canvasScale.value) || 1.0;
-      let nextX = savedTranslateX.value + event.translationX / s;
-      let nextY = savedTranslateY.value + event.translationY / s;
-
-      const itemW = 80 * scale.value;
-      const itemH = 80 * scale.value;
-
-      // Akıllı Hizalama (Smart Snapping & Guides)
-      if (smartSnapping?.calculateSnapping && (snapTargetsX.value.length > 0 || snapTargetsY.value.length > 0)) {
-        const res = smartSnapping.calculateSnapping(
-          nextX,
-          nextY,
-          itemW,
-          itemH,
-          snapTargetsX.value,
-          snapTargetsY.value,
-          6
-        );
-
-        nextX = res.snappedX;
-        nextY = res.snappedY;
-
-        if (res.hasSnapX) {
-          smartSnapping.guideLineX.value = res.guideX;
-          smartSnapping.guideLineXVisible.value = 1;
-          if (!isSnappedV.value) {
-            isSnappedV.value = true;
-            runOnJS(triggerHaptic)();
-            if (onSnapChange) runOnJS(onSnapChange)({ v: true });
-          }
-        } else {
-          smartSnapping.guideLineXVisible.value = 0;
-          if (isSnappedV.value) {
-            isSnappedV.value = false;
-            if (onSnapChange) runOnJS(onSnapChange)({ v: false });
-          }
-        }
-
-        if (res.hasSnapY) {
-          smartSnapping.guideLineY.value = res.guideY;
-          smartSnapping.guideLineYVisible.value = 1;
-          if (!isSnappedH.value) {
-            isSnappedH.value = true;
-            runOnJS(triggerHaptic)();
-            if (onSnapChange) runOnJS(onSnapChange)({ h: true });
-          }
-        } else {
-          smartSnapping.guideLineYVisible.value = 0;
-          if (isSnappedH.value) {
-            isSnappedH.value = false;
-            if (onSnapChange) runOnJS(onSnapChange)({ h: false });
-          }
-        }
-      }
-
-      translateX.value = nextX;
-      translateY.value = nextY;
+      translateX.value = savedTranslateX.value + event.translationX / s;
+      translateY.value = savedTranslateY.value + event.translationY / s;
     })
     .onEnd(() => {
       'worklet';
       isActive.value = false;
-      isSnappedV.value = false;
-      isSnappedH.value = false;
-      if (smartSnapping) {
-        smartSnapping.guideLineXVisible.value = 0;
-        smartSnapping.guideLineYVisible.value = 0;
-      }
-      if (onSnapChange) {
-        runOnJS(onSnapChange)({ v: false, h: false });
-      }
       if (onMove) {
         runOnJS(onMove)(sticker.id, translateX.value, translateY.value);
       }
@@ -221,20 +122,11 @@ export default function DraggableSticker({
     // (react-native-gesture-handler/gesture.js: `this.handlers.onFinalize = callback`).
     // Ikinci bir .onFinalize() cagrisi birincinin UZERINE YAZAR. Daha once
     // bayrak birakma ayri bir .onFinalize() olarak eklenmis ve asagidaki
-    // temizligi (isActive, snap kilavuzlari, onDeselect) sessizce yok etmisti.
+    // temizligi (isActive, onDeselect, isStickerDragging) sessizce yok etmisti.
     // Bu yuzden hepsi TEK govdede toplanmistir.
     .onFinalize(() => {
       'worklet';
       isActive.value = false;
-      isSnappedV.value = false;
-      isSnappedH.value = false;
-      if (smartSnapping) {
-        smartSnapping.guideLineXVisible.value = 0;
-        smartSnapping.guideLineYVisible.value = 0;
-      }
-      if (onSnapChange) {
-        runOnJS(onSnapChange)({ v: false, h: false });
-      }
       if (onDeselect) {
         runOnJS(onDeselect)();
       }
@@ -242,13 +134,6 @@ export default function DraggableSticker({
       if (isStickerDragging) {
         isStickerDragging.value = false;
       }
-      // GECICI (teshis/SORUN A): onFinalize jest AKTIFLESMESE de cagrilir.
-      // `wasActive=false` gorunuyorsa secim, hic surukleme olmadan kalkiyor
-      // demektir (hipotez a).
-      runOnJS(dlog)('sticker:panFinalize', {
-        drawingMode: isDrawingMode,
-        deselectCalled: !!onDeselect,
-      });
     });
 
   // Seçim (Tap) gesture'ı - Sadece parmak 5px'den az hareket ettiğinde çalışır
@@ -256,9 +141,6 @@ export default function DraggableSticker({
     .maxDuration(250)
     .maxDistance(5)
     .onEnd((_event, success) => {
-      // GECICI (teshis/SORUN A): bu satir goruluyorsa dokunus cikartmaya
-      // ULASTI ve secim jesti kazandi demektir.
-      runOnJS(dlog)('sticker:tapEnd', { success: !!success, drawingMode: isDrawingMode });
       if (success) {
         runOnJS(triggerHaptic)();
         if (onSelect) {
@@ -280,10 +162,6 @@ export default function DraggableSticker({
     // oldugu icin iliski etkisizdir - bu yuzden takassizdir.
     .blocksExternalGesture(drawingGestureRef)
     .onStart(() => {
-      // GECICI (teshis/hipotez b): bu satir goruluyorsa buyutme tutamaci
-      // render edilmis VE dokunusu almis demektir. Gorulmuyorsa sorun
-      // buyutmede degil SECIMDEDIR (tutamac hic render edilmiyor).
-      runOnJS(dlog)('sticker:resizeStart', { drawingMode: isDrawingMode });
       savedScale.value = scale.value;
     })
     .onUpdate((event) => {

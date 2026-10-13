@@ -1,10 +1,9 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useAnimatedReaction, runOnJS } from 'react-native-reanimated';
 import { useZoomableCanvas } from '../drawing/ZoomableCanvas';
 // GECICI (teshis): kaldirilacak
-import { dlog } from '../../utils/diagnosticLog';
 import DraggableSticker from './DraggableSticker';
 
 /**
@@ -29,11 +28,6 @@ export default function StickerCanvas({
   style,
 }) {
   const [selectedStickerId, setSelectedStickerId] = useState(null);
-  // GECICI (teshis): secim durumu her degistiginde yazilir; "secildi mi,
-  // ne zaman kalkti" sorusunu dogrudan cevaplar.
-  useEffect(() => {
-    dlog('stickerCanvas:selection', { selected: selectedStickerId || 'yok' });
-  }, [selectedStickerId]);
   const [canvasLayout, setCanvasLayout] = useState({ width: 0, height: 0 });
   const { isDrawingActive } = useZoomableCanvas();
 
@@ -48,16 +42,8 @@ export default function StickerCanvas({
   );
 
   // Mod değiştiğinde veya dışa aktarım başladığında seçimi kaldır
-  // GECICI (teshis): cizim modunun GERCEK degeri. Senaryolari ayirt etmek icin
-  // her degisimde yazilir.
-  useEffect(() => {
-    dlog('stickerCanvas:mode', { isDrawingMode, isExporting, stickers: stickers?.length });
-  }, [isDrawingMode, isExporting, stickers?.length]);
-
   useEffect(() => {
     if ((isDrawingMode || isExporting) && selectedStickerId) {
-      // GECICI (teshis/hipotez a): secim MOD yuzunden mi kalkiyor?
-      dlog('stickerCanvas:deselectByMode', { isDrawingMode, isExporting });
       setSelectedStickerId(null);
     }
   }, [isDrawingMode, isExporting]);

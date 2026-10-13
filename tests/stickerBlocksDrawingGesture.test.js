@@ -286,21 +286,23 @@ const blockCalls = (calls) => calls.filter((c) => c.name === 'blocksExternalGest
   console.log('OK Test 6: RNGH sozlesmesi (convertToHandlerTag + initialize) yerinde');
 }
 
-// --- Test 7: Tani izleri korunmus olmali -----------------------------
+// --- Test 7: Cikartmaya ozel GECICI tani izleri TEMIZLENDI -------------
+// Duzeltme cihazda dogrulandigi icin cikartma tanilari kaldirildi. Bu test artik
+// tersini korur: geri sizmasinlar. Sorun B ve digerleri icin kullanilan
+// perf:/scribble:/eraser: izleri KORUNUR, onlara dokunulmadi.
 {
-  assert.ok(
-    stickerSrc.includes("dlog)('sticker:panStart'"),
-    'uzun basisin aktiflestigini gosteren sticker:panStart izi korunmali'
-  );
-  assert.ok(
-    drawingSrc.includes("dlog)('drawing:blockedBySticker')"),
-    'cizimin engellendigini gosteren drawing:blockedBySticker izi korunmali'
-  );
-  assert.ok(
-    stickerSrc.includes("dlog('sticker:blockRef'"),
-    'referansin cozumlendigini gosteren sticker:blockRef izi bulunmali'
-  );
-  console.log('OK Test 7: tani izleri yerinde (panStart + blockedBySticker + blockRef)');
+  ['sticker:', 'stickerCanvas:', 'drawing:blockedBySticker'].forEach((trace) => {
+    assert.ok(
+      !stickerSrc.includes(trace) && !drawingSrc.includes(trace),
+      'cikartmaya ozel gecici tani izi geri sizmis: ' + trace
+    );
+  });
+  assert.ok(!/\bdlog\b/.test(stickerSrc), 'DraggableSticker artik dlog kullanmamali');
+  // Hala kapanmamis sorunlarin izleri DOKUNULMAMIS olmali
+  ['perf:strokeEnd', 'scribble:gate', 'eraser:commit'].forEach((keep) => {
+    assert.ok(drawingSrc.includes(keep), 'korunmasi gereken iz kaybolmus: ' + keep);
+  });
+  console.log('OK Test 7: cikartma tanilari temizlendi, perf/scribble/eraser izleri korundu');
 }
 
 console.log('--- TUM P0 ILISKI TESTLERI BASARIYLA GECTI! ---');

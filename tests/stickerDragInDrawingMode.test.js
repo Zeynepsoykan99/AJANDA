@@ -186,7 +186,8 @@ console.log(
   // (gesture.js: `this.handlers.onFinalize = callback`). Ayni zincirde ikinci bir
   // .onFinalize() birincinin UZERINE YAZAR ve onun govdesi sessizce kaybolur.
   // Bu tam olarak cd7484c2'de yasandi: bayrak birakma ayri bir onFinalize olarak
-  // eklenince snap kilavuzu/isActive/onDeselect temizligi yok oldu.
+  // eklenince isActive/onDeselect temizligi yok oldu. (Cikartma hizalamasi
+  // sonradan tamamen kaldirildi; o yuzden kilavuz temizligi listede yoktur.)
   // Yorum satirlarindaki ornek metinler (.onFinalize() gibi) sayima girmesin
   const chainNoComments = chain.replace(/^[ \t]*\/\/.*$/gm, '');
   const CALLBACKS = ['onBegin', 'onStart', 'onUpdate', 'onEnd', 'onFinalize', 'onTouchesDown'];
@@ -205,7 +206,6 @@ console.log(
   [
     ['isStickerDragging.value = false;', 'bayrak birakma'],
     ['isActive.value = false;', 'isActive sifirlama'],
-    ['guideLineXVisible.value = 0;', 'snap kilavuzu temizligi'],
     ['runOnJS(onDeselect)();', 'secim kaldirma'],
   ].forEach(([needle, label]) => {
     assert.ok(
