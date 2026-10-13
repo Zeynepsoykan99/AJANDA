@@ -4,6 +4,108 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-13] - SORUN B: Preview Profili + İz Gecikmesinin Kaynağını Ayıran Ölçümler
+
+Üretim davranışına **dokunulmadı**: yalnızca ölçüm, `eas.json` profili ve dokümantasyon.
+
+### 📊 Cihaz Ölçümü (geliştirme derlemesi, Metro bağlı, damga `perf-2026-10-13-F`)
+```
+perf:strokeEnd tool=pen points=11 moveN=10 moveAvgMs=0.75 moveMaxMs=1.08
+  pathAvgMs=0.01 pathMaxMs=0.02 lagAvgMs=46.70 lagMaxMs=90.00
+  frameAvgMs=83.04 longFrames=1 rendersThisStroke=1 renders=76
+```
+**Kullanıcının yorumu doğrulandı:** bizim işlerimiz ihmal edilebilir (hareket başına **0,75 ms**,
+yol üretimi **0,01 ms**). Algoritmik düzeltme doğruydu ama bu çizgi boyutlarında **darboğaz
+değildi**. Darboğaz **UI → JS gönderim/kuyruk gecikmesi**: olay 47 ms bekliyor, işleyici 1 ms'de
+bitiyor. Kaynağı (geliştirme derlemesi mi, uygulamanın kendi JS işi mi) **henüz ayrılamadı**.
+
+`frameAvgMs=83` yalnızca **tek** örnekten geliyordu (`longFrames=1`) — zayıf istatistik, kullanıcı
+haklı. `frameN` alanı bu yüzden eklendi.
+
+### ✅ Ölçüm Geçerliliği (2c)
+Hem worklet hem JS tarafı **`Date.now()`** kullanıyor → aynı sistem saati, farklı saat tabanı yok.
+Yine de iki **bağımsız kontrol** eklendi:
+- **`dispatchCtrlMs`** — çizginin **ilk** olayında, kuyruk birikmeden önceki gönderim gecikmesi.
+  Küçükse (≈2 ms) 47 ms **gerçek kuyruk beklemesidir**; büyükse saat tabanı şüphelidir.
+- **`perf:idleBaseline`** — **yalnızca** JS tarafındaki rAF saatini kullanır, çalışma zamanları
+  arasında saat karşılaştırması **yapmaz**. Boşta da ~80 ms ise JS thread sürekli yavaş.
+
+### 📏 Eklenen Ölçümler (sıcak yola log YAZILMAZ)
+- **`perf:idleBaseline`** — ekran açılışında ~3 sn, dokunmadan rAF aralıkları
+  (`frameN`/`frameAvgMs`/`frameMaxMs`/`longFrames`/`durationMs`/`abortedByStroke`). Çizim
+  başlayınca durur, iki rAF döngüsü çakışmasın.
+- **`perf:strokeEnd`**'e: **`strokeDurationMs`** (ilk-son olay → olay hızı),
+  **`flushAvgMs`/`flushMaxMs`** (kare birleştirmemizin **eklediği** gecikme), **`frameN`**,
+  **`dispatchCtrlMs`**.
+
+### ⚠️ Kendi Önceki İddiamı Düzeltiyorum
+Geçen tur "`moveTimingRef`/`pathTimingRef` hiç sıfırlanmıyor, `perf:strokeEnd` birikmiş değer
+yazıyor" demiştim — **yanlıştı**. `summarizeTiming` özet alırken kovayı **kendisi** sıfırlıyor
+(`diagnosticLog.js:139-142`), yani değerler **her zaman çizgi başınaydı**. Kullanıcının verisi de
+bunu doğruluyor: `moveN=10`, 10 hareket için.
+
+`resetTiming` yine de gerekli ama **daha dar** bir sebeple: çizgi **iptal** edilirse
+(`handleTouchCancel`) `perf:strokeEnd` yazılmaz, `summarizeTiming` çağrılmaz ve kova dolu kalır;
+sonraki çizgi iptal edilenin ölçülerini devralırdı. Gerekçe kodda ve testte düzeltildi.
+
+### 🏗️ `eas.json` preview profili
+`developmentClient` **yok** (`__DEV__` kapalı, Metro yok, üretim JS paketi), `internal` dağıtım,
+Android **APK**. **`channel` eklenmedi:** `expo-updates` kurulu değil (`package.json`'dan
+doğrulandı), o alan gereksiz olurdu.
+
+**Env değişkeni plumbing'i gerekmedi:** `dlog` `__DEV__`'e bağlı **değil**
+(`DIAGNOSTICS_ENABLED` tek anahtar), bu yüzden preview APK'da da
+`adb logcat -s ReactNativeJS` ile satırlar çıkar. Kaldırma listesine not düşüldü: ileride açılacak
+**`production` profili tanıyı İÇERMEMELİDİR**.
+
+### 🔍 Elenen JS Yükü Adayları (madde 3)
+| Aday | Sonuç |
+|---|---|
+| `setInterval` | ❌ Yalnızca `AudioRecorderModal` ve `PinAuthModal` — **modallar**, çizim ekranında mount değil |
+| `withRepeat` sonsuz animasyon | ❌ `AudioRecorderModal` ve `Skeleton` — **UI thread** Reanimated, JS thread'i meşgul etmez |
+| `ZoomableCanvas:110` `useAnimatedReaction` | ❌ `Math.round(scale*100)` değişimine bağlı; çizim sırasında scale değişmiyor → **hiç** tetiklenmiyor |
+| `StickerCanvas:35` reaksiyonu | ❌ Yalnızca seçili çıkartma varken **bir kez** |
+| Her render'da kurulan **3 jest nesnesi** | ❌ `rendersThisStroke=1` → çizgi boyunca **bir** kez kuruluyor. **`useMemo` bu ölçümle gerekçelendirilemez** |
+| **Geliştirme derlemesi yükü** | ⚠️ **Kalan tek aday.** Kaynaktan ayrılamaz — preview build bunun için |
+
+### 🔎 Bulgu (2d) — neden yalnızca 8-11 nokta?
+`handleTouchMove`'da minimum mesafe / seyreltme filtresi **yok**, her olay pushlanıyor. 11 nokta =
+RNGH **10 `onUpdate`** üretti. Olay **hızı** ancak `strokeDurationMs` ile anlaşılır (ölçüm bu yüzden
+eklendi): 1500 ms ise ~6 Hz (olay üretimi de yavaş), 170 ms ise ~60 Hz (normal). **Emin değilim,
+cihaz verisi gerekli.**
+
+### 🔎 Bulgu (2e) — `scribble:gate enabled=false`
+**Yükleme hatası DEĞİL.** `getDrawingPreferences` → `loadDrawingPreferences` → AsyncStorage zinciri
+doğru ve dört ekran dinleyiciye abone. `SCRIBBLE_ERASE_DEFAULT=true` yalnızca **ilk açılışta**
+geçerli; `enabled=false` demek `@ajanda_scribble_erase_v1` anahtarında **`'0'`** yazılı, yani
+`DrawingToolbar`'daki anahtar (`handleToggleScribbleErase`) **kapatılmış**. Talimat gereği
+**düzeltme yapılmadı**.
+
+### ✅ Testler — 31/31
+**`tests/perfMeasurement.test.js` [NEW]** — 9 test: `summarizeTiming`'in kendi sıfırlaması ·
+`resetTiming`'in iptal yolundaki işi · beş kovanın çizgi başında sıfırlanması · özet satırında 12
+alan · `idleBaseline`'ın varlığı, **saat tabanından bağımsızlığı** ve çizimde durması · sıcak yolda
+log olmaması · preview profilinin doğruluğu · `dlog`'un `__DEV__`'e bağlı olmaması.
+
+**Kasıtlı kırılmalar: 12/12 yakalandı.** R1 ilk denemede **kaçırıldı**; sebebi testin yanlış
+senaryoyu kurmasıydı (arada `summarizeTiming` çağırınca kova zaten sıfırlanıyordu) — senaryo iptal
+yoluna çevrildi, sonra yakalandı.
+
+### ⚠️ Kapsamadıkları
+Gerçek kare süresi · dokunmatik gecikmesi · Hermes davranışı · iki çalışma zamanı arasındaki saat
+tabanı eşitliği (ancak cihazda `dispatchCtrlMs` + `idleBaseline` ile denetlenir) ·
+geliştirme/preview farkı.
+
+### 📁 Değiştirilen Dosyalar
+- `components/drawing/DrawingCanvas.js`, `utils/diagnosticLog.js`, `eas.json`
+- `tests/perfMeasurement.test.js` **[NEW]**
+- `ilerleme.md`
+
+Damga: **`perf-2026-10-13-G`**. 113 dosya sözdizimi temiz, ölü referans yok.
+**Cihazda doğrulanmadı.**
+
+---
+
 ## 📅 [2026-10-13] - SORUN B: Canlı Çizgi Yolu Artımlı Üretim + Kare Başına Tek Basım
 
 Kalemle yazarken izin elin gerisinde kalması. Kullanıcı gözlemi: yavaşlık **boş sayfada da dolu
