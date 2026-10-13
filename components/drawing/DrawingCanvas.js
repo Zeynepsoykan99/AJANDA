@@ -16,6 +16,7 @@ import { evaluateScribbleErase } from '../../utils/scribbleDetection';
 // GECICI (tesshis): kok neden bulununca bu import ve dlog cagrilari kaldirilacak
 import {
   dlog,
+  resetTiming,
   len,
   textLen,
   createTimingBucket,
@@ -24,6 +25,7 @@ import {
   nowMs,
 } from '../../utils/diagnosticLog';
 import { useZoomableCanvas } from './ZoomableCanvas';
+import { createStrokePathBuilder } from '../../utils/strokePathBuilder';
 
 const triggerHaptic = () => {
   try {
@@ -120,10 +122,24 @@ export default function DrawingCanvas({
 
   // GECICI (teshis): SORUN B olcumu. Sicak yolda LOG YAZILMAZ, yalnizca
   // sure biriktirilir ve hareket bitiminde tek satir ozet yazilir.
+  // Artimli yol ureticisi: hareket basina SABIT is yapar ve pointsToSvgPath
+  // ile birebir ayni dizgeyi uretir (bkz. utils/strokePathBuilder.js).
+  const pathBuilderRef = useRef(createStrokePathBuilder());
+  // Canli izi kare basina BIR kez ekrana basmak icin bekleyen rAF
+  const pathRafIdRef = useRef(null);
+
   const moveTimingRef = useRef(createTimingBucket());
   const pathTimingRef = useRef(createTimingBucket());
   const renderCountRef = useRef(0);
   renderCountRef.current += 1;
+  // GECICI (teshis/SORUN B): iz gecikmesini JS thread mesguliyeti ile render
+  // hattindan ayirmak icin. Sicak yola LOG YAZILMAZ; yalnizca biriktirilir.
+  const eventLagRef = useRef(createTimingBucket());   // UI thread -> JS gecikmesi
+  const frameGapRef = useRef(createTimingBucket());   // cizgi sirasinda kare araliklari
+  const frameRafIdRef = useRef(null);
+  const lastFrameAtRef = useRef(0);
+  const longFrameCountRef = useRef(0);
+  const strokeRenderStartRef = useRef(0);
 
   const triggerThrottledHaptic = useCallback(() => {
     const now = Date.now();
@@ -251,6 +267,14 @@ export default function DrawingCanvas({
   // Unmount anında bekleyen RAF varsa temizle
   useEffect(() => {
     return () => {
+      if (pathRafIdRef.current) {
+        cancelAnimationFrame(pathRafIdRef.current);
+        pathRafIdRef.current = null;
+      }
+      if (frameRafIdRef.current) {
+        cancelAnimationFrame(frameRafIdRef.current);
+        frameRafIdRef.current = null;
+      }
       if (eraseRafIdRef.current) {
         cancelAnimationFrame(eraseRafIdRef.current);
       }
@@ -479,6 +503,32 @@ export default function DrawingCanvas({
     setHiddenStrokeIds(new Set());
   }, []);
 
+  /**
+   * GECICI (teshis/SORUN B): cizgi suresince kare araliklarini olcer.
+   * 32 ms'yi (iki kare) asan araliklar JS thread'in bloke oldugunu gosterir.
+   * Log YAZMAZ, yalnizca biriktirir; ozet cizgi bitiminde tek satir olarak cikar.
+   */
+  const startFrameMonitor = useCallback(() => {
+    lastFrameAtRef.current = nowMs();
+    longFrameCountRef.current = 0;
+    const tick = () => {
+      const t = nowMs();
+      const gap = t - lastFrameAtRef.current;
+      lastFrameAtRef.current = t;
+      addTiming(frameGapRef.current, gap);
+      if (gap > 32) longFrameCountRef.current += 1;
+      frameRafIdRef.current = requestAnimationFrame(tick);
+    };
+    frameRafIdRef.current = requestAnimationFrame(tick);
+  }, []);
+
+  const stopFrameMonitor = useCallback(() => {
+    if (frameRafIdRef.current) {
+      cancelAnimationFrame(frameRafIdRef.current);
+      frameRafIdRef.current = null;
+    }
+  }, []);
+
   const handleTouchStart = useCallback(
     (absX, absY, locX, locY) => {
       const state = stateRef.current;
@@ -531,15 +581,30 @@ export default function DrawingCanvas({
 
       strokeStartTimeRef.current = Date.now();
       pointsRef.current = [{ x: coordX, y: coordY, timestamp: 0 }];
-      setCurrentPath(`M ${coordX} ${coordY}`);
+      // Artimli uretici yeni cizgi icin sifirlanir ve ilk nokta eklenir.
+      pathBuilderRef.current.reset();
+      pathBuilderRef.current.push({ x: coordX, y: coordY });
+      setCurrentPath(pathBuilderRef.current.toPath());
+      // GECICI (teshis/SORUN B): her cizgi icin AYRI ozet. Sifirlanmazsa
+      // perf:strokeEnd mount'tan beri birikmis deger yazar.
+      resetTiming(moveTimingRef.current);
+      resetTiming(pathTimingRef.current);
+      resetTiming(eventLagRef.current);
+      resetTiming(frameGapRef.current);
+      strokeRenderStartRef.current = renderCountRef.current;
+      startFrameMonitor();
     },
-    [processEraseAt]
+    [processEraseAt, startFrameMonitor]
   );
 
   const handleTouchMove = useCallback(
-    (absX, absY, locX, locY) => {
+    (absX, absY, locX, locY, uiSentAt) => {
       // GECICI (teshis/SORUN B): sure biriktirilir, LOG YAZILMAZ
       const __t0 = nowMs();
+      // UI thread'de olayin olustugu an ile JS'te islendigi an arasindaki fark.
+      // Buyukse gecikme JS thread'in mesguliyetinden, kucukse render hattindan
+      // geliyor demektir - iki kaynagi ayirmanin tek yolu.
+      if (uiSentAt) addTiming(eventLagRef.current, Date.now() - uiSentAt);
       const state = stateRef.current;
       let coordX = locX;
       let coordY = locY;
@@ -576,12 +641,25 @@ export default function DrawingCanvas({
 
       const elapsed = Date.now() - strokeStartTimeRef.current;
       pointsRef.current.push({ x: coordX, y: coordY, timestamp: elapsed });
-      // GECICI (teshis/SORUN B): SVG yolu yeniden hesaplamanin maliyeti ayri olculur.
-      // Bu is her harekette TUM noktalar uzerinde donuyor -> bir cizgi boyunca O(n^2).
+
+      // ARTIMLI YOL: hareket basina SABIT is. Eskiden burada pointsToSvgPath
+      // TUM noktalar uzerinde doneuyordu; bir cizgi boyunca O(n^2) nokta
+      // ziyareti ve O(n^2) string tahsisi (1000 nokta icin ~498.500 ziyaret,
+      // ~27,8 MB dizge). Uretilen dizge birebir aynidir.
       const __p0 = nowMs();
-      const newPath = pointsToSvgPath(pointsRef.current);
+      pathBuilderRef.current.push({ x: coordX, y: coordY });
       addTiming(pathTimingRef.current, nowMs() - __p0);
-      setCurrentPath(newPath);
+
+      // KARE BASINA TEK EKRANA BASMA: her hareket olayi ayri bir React
+      // render'i tetiklemez. TUM noktalar yine toplanir (pointsRef + uretici),
+      // yani tamamlanan cizgi ve cizim kalitesi DEGISMEZ; yalnizca canli izin
+      // ekrana basilma sikligi kare butcesine baglanir.
+      if (!pathRafIdRef.current) {
+        pathRafIdRef.current = requestAnimationFrame(() => {
+          pathRafIdRef.current = null;
+          setCurrentPath(pathBuilderRef.current.toPath());
+        });
+      }
       addTiming(moveTimingRef.current, nowMs() - __t0);
     },
     [eraseBetweenPoints]
@@ -589,6 +667,13 @@ export default function DrawingCanvas({
 
   const handleTouchEnd = useCallback(() => {
     const state = stateRef.current;
+    // Bekleyen canli-iz basimi ve kare olcumu durdurulur; cizgi birazdan
+    // kalici katmana gecip currentPath temizlenecek.
+    if (pathRafIdRef.current) {
+      cancelAnimationFrame(pathRafIdRef.current);
+      pathRafIdRef.current = null;
+    }
+    stopFrameMonitor();
     if (state.tool === 'eraser') {
       if (eraseRafIdRef.current) {
         cancelAnimationFrame(eraseRafIdRef.current);
@@ -634,6 +719,8 @@ export default function DrawingCanvas({
     {
       const mv = summarizeTiming(moveTimingRef.current);
       const pt = summarizeTiming(pathTimingRef.current);
+      const lag = summarizeTiming(eventLagRef.current);
+      const fg = summarizeTiming(frameGapRef.current);
       dlog('perf:strokeEnd', {
         tool: state.tool,
         points: pointsRef.current.length,
@@ -644,6 +731,17 @@ export default function DrawingCanvas({
         pathAvgMs: pt.avg,
         pathMaxMs: pt.max,
         pathTotalMs: pt.total,
+        // UI thread -> JS olay gecikmesi: BUYUKSE JS thread mesgul,
+        // KUCUKSE darbogaz render hattinda demektir.
+        lagAvgMs: lag.avg,
+        lagMaxMs: lag.max,
+        // Cizgi suresince kare araliklari ve 32 ms'yi asan kare sayisi
+        frameAvgMs: fg.avg,
+        frameMaxMs: fg.max,
+        longFrames: longFrameCountRef.current,
+        // Bu CIZGI boyunca yapilan React render sayisi (kare birlestirme sonrasi
+        // nokta sayisindan cok daha kucuk olmali)
+        rendersThisStroke: renderCountRef.current - strokeRenderStartRef.current,
         renders: renderCountRef.current,
       });
     }
@@ -752,10 +850,15 @@ export default function DrawingCanvas({
     }
     pointsRef.current = [];
     setCurrentPath('');
-  }, [commitEraserBatch, eraseBetweenPoints]);
+  }, [commitEraserBatch, eraseBetweenPoints, stopFrameMonitor]);
 
   const handleTouchCancel = useCallback(() => {
     const state = stateRef.current;
+    if (pathRafIdRef.current) {
+      cancelAnimationFrame(pathRafIdRef.current);
+      pathRafIdRef.current = null;
+    }
+    stopFrameMonitor();
     if (state.tool === 'eraser') {
       if (eraseRafIdRef.current) {
         cancelAnimationFrame(eraseRafIdRef.current);
@@ -766,7 +869,7 @@ export default function DrawingCanvas({
     pointsRef.current = [];
     setCurrentPath('');
     setLassoPath('');
-  }, [commitEraserBatch]);
+  }, [commitEraserBatch, stopFrameMonitor]);
 
   // Çizim Gesture'ı (react-native-gesture-handler Pan):
   // KESİNLİKLE sadece tek parmak (minPointers(1).maxPointers(1)) ile tetiklenir.
@@ -852,7 +955,8 @@ export default function DrawingCanvas({
       if (isStickerDragging && isStickerDragging.value) {
         return;
       }
-      runOnJS(handleTouchMove)(event.absoluteX, event.absoluteY, event.x, event.y);
+      // GECICI (teshis/SORUN B): UI thread zaman damgasi olay gecikmesi icin
+      runOnJS(handleTouchMove)(event.absoluteX, event.absoluteY, event.x, event.y, Date.now());
     })
     .onEnd(() => {
       'worklet';

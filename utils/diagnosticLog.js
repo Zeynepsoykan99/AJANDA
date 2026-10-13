@@ -15,8 +15,11 @@
  *   - app/_layout.js                          (logBuildStamp)
  *   - app/ajandam/[pageId].js                 (dlog)
  *   - app/todolist/[pageId].js                (dlog)
- *   - components/drawing/DrawingCanvas.js     (perf:/scribble:/eraser: +
- *                                              ölçüm kovaları + renderCountRef)
+ *   - components/drawing/DrawingCanvas.js     (perf:/scribble:/eraser: + ölçüm
+ *                                              kovaları + renderCountRef +
+ *                                              eventLagRef/frameGapRef/
+ *                                              startFrameMonitor + onUpdate'teki
+ *                                              Date.now() zaman damgası)
  *   - app/pdf-probe.js                        (TUM DOSYA + ana menu baglantisi;
  *                                              tam PDF özelliği turunda silinecek)
  *   - tests/pendingSaveFlush.test.js          (dlog/len/textLen no-op enjeksiyonu)
@@ -35,11 +38,11 @@
  * Her tanı turunda elle güncellenir; Metro'ya bağlandığınızda açılışta yazılır.
  * Konsolda bu damgayı görmüyorsanız cihaz ESKİ paketi çalıştırıyor demektir.
  */
-export const BUILD_STAMP = 'duzeltme-2026-10-12-E';
+export const BUILD_STAMP = 'perf-2026-10-13-F';
 
 /** Bu damgada neler var (rapordaki adımlarla eşleşsin diye) */
 export const BUILD_NOTES =
-  'P0 DUZELTME: blocksExternalGesture + probe a/b/c/d/e (RefProbe tag gosterir)';
+  'SORUN B: artimli SVG yol + kare birlestirme; iz gecikmesi olcumu eklendi';
 
 /** Teşhis loglarını tek yerden kapatmak için. Kaldırmadan önce false yapılabilir. */
 export const DIAGNOSTICS_ENABLED = true;
@@ -99,6 +102,17 @@ export const createTimingBucket = () => ({ count: 0, totalMs: 0, maxMs: 0 });
  * @param {object} bucket
  * @param {number} ms
  */
+/**
+ * ⚠️ GEÇİCİ — Kovayı sıfırlar. Her çizgi için ayrı özet çıkarmak gerekir;
+ * sıfırlanmazsa `perf:strokeEnd` mount'tan beri birikmiş değer yazar.
+ */
+export const resetTiming = (bucket) => {
+  if (!bucket) return;
+  bucket.count = 0;
+  bucket.totalMs = 0;
+  bucket.maxMs = 0;
+};
+
 export const addTiming = (bucket, ms) => {
   if (!bucket) return;
   bucket.count += 1;

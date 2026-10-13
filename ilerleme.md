@@ -4,6 +4,119 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-13] - SORUN B: Canlı Çizgi Yolu Artımlı Üretim + Kare Başına Tek Basım
+
+Kalemle yazarken izin elin gerisinde kalması. Kullanıcı gözlemi: yavaşlık **boş sayfada da dolu
+sayfada da aynı**, takılma değil **sürekli gecikme**.
+
+### 🔗 Girdi → Ekran Zinciri (kaynaktan, cihazsız)
+
+| Adım | Thread | Hareket başına iş |
+|---|---|---|
+| `Gesture.Pan().onUpdate` | **UI** | O(1) — `isStickerDragging` kontrolü |
+| `runOnJS(handleTouchMove)` | **UI → JS köprüsü** | her hareket **ayrı** JS işi, kare birleştirme **yok** |
+| `pointsRef.current.push` | JS | O(1) |
+| `pointsToSvgPath(pointsRef.current)` | JS | **O(n)** → çizgi boyunca **O(n²)** |
+| `setCurrentPath(newPath)` | JS | **React state** → `DrawingCanvas` gövdesi yeniden çalışır |
+| SVG `<Path d=...>` | JS → native | prop güncellemesi |
+
+### 🔬 Hipotez Sonuçları
+
+| # | Hipotez | Sonuç |
+|---|---|---|
+| **a** | Canlı yol her harekette tüm noktalardan yeniden üretiliyor | ✅ **KANITLANDI.** `DrawingCanvas.js:583` `pointsToSvgPath(pointsRef.current)` — fonksiyon (`:268`) tüm diziyi dolaşıyor |
+| **b** | Canlı çizgi UI thread'de mi, React state'te mi | ✅ **KANITLANDI: React state.** `const [currentPath, setCurrentPath] = useState('')` (`:100`), her harekette `setCurrentPath`. Shared value / `useAnimatedProps` **yok** |
+| **c** | Olaylar hangi yoldan, kare başına birleştiriliyor mu | ✅ **KANITLANDI.** `onUpdate` worklet ama gövdesi doğrudan `runOnJS(handleTouchMove)`. **Birleştirme yok**, her olay ayrı JS işi |
+| **d** | Hareket başına gereksiz iş | ✅ **Kısmen.** O(n) yol üretimi + yeni dizge tahsisi + setState. Karalama tespiti **yalnızca** `handleTouchEnd`'de (yeniden doğrulandı) ✓. Bounds hesabı sıcak yolda **yok** ✓ |
+| **e** | 20 alanlı stateRef efekti çizim sırasında kaç kez | ❌ **ELENDİ.** Gerçek bağımlılık dizisi var ve `currentPath` içinde **değil** → çizim sırasında **hiç** çalışmıyor |
+| **f** | Geliştirme derlemesi etkisi | ⚠️ **AYRILAMADI.** Kaynaktan ölçülemez; cihaz/derleme karşılaştırması gerekir |
+| **g** | Tamamlanmış çizgiler yeniden render ediliyor mu | ❌ **ELENDİ** — ve **gözlemi açıklıyor.** `StaticDrawingsLayer` `React.memo` (`:39`), `currentPath` değişimi onu render etmiyor. **Yavaşlığın sayfa içeriğinden bağımsız olmasının nedeni tam olarak bu.** Kayıt işleri (`scheduleSave`/`withPagesLock`) yalnızca `handleTouchEnd`'de ✓ |
+
+**Ek bulgu (düzeltilmedi):** `drawingGesture`/`dotTapGesture`/`composedDrawingGesture`
+(`:820, :872, :883`) `useMemo` **olmadan** gövdede kuruluyor → her render'da 3 yeni jest nesnesi.
+Kare birleştirme render sayısını düşürdüğü için etkisi dolaylı olarak azaldı; **tek başına
+dokunmadım**, cihaz verisi olmadan kazancı kanıtlanamaz.
+
+### 📊 Node Kıyası (işlem sayısı, duvar saati değil)
+Gerçek `pointsToSvgPath` kaynaktan okunup çalıştırıldı. Bir **çizgi boyunca** toplam nokta ziyareti:
+
+| n | eski (toplam) | yeni (toplam) | kazanç |
+|---|---|---|---|
+| 100 | 29.502 | 792 | **37×** |
+| 500 | 747.502 | 3.992 | **187×** |
+| 1000 | 2.995.002 | 7.992 | **375×** |
+| 2000 | 11.990.002 | 15.992 | **750×** |
+
+n iki katına çıkınca eski **~4×** (karesel), yeni **~2×** (doğrusal) artıyor.
+**Dizge tahsisi:** 1000 noktalı tek çizgide eski yol **~30,5 MB**, yeni yol son hal **62 KB**.
+
+> Bu sayımlar **algoritmik karmaşıklığı** kanıtlar. Cihaz maliyeti (Hermes, GC, kare bütçesi)
+> buradan **türemez**; yalnızca yaklaşımdır.
+
+### 🔧 Düzeltmeler
+**1. `utils/strokePathBuilder.js` [NEW] — artımlı yol üretimi**
+Yolun biçimi `M p0 + Σ " Q pi, orta(pi,pi+1)" + " L p(n-1)"`. Yeni nokta gelince yalnızca **bir Q
+parçası** eklenir ve **kuyruk L** değişir. Üretici değişmez ön eki biriktirir → **hareket başına
+sabit iş**.
+**Çıktı birebir aynı:** 662 ara adımda gerçek `pointsToSvgPath` ile karşılaştırıldı, fark yok →
+**çizim görünümü değişmedi**.
+
+**2. Kare başına tek ekrana basma** — `setCurrentPath` artık `requestAnimationFrame` ile kare başına
+**bir kez**. **TÜM noktalar yine toplanıyor** (`pointsRef` + üretici), yani tamamlanan çizgi, commit
+yolu ve çizim kalitesi **değişmedi**; yalnızca canlı izin ekrana basılma sıklığı kare bütçesine
+bağlandı.
+
+Commit yolu (`:820`) hâlâ `pointsToSvgPath`'i **bir kez** çağırıyor (çizgi başına O(n)) — bu aynı
+zamanda üretici ↔ referans eşitliğini canlı tutuyor.
+
+**Dokunulmayanlar:** silgi, kement, karalama tespiti, undo, el yazısı tanıma, kayıt/flush sırası,
+A1 kilidi, yumuşatma/çizgi görünümü.
+
+### 📏 Eklenen GEÇİCİ Ölçümler (sıcak yola log YAZILMAZ)
+`perf:strokeEnd` özetine, **iz gecikmesinin kaynağını ayırmak** için:
+- **`lagAvgMs` / `lagMaxMs`** — UI thread'de olayın oluştuğu an (`Date.now()` worklet içinde) ile
+  JS'te işlendiği an arasındaki fark. **Büyükse JS thread meşgul, küçükse darboğaz render hattında.**
+- **`frameAvgMs` / `frameMaxMs` / `longFrames`** — çizgi süresince `requestAnimationFrame`
+  aralıkları ve 32 ms'yi aşan kare sayısı
+- **`rendersThisStroke`** — bu çizgi boyunca React render sayısı (kare birleştirmeden sonra nokta
+  sayısından çok küçük olmalı)
+
+**Ayrıca düzeltildi:** `moveTimingRef`/`pathTimingRef` **hiç sıfırlanmıyordu**, yani
+`perf:strokeEnd` mount'tan beri **birikmiş** değer yazıyordu. `resetTiming` eklendi
+(`utils/diagnosticLog.js`) ve her çizgi başında kovalar sıfırlanıyor. Önceki ölçüm istenmiş olsaydı
+yanıltıcı olacaktı.
+
+Damga: **`perf-2026-10-13-F`**. Kaldırma listesi güncellendi.
+
+### ✅ Testler — 30/30
+**`tests/strokePathBuilder.test.js` [NEW]** — 6 test: 662 ara adımda dizge eşitliği · karmaşıklık
+(eski karesel ~4×, yeni doğrusal ~2×, 1000 noktada >100×) · dizge tahsisi (~31 MB → 62 KB) · sıcak
+yolda O(n) çağrı yok + artımlı + kare başına tek basım · commit yolu referansı koruyor · silgi ve
+kement dalları dokunulmamış.
+
+**Kasıtlı kırılmalar: 10/10 yakalandı** — dizge eşitliğinin bozulması (E1-E4), sıcak yola O(n) işin
+geri sızması ve kare birleştirmenin kaldırılması (H1-H2), nokta toplamanın düşürülmesi (H3), commit
+referansının kaybı (H4), kement dalının kaldırılması (K1), stateRef üç-liste desenkronizasyonu (S1).
+
+### ⚠️ KAPSAMADIKLARI (yalnızca cihazda ölçülebilir)
+Gerçek kare süresi · dokunmatik gecikmesi · Hermes davranışı · GC duraklamaları · geliştirme
+derlemesi (`__DEV__`/Metro) ek yükü · gözlemlenen gecikmenin **ne kadarının** JS thread'den, ne
+kadarının render hattından geldiği. Hipotez **(b)** kanıtlandı ama **düzeltilmedi**: canlı çizgiyi
+UI thread'e (`useAnimatedProps`) taşımak büyük bir yeniden yapılandırma ve gerekliliği yukarıdaki
+ölçümlerle karar verilmeli.
+
+### 📁 Değiştirilen Dosyalar
+- `utils/strokePathBuilder.js` **[NEW]**
+- `components/drawing/DrawingCanvas.js`, `utils/diagnosticLog.js`
+- `tests/strokePathBuilder.test.js` **[NEW]**
+- `ilerleme.md`
+
+### ✅ Doğrulama
+- **30/30** test · 113 dosya sözdizimi temiz · ölü referans yok · stateRef 20 anahtar
+- **Cihazda doğrulanmadı.**
+
+---
+
 ## 📅 [2026-10-13] - Çıkartmalarda Hizalama Kaldırıldı (serbest yerleşim) + Çıkartma Tanıları Temizlendi
 
 Çıkartma sürükleme/boyutlandırma düzeltmesi (`f81d6a24`) **cihazda doğrulandı** — kalem seçiliyken
