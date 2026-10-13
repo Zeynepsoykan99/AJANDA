@@ -72,6 +72,13 @@ zamanda üretici ↔ referans eşitliğini canlı tutuyor.
 **Dokunulmayanlar:** silgi, kement, karalama tespiti, undo, el yazısı tanıma, kayıt/flush sırası,
 A1 kilidi, yumuşatma/çizgi görünümü.
 
+**📌 Ayrı not — kement tarafında aynı sorun duruyor (kullanıcı kararı: şimdilik dokunulmayacak):**
+`handleTouchMove`'un kement dalı her harekette `pointsToLassoSvgPath(pointsRef.current)` çağırıp
+`setLassoPath` ile React state güncelliyor — yani kalem yolunda düzeltilen **aynı O(n²) deseni**
+(`DrawingCanvas.js`, kement dalı). Kement çizgileri genelde kalem çizgilerinden kısa olduğu için
+etkisi daha küçük; bu tur **kapsam dışıydı**. Düzeltmesi aynı yöntemle yapılabilir: artımlı yol
+(kementte parçalar düz `L` olduğu için daha da basit) + kare başına tek basım.
+
 ### 📏 Eklenen GEÇİCİ Ölçümler (sıcak yola log YAZILMAZ)
 `perf:strokeEnd` özetine, **iz gecikmesinin kaynağını ayırmak** için:
 - **`lagAvgMs` / `lagMaxMs`** — UI thread'de olayın oluştuğu an (`Date.now()` worklet içinde) ile
