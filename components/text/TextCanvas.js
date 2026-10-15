@@ -19,6 +19,8 @@ import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 import { useZoomableCanvas } from '../drawing/ZoomableCanvas';
 import { useSmartSnapping } from '../canvas/SmartSnappingContext';
+// GECICI (teshis/SORUN B): kaldirilacak
+import { bumpRender } from '../../utils/diagnosticLog';
 
 const triggerHaptic = () => {
   try {
@@ -394,6 +396,8 @@ export default function TextCanvas({
   selectedBlockIds: externalSelectedBlockIds,
   onSelectedBlockIdsChange,
 }) {
+  // GECICI (teshis/SORUN B): cizgi boyunca kac kez render oldugunu sayar
+  bumpRender('textCanvas');
   const { pageToCanvas, screenToCanvas } = useZoomableCanvas();
   const [editingId, setEditingId] = useState(null);
   const [canvasLayout, setCanvasLayout] = useState({ width: 0, height: 0 });

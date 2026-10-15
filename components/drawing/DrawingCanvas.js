@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
+import { View, StyleSheet, Platform, PixelRatio } from 'react-native';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
@@ -23,6 +23,10 @@ import {
   addTiming,
   summarizeTiming,
   nowMs,
+  bumpRender,
+  snapshotRenders,
+  diffRenders,
+  BUILD_KIND,
 } from '../../utils/diagnosticLog';
 import { useZoomableCanvas } from './ZoomableCanvas';
 import { createStrokePathBuilder } from '../../utils/strokePathBuilder';
@@ -43,6 +47,9 @@ const StaticDrawingsLayer = React.memo(function StaticDrawingsLayer({
   selectedStrokeIds = [],
   hiddenStrokeIds,
 }) {
+  // GECICI (teshis/SORUN B): memo gercekten tutuyor mu? Prop referanslari her
+  // render'da degisiyorsa bu sayac DrawingCanvas ile ayni hizda artar.
+  bumpRender('staticLayer');
   return (
     <>
       {drawings.map((stroke) => {
@@ -90,6 +97,12 @@ export default function DrawingCanvas({
   selectionBounds = null,
   onSelectionChange,
   style,
+  // GECICI (teshis/SORUN B): yalnizca `perf:strokeEnd` satirina yazilir,
+  // hicbir render/davranis karari bu proplara bagli DEGILDIR.
+  diagScreen = '-',
+  diagTemplate = '-',
+  diagPagesMounted = 0,
+  diagUnderlayViews = -1,
 }) {
   const {
     scale: zoomScale,
@@ -102,6 +115,10 @@ export default function DrawingCanvas({
   const [currentPath, setCurrentPath] = useState('');
   const [lassoPath, setLassoPath] = useState('');
   const [hiddenStrokeIds, setHiddenStrokeIds] = useState(new Set());
+  // GECICI (teshis/SORUN B): handleTouchEnd bir useCallback; state'i dogrudan
+  // okursa BAYAT deger kapar. svgSiblings sayimi icin guncel kopya burada.
+  const hiddenStrokeIdsRef = useRef(hiddenStrokeIds);
+  hiddenStrokeIdsRef.current = hiddenStrokeIds;
   const pointsRef = useRef([]);
   const strokeStartTimeRef = useRef(0);
 
@@ -132,6 +149,23 @@ export default function DrawingCanvas({
   const pathTimingRef = useRef(createTimingBucket());
   const renderCountRef = useRef(0);
   renderCountRef.current += 1;
+  bumpRender('drawingCanvas');
+  // GECICI (teshis/SORUN B): cizgi basinda alinan kuresel render sayac kopyasi
+  const renderSnapshotRef = useRef(null);
+  // GECICI (teshis/SORUN B): tuvalin OLCULEN yerlesim boyutu. State DEGIL:
+  // ref'e yazilir, yani olcum tek bir ekstra render bile uretmez.
+  const canvasSizeRef = useRef({ width: 0, height: 0 });
+  const handleCanvasLayout = useCallback((e) => {
+    const { width, height } = e.nativeEvent.layout;
+    canvasSizeRef.current = { width: Math.round(width), height: Math.round(height) };
+  }, []);
+  // GECICI (teshis/SORUN B): React render + commit suresi (JS tarafindan
+  // gorunen kismi). setCurrentPath cagrisindan hemen once saat baslar,
+  // useLayoutEffect commit'ten sonra / boyama oncesi durdurur.
+  // KAPSAMADIGI: UI thread'deki mount/diff ve yerel SVG cizimi. Kare araligi
+  // (frameAvgMs) ile arasindaki fark o kalani verir.
+  const renderCommitRef = useRef(createTimingBucket());
+  const commitStartRef = useRef(0);
   // GECICI (teshis/SORUN B): iz gecikmesini JS thread mesguliyeti ile render
   // hattindan ayirmak icin. Sicak yola LOG YAZILMAZ; yalnizca biriktirilir.
   const eventLagRef = useRef(createTimingBucket());   // UI thread -> JS gecikmesi
@@ -150,6 +184,16 @@ export default function DrawingCanvas({
   // beklemesidir. Iki calisma zamani da Date.now() kullanir.
   const dispatchControlRef = useRef(0);
   const strokeActiveRef = useRef(false);
+
+  // GECICI (teshis/SORUN B): commit kapanis olcumu. Bagimlilik `currentPath`
+  // oldugu icin yalnizca canli iz guncellendiginde calisir; commitStartRef
+  // sifirsa (ilk mount, cizgi disi render) hicbir sey yapmaz.
+  useLayoutEffect(() => {
+    if (commitStartRef.current) {
+      addTiming(renderCommitRef.current, nowMs() - commitStartRef.current);
+      commitStartRef.current = 0;
+    }
+  }, [currentPath]);
 
   const triggerThrottledHaptic = useCallback(() => {
     const now = Date.now();
@@ -656,6 +700,9 @@ export default function DrawingCanvas({
       resetTiming(eventLagRef.current);
       resetTiming(frameGapRef.current);
       resetTiming(flushDelayRef.current);
+      resetTiming(renderCommitRef.current);
+      renderSnapshotRef.current = snapshotRenders();
+      commitStartRef.current = 0;
       lastMoveAtRef.current = nowMs();
       strokeRenderStartRef.current = renderCountRef.current;
       strokeActiveRef.current = true;
@@ -731,6 +778,8 @@ export default function DrawingCanvas({
           // GECICI (teshis/SORUN B): kare birlestirmenin EKLEDIGI gecikme.
           // Son hareketin JS'te islenmesi ile ekrana basma arasindaki fark.
           addTiming(flushDelayRef.current, nowMs() - lastMoveAtRef.current);
+          // GECICI (teshis/SORUN B): render+commit saati
+          commitStartRef.current = nowMs();
           setCurrentPath(pathBuilderRef.current.toPath());
         });
       }
@@ -797,7 +846,41 @@ export default function DrawingCanvas({
       const lag = summarizeTiming(eventLagRef.current);
       const fg = summarizeTiming(frameGapRef.current);
       const fl = summarizeTiming(flushDelayRef.current);
+      const rc = summarizeTiming(renderCommitRef.current);
+      const rr = diffRenders(renderSnapshotRef.current);
+      // Canli izle AYNI <Svg> kokunde duran ogeleri SAY. Tahmin degil: burada
+      // render edilen cocuklarin tam listesi asagidaki JSX ile birebirdir.
+      const visibleStatic = (state.drawings || []).filter(
+        (st) => !(hiddenStrokeIdsRef.current && hiddenStrokeIdsRef.current.has(st.id))
+      ).length;
+      const hasSel =
+        (state.selectedStrokeIds || []).length > 0 &&
+        state.selectionBounds &&
+        state.selectionBounds.width > 0;
+      const svgSiblings = visibleStatic + 1 + (hasSel ? 5 : 0);
+      const cw = canvasSizeRef.current.width;
+      const ch = canvasSizeRef.current.height;
+      const zoom =
+        state.zoomScale && typeof state.zoomScale.value === 'number' ? state.zoomScale.value : 1;
+      const dpr = PixelRatio.get();
       dlog('perf:strokeEnd', {
+        // --- BAGLAM: hangi derleme, hangi ekran, ne kadar buyuk bir tuval ---
+        build: BUILD_KIND,
+        screen: diagScreen,
+        tpl: diagTemplate,
+        // Yerlesim olcusu (dp) ve toplam olcek. Fiziksel piksel = cw*ch*dpr^2*zoom^2
+        canvasW: cw,
+        canvasH: ch,
+        dpr,
+        zoom: zoom.toFixed(2),
+        physPx: Math.round(cw * ch * dpr * dpr * zoom * zoom),
+        // Ayni anda mount edilmis sayfa sayisi (Notlarim/Gunlugum'de >1)
+        pagesMounted: diagPagesMounted,
+        // Kagit dokusunun urettigi yerel View sayisi (UST SINIR tahmini; -1 = bilinmiyor)
+        underlayViews: diagUnderlayViews,
+        // Canli izle AYNI Svg kokundeki oge sayisi
+        staticStrokes: visibleStatic,
+        svgSiblings,
         tool: state.tool,
         points: pointsRef.current.length,
         moveN: mv.n,
@@ -829,6 +912,19 @@ export default function DrawingCanvas({
         // nokta sayisindan cok daha kucuk olmali)
         rendersThisStroke: renderCountRef.current - strokeRenderStartRef.current,
         renders: renderCountRef.current,
+        // React render + commit (JS tarafindan gorunen kismi). Kalan sure
+        // (frameAvgMs - moveAvg - renderCommitAvg) UI thread + yerel SVG'dir.
+        rcAvgMs: rc.avg,
+        rcMaxMs: rc.max,
+        rcN: rc.n,
+        // Bu CIZGI boyunca bilesen bazinda KURESEL render sayilari.
+        // rDraw: tum DrawingCanvas ORNEKLERI toplami (Notlarim'da sayfa basina bir tane).
+        // rStatic < rDraw ise React.memo tutuyor demektir.
+        rDraw: rr.drawingCanvas,
+        rStatic: rr.staticLayer,
+        rScreen: rr.screen,
+        rText: rr.textCanvas,
+        rSticker: rr.stickerCanvas,
       });
     }
 
@@ -1088,6 +1184,8 @@ export default function DrawingCanvas({
         style,
       ]}
       pointerEvents={isDrawingMode ? 'auto' : 'none'}
+      /* GECICI (teshis/SORUN B): tuval olcusunu ref'e yazar, render uretmez */
+      onLayout={handleCanvasLayout}
     >
       <GestureDetector gesture={composedDrawingGesture}>
         <View style={StyleSheet.absoluteFill}>

@@ -25,7 +25,7 @@ import {
   DEFAULT_PAPER_TEMPLATE_ID,
 } from '../../constants/pageTemplates';
 
-import PaperSheet from '../../components/stationery/PaperSheet';
+import PaperSheet, { countRulingElements } from '../../components/stationery/PaperSheet';
 import NotebookInlineText from '../../components/stationery/NotebookInlineText';
 import PaperTemplateModal from '../../components/PaperTemplateModal';
 import NotebookContainer from '../../components/stationery/NotebookContainer';
@@ -52,6 +52,8 @@ import { StorageService } from '../../services/storageService';
 import { isSameDay, formatFilterDate } from '../../components/ui/GlobalFilterHeader';
 import { SecurityService } from '../../services/securityService';
 import { captureRef } from 'react-native-view-shot';
+// GECICI (teshis/SORUN B): kaldirilacak
+import { bumpRender } from '../../utils/diagnosticLog';
 import * as Haptics from 'expo-haptics';
 import ExportLoadingModal from '../ui/ExportLoadingModal';
 import { PdfExportService } from '../../services/pdfExportService';
@@ -105,6 +107,8 @@ export default function NotebookPagesView({
   initialPageId,
   isDiary = false,
 }) {
+  // GECICI (teshis/SORUN B): bir cizgi boyunca EBEVEYN ekran kac kez render oldu
+  bumpRender('screen');
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const { colors } = useTheme();
@@ -1680,6 +1684,11 @@ export default function NotebookPagesView({
                         styles.fullBleedCanvas,
                         { zIndex: isActive && activeMode === 'drawing' ? 50 : 20 },
                       ]}
+                      /* GECICI (teshis/SORUN B): yalnizca perf:strokeEnd satirina yazilir */
+                      diagScreen={isDiary ? 'gunluk' : 'notlarim'}
+                      diagTemplate={paper.ruling}
+                      diagPagesMounted={pages.length}
+                      diagUnderlayViews={countRulingElements(paper.ruling, pageWidth, pageHeight)}
                     />
 
                     {/* Kement Menüsü (Sadece aktif sayfada ve dışa aktarım yapılmıyorken) */}

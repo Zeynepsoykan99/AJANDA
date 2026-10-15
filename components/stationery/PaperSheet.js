@@ -39,6 +39,32 @@ function getRulingCounts(width, height) {
 }
 
 /**
+ * ⚠️ GEÇİCİ — TEŞHİS (SORUN B). Kök neden bulununca KALDIRILACAK.
+ *
+ * Kağıt dokusunun kaç ADET yerel View ürettiğini verir. Bu sayılar çizgi
+ * başına yeniden hesaplanmaz; yalnızca `perf:strokeEnd` satırına yazılır ki
+ * Ajandam (tek resim) ile Notlarım (çizgi/ızgara/nokta View'leri) arasındaki
+ * yük farkı TAHMİN değil SAYI olsun.
+ *
+ * NOT: Burada verilen genişlik/yükseklik SAYFA ölçüsüdür; gerçek kağıt yüzeyi
+ * NotebookContainer dolgusu kadar küçüktür. Yani sonuç bir ÜST SINIR tahminidir.
+ *
+ * @param {string} ruling - 'lined' | 'grid' | 'dotted' | 'blank'
+ * @param {number} width
+ * @param {number} height
+ * @returns {number} doku için üretilen View sayısı
+ */
+export function countRulingElements(ruling, width, height) {
+  if (!width || !height) return 0;
+  const c = getRulingCounts(width, height);
+  if (ruling === 'lined') return c.lines;
+  if (ruling === 'grid') return c.gridRows + c.gridCols;
+  // Noktalı: her satır bir View, her nokta bir View
+  if (ruling === 'dotted') return c.dotRows + c.dotRows * c.dotCols;
+  return 0;
+}
+
+/**
  * PaperSheet - Gerçekçi Kırtasiye Kağıdı Tabanı
  * Fildişi/krem rengi taban, defter çizgileri veya noktalı ızgara dokusu sunar.
  * Çizgi / ızgara / nokta sayısı kağıdın ölçülen boyutuna göre hesaplanır;

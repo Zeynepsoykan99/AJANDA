@@ -28,6 +28,12 @@
  *                                              "production" profili taniyi
  *                                              ICERMEMELIDIR - DIAGNOSTICS_ENABLED
  *                                              false yapilmali veya bu dosya silinmeli)
+ *   - components/notebook/NotebookPagesView.js (bumpRender + diag* proplari)
+ *   - components/text/TextCanvas.js            (bumpRender)
+ *   - components/stickers/StickerCanvas.js     (bumpRender)
+ *   - components/stationery/PaperSheet.js      (countRulingElements disa aktarimi;
+ *                                              YALNIZCA tani icin kullaniliyor)
+ *   - tests/perfMeasurement.test.js            (olcum altyapisi testleri)
  * Bulmak için: grep -rn "diagnosticLog" --include=*.js .
  *
  * Çıktı `console.log` ile yazılır; Metro terminalinde görünür.
@@ -43,11 +49,11 @@
  * Her tanı turunda elle güncellenir; Metro'ya bağlandığınızda açılışta yazılır.
  * Konsolda bu damgayı görmüyorsanız cihaz ESKİ paketi çalıştırıyor demektir.
  */
-export const BUILD_STAMP = 'perf-2026-10-13-G';
+export const BUILD_STAMP = 'perf-2026-10-15-H';
 
 /** Bu damgada neler var (rapordaki adımlarla eşleşsin diye) */
 export const BUILD_NOTES =
-  'SORUN B: idleBaseline + strokeDuration/flushDelay/frameN + kontrol olcumu';
+  'SORUN B: ekran/derleme etiketi + tuval olcusu + render sayaclari + renderCommit';
 
 /** Teşhis loglarını tek yerden kapatmak için. Kaldırmadan önce false yapılabilir. */
 export const DIAGNOSTICS_ENABLED = true;
@@ -149,10 +155,67 @@ export const summarizeTiming = (bucket) => {
   return out;
 };
 
+/**
+ * ⚠️ GEÇİCİ — Derleme türü etiketi.
+ *
+ * Ölçüm satırlarının hangi derlemeden geldiğini karıştırmamak için. `__DEV__`
+ * Metro paketleyicisi tarafından tanımlanır; Node tarafındaki testlerde yoktur,
+ * o yüzden varlığı denetlenir.
+ */
+export const BUILD_KIND =
+  typeof __DEV__ !== 'undefined' && __DEV__ ? 'dev' : 'preview';
+
+/**
+ * ⚠️ GEÇİCİ — HAFİF RENDER SAYAÇLARI (SORUN B)
+ *
+ * Bir çizgi boyunca hangi bileşenin kaç kez render olduğunu ayırmak için.
+ * Sayaçlar KÜRESELDİR: aynı adda birden çok örnek varsa (Notlarım'da her sayfa
+ * için bir DrawingCanvas mount edilir) toplam render sayısını verirler — ekran
+ * başına toplam render işini ölçmek istediğimiz için istenen davranış budur.
+ *
+ * Gövdede çağrılır (ref++ yerine), yalnızca bir sayı artırır; LOG YAZMAZ.
+ */
+const renderCounts = {
+  drawingCanvas: 0,
+  staticLayer: 0,
+  screen: 0,
+  textCanvas: 0,
+  stickerCanvas: 0,
+};
+
+/** Bilinen sayaç adları (yazım hatası sessizce kaybolmasın diye) */
+export const RENDER_COUNTER_KEYS = Object.keys(renderCounts);
+
+/**
+ * Bir bileşenin render sayacını artırır. Bilinmeyen ad sessizce yok sayılmaz;
+ * sayaç tablosuna eklenir ki ölçüm kaybolmasın.
+ * @param {string} key
+ */
+export const bumpRender = (key) => {
+  if (!DIAGNOSTICS_ENABLED) return;
+  renderCounts[key] = (renderCounts[key] || 0) + 1;
+};
+
+/** Sayaçların o anki kopyası (çizgi başında alınır) */
+export const snapshotRenders = () => ({ ...renderCounts });
+
+/**
+ * Çizgi başındaki kopya ile şimdiki değerler arasındaki farkı verir.
+ * @param {object} before - snapshotRenders() çıktısı
+ * @returns {object} ad -> bu çizgi boyunca render sayısı
+ */
+export const diffRenders = (before) => {
+  const out = {};
+  Object.keys(renderCounts).forEach((k) => {
+    out[k] = renderCounts[k] - ((before && before[k]) || 0);
+  });
+  return out;
+};
+
 /** Yüksek çözünürlüklü saat; yoksa Date.now()'a düşer */
 export const nowMs = () =>
   typeof global !== 'undefined' && global.performance && global.performance.now
     ? global.performance.now()
     : Date.now();
 
-export default { dlog, len, textLen, DIAGNOSTICS_ENABLED };
+export default { dlog, len, textLen, DIAGNOSTICS_ENABLED, bumpRender };

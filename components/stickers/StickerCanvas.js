@@ -5,6 +5,7 @@ import { useAnimatedReaction, runOnJS } from 'react-native-reanimated';
 import { useZoomableCanvas } from '../drawing/ZoomableCanvas';
 // GECICI (teshis): kaldirilacak
 import DraggableSticker from './DraggableSticker';
+import { bumpRender } from '../../utils/diagnosticLog';
 
 /**
  * StickerCanvas - Sayfa üzerindeki sticker overlay katmanı
@@ -27,6 +28,8 @@ export default function StickerCanvas({
   pointerEvents = 'box-none',
   style,
 }) {
+  // GECICI (teshis/SORUN B): cizgi boyunca kac kez render oldugunu sayar
+  bumpRender('stickerCanvas');
   const [selectedStickerId, setSelectedStickerId] = useState(null);
   const [canvasLayout, setCanvasLayout] = useState({ width: 0, height: 0 });
   const { isDrawingActive } = useZoomableCanvas();

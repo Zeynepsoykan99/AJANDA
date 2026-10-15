@@ -39,7 +39,7 @@ import { getPrivacySettings } from '../../services/privacySettingsService';
 import * as Haptics from 'expo-haptics';
 import { applyScribbleErase, revertScribbleErase } from '../../utils/scribbleDetection';
 // GECICI (tesshis): kok neden bulununca kaldirilacak
-import { dlog, len, textLen } from '../../utils/diagnosticLog';
+import { dlog, len, textLen, bumpRender } from '../../utils/diagnosticLog';
 import {
   getDrawingPreferences,
   isScribbleEraseEnabled,
@@ -69,6 +69,8 @@ import PrivacyNoticeModal, {
 const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
 
 export default function TodoViewScreen() {
+  // GECICI (teshis/SORUN B): bir cizgi boyunca EBEVEYN ekran kac kez render oldu
+  bumpRender('screen');
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const { pageId } = useLocalSearchParams();
@@ -1335,6 +1337,13 @@ export default function TodoViewScreen() {
               styles.fullBleedCanvas,
               { zIndex: activeMode === 'drawing' ? 50 : 20 },
             ]}
+            /* GECICI (teshis/SORUN B): yalnizca perf:strokeEnd satirina yazilir.
+               Bu ekranlarda sablon tam sayfa bir GORSEL'dir (image_template),
+               kagit dokusu View'i uretilmez -> underlayViews 0. */
+            diagScreen="todolist"
+            diagTemplate={template?.type || page?.category || '-'}
+            diagPagesMounted={1}
+            diagUnderlayViews={template?.type === 'image_template' ? 0 : -1}
           />
 
           {/* Kement (Lasso) Bağlamsal Eylem Menüsü */}
