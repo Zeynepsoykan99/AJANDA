@@ -4982,3 +4982,101 @@ Kullanıcı kararı: **şimdilik geçiş yapılmayacak.** Yapılacağı zaman ge
 
 
 
+
+### 🔬 SORUN B — 2. Teşhis Turu: Ajandam ↔ Notlarım Yapı Farkı ve Ölçüm Genişletmesi (2026-10-15)
+
+**Bu tur TEŞHİS'tir. Üretim davranışı değiştirilmedi** — eklenen her şey yalnızca
+`perf:strokeEnd` satırına yazılır; `tests/perfMeasurement.test.js` Test 14 bunu
+kodda doğrular (`diag*` propları log bloğu dışında hiçbir yerde geçmiyor).
+
+#### 1. Yapısal karşılaştırma (kod kanıtı, cihaz gerekmedi)
+
+| # | Konu | Ajandam (`app/ajandam/[pageId].js`) | Notlarım / Günlüğüm (`components/notebook/NotebookPagesView.js`) |
+|---|---|---|---|
+| a | Canlı çizginin `<Svg>` kökü | `DrawingCanvas.js:1095-1105` — canlı çizgi, `StaticDrawingsLayer`, kement ve seçim kutusu **AYNI** `<Svg>` kökünde. Kağıt/arka plan ayrı native katman. | **Birebir aynı** (ortak bileşen). Fark yok. |
+| b | Kağıt şablonu nasıl çiziliyor | `constants/pageTemplates.js` — monthly/weekly/todo şablonlarının **hepsi** `type: 'image_template'` → `ImageTemplatePage` → **tek görsel View'i**. `NotebookContainer` bile atlanır (`[pageId].js:1391`). | `PaperSheet` dokuyu **yerel View'lerle** çizer. 700×990 dp sayfada: çizgili **31**, kareli **74**, **noktalı 900** View (`countRulingElements`, Test 15). Üstüne `NotebookContainer` (ribbon + coverFrame elevation 8 + 2 sayfa yığını + `SpiralBinder` 12-18 halka, elevation 3) + `PaperSheet` (elevation 2, overflow hidden) + `NotebookInlineText` (multiline TextInput) + `IndexFlagsRail`. |
+| c | Tuval piksel boyutu | `computeContainedPageDimensions` ile contain-fit, **süper örnekleme yok**: SVG, yerleşim boyutunda (dp) × cihaz piksel oranında çizilir. `f5c87d38` yalnızca `shapeRendering="geometricPrecision"` ekledi, ölçek eklemedi. | Aynı hesap, aynı ölçek. Fark yok. **Gerçek sayılar bu turda `canvasW/canvasH/dpr/physPx` ile ölçülüyor.** |
+| d | Aynı anda mount edilen sayfa | **1** sayfa, **1** `DrawingCanvas`, **1** `ZoomableCanvas`. Pager/FlatList yok. | `NotebookPagesView.js:1523` — yatay `ScrollView` içinde `pages.map(...)`, **sanallaştırma YOK**. N sayfa = N `ZoomableCanvas` + N `DrawingCanvas` + N `TextCanvas` + N `StickerCanvas` + N `PaperSheet` + N TextInput. |
+| e | Çizim sırasında ebeveyn render'ı | Çizgi **bitince** bir `setPage`. Çizgi boyunca yalnızca `DrawingCanvas` render olur. Kenar rengi/zoom tamamen UI thread (Reanimated), state üretmez. | Çizgi bitince bir `setNotebook` — ama o tek render **TÜM N sayfanın** alt ağacını yeniden render eder. Ek olarak notebook'a özgü: `ScrollView onTouchStart/onTouchEnd` her dokunuşta çalışır (`:498-504`); değer değişmediği için React bail-out yapar, yük düşük ama Ajandam'da hiç yoktur. |
+| f | `React.memo` fiilen tutuyor mu | `selectedStrokeIds` state dizisi (sabit referans), `drawings` sayfa nesnesinden (sabit) → **memo tutar**. | Aktif sayfada tutar. **Aktif OLMAYAN her sayfada `selectedStrokeIds={isActive ? selectedStrokeIds : []}` her render'da YENİ bir `[]` üretir** (`:1670`) → o sayfaların `StaticDrawingsLayer` memo'su **her ebeveyn render'ında kırılır** ve tüm statik çizgileri yeniden React-render edilir. Ayrıca boş sayfalarda `drawings={p.drawings \|\| []}` de yeni dizi üretir. |
+| g | Çizim yüzeyinin alt/üstündeki notebook'a özgü maliyetler | Yok. | `pageCaptureContainer` (view-shot için `collapsable={false}`, Android'de View birleştirmeyi engeller), iç içe gölge/elevation katmanları (8 + 3 + 2), iki `overflow: hidden` kırpma, `NotebookInlineText` TextInput, `DiaryDateMoodBadge` (Günlüğüm). |
+| h | — | ↑ tablo | ↑ tablo |
+
+#### Asıl mekanizma (kodla kanıtlı, bu tur bulundu)
+
+`node_modules/react-native-svg/android/.../SvgView.java`:
+`onDraw` → `mBitmap == null` ise `drawOutput()`; `drawOutput()` **tam tuval boyutunda
+yeni bir `ARGB_8888` Bitmap ayırır ve TÜM çocukları içine yeniden çizer**
+(`:129-145`, `:267-283`). Herhangi bir çocuk `invalidate()` olduğunda
+(`VirtualView.java:136-143` → `clearParentCache()` → `SvgView.invalidate()`)
+`mBitmap.recycle(); mBitmap = null;` yapılır (`:92-111`).
+
+Yani **canlı çizginin her karesinde**:
+1. Sayfa boyutunda yeni bir ARGB_8888 bitmap **ayrılır** (700×990 dp @ dpr 2 ≈ 1400×1980 px ≈ **11 MB**),
+2. **Bütün statik çizgiler + canlı çizgi** o bitmap'e yeniden rasterize edilir,
+3. Bitmap ekrana basılır, bir sonraki karede geri dönüştürülür.
+
+Bu, "kalan ~15 ms/kare render+commit+SVG'de" çıkarımının somut karşılığıdır ve
+madde (a)'yı doğrular: canlı çizgi ağır içerikle **aynı kökte** olduğu için her
+güncellemede tüm içerik yeniden çizilir.
+
+**Notlarım'ı Ajandam'dan ayıran kısım:** N sayfa aynı anda mount olduğu için
+N adet `SvgView` (her biri kendi tam sayfa bitmap'ini tutabilir) + N×900'e kadar
+kağıt dokusu View'i aynı anda hiyerarşide durur. Bu, UI/Render thread'i meşgul
+eder ve dokunuş gönderiminin gecikmesini (`lagAvgMs`) büyütür — 1. turda ölçülen
+`lagAvgMs=46.70 / lagMaxMs=90.00` tam da bu kalıba uyar. **Kanıt seviyesi: mekanizma
+kodla kanıtlı, Notlarım-Ajandam farkına katkısı ÖLÇÜM BEKLİYOR.**
+
+#### 2. Eklenen ölçümler (sıcak yola log YAZILMAZ, çizgi bitince tek satır)
+
+`perf:strokeEnd` satırına eklendi:
+- `build` (dev|preview), `screen` (ajandam|todolist|gunluk|notlarim), `tpl`
+- `canvasW`/`canvasH` (yerleşim dp), `dpr`, `zoom`, `physPx` (toplam fiziksel piksel)
+- `pagesMounted`, `underlayViews` (kağıt dokusunun View sayısı; **üst sınır tahmini**)
+- `staticStrokes`, `svgSiblings` (canlı izle **aynı** `<Svg>` kökündeki öğe sayısı)
+- `rcAvgMs`/`rcMaxMs`/`rcN`: React render + commit. `setCurrentPath`'ten hemen
+  önce başlar, `useLayoutEffect` ile **boyamadan önce** kapanır.
+  **Kapsamadığı:** UI thread'deki mount/diff ve yerel SVG rasterizasyonu —
+  o kalan `frameAvgMs − moveAvgMs − rcAvgMs` farkındadır.
+- `rDraw`/`rStatic`/`rScreen`/`rText`/`rSticker`: çizgi boyunca bileşen bazında
+  **küresel** render sayısı. `rStatic < rDraw` ise `StaticDrawingsLayer` memo'su tutuyor.
+
+Tuval ölçüsü `onLayout` ile **ref**'e yazılır, state'e değil: ölçüm tek bir ekstra
+render bile üretmez (Test 14).
+
+#### Preview'da React Profiler ÇALIŞMAZ (kodla kanıtlı)
+
+`node_modules/react-native/Libraries/Renderer/shims/ReactFabric.js` yalnızca
+`-dev` ve `-prod` uygulamalarını seçer; `ReactFabric-profiling.js` hiçbir koşulda
+yüklenmez ve `ReactFabric-prod.js` içinde `onRender` **hiç geçmez** (0 eşleşme).
+Bu yüzden `<Profiler onRender>` preview APK'da sessizce hiçbir şey yapmaz.
+Preview'da dolaylı ölçüm kullanıyoruz: rAF kare aralıkları + render sayaçları +
+`rcAvgMs`. (Gerçek fiber bazlı profil isterse **geliştirme derlemesi** gerekir.)
+
+#### Testler
+
+31/31 geçti. `tests/perfMeasurement.test.js` 8 → **16 test**.
+Kasıtlı kırılma denetimi: **14/14 yakalandı** (sayaç kaldırma, `diffRenders`'ın
+mutlak değer döndürmesi, `snapshotRenders`'ın canlı referans döndürmesi,
+`useLayoutEffect → useEffect`, commit saatinin `setCurrentPath` sonrasına kayması,
+alan silme, `diag*` propunun üretim yoluna sızması, ölçünün state'e yazılması,
+noktalı kağıt sayımının eksilmesi, ekran etiketinin sabitlenmesi, çıplak `__DEV__`,
+kova/kopya sıfırlamalarının düşmesi).
+150 dosya `babel-preset-expo` sözdizimi temiz, ölü referans yok.
+
+**Testin kapsamadığı:** gerçek cihaz kare süresi, dokunmatik gecikmesi, Hermes
+davranışı, `rcAvgMs`'in UI thread kısmı, `underlayViews`'un gerçek ölçülen kağıt
+yüzeyi yerine sayfa ölçüsünden türetilmesi, render sayaçlarının aynı addaki
+örnekleri ayırmaması.
+
+Damga `perf-2026-10-15-H`.
+
+#### 3. Preview derlemesi
+
+- Build: `0f812a01-7ffa-4485-bbf5-e5d2679f6b44` (profil `preview`, commit `f0a4568c`)
+- Kurulum / QR: https://expo.dev/accounts/zeynepsoykan/projects/AJANDA/builds/0f812a01-7ffa-4485-bbf5-e5d2679f6b44
+- APK: https://expo.dev/artifacts/eas/OpHQYtq_Vcn5C7nwa_BOkm1XCoBhXTYPmAR3uxJuBeA.apk
+
+Cihazda ölçüm:
+`adb logcat -s ReactNativeJS | findstr AJANDA-TANI`
+Açılışta `YAPIM DAMGASI: perf-2026-10-15-H` görünmüyorsa cihaz eski paketi çalıştırıyordur.
