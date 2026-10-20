@@ -4,6 +4,43 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-20] - Bulut Yedekleme Faz 0: Cihazda Depolama Ölçümü (GEÇİCİ)
+
+Üretim davranışına, veri biçimine **dokunulmadı**; bağımlılık eklenmedi, build alınmadı.
+Bulut kararı: **Google Drive appDataFolder** (Firebase/Supabase/Appwrite elendi). Drive aşamasında
+Google Sign-In ve `expo-document-picker` gibi native bağımlılıklar gerekecek → o aşamada yeni build şart.
+
+### 📏 Eklenen GEÇİCİ Ölçüm — `utils/storageDiagnostics.js` [NEW]
+Ana menüde **"Depolama ölçümü (geçici)"** bağlantısı; elle, tek seferlik, **salt okunur**.
+`[AJANDA-TANI] storage:*` satırları + ekranda özet (Paylaş ile gönderilebilir):
+- `storage:key` / `storage:total` / `storage:dbFile` — anahtar boyutları (UTF-8), 2 MB CursorWindow ve
+  6 MB Android DB sınırına yüzde; RKStorage SQLite dosyasının gerçek boyutu
+- `storage:largestPage`, `storage:strokes` — en büyük sayfa, sayfa/çizgi/nokta sayıları, nokta başına bayt
+- `storage:dVsPoints`, `storage:decimals` — `d` ile `points` payı, timestamp payı, 2 basamak yuvarlama tahmini,
+  ondalık basamak dağılımı
+- `storage:audio` — AUDIO_DIR dosya adedi/toplamı, referanssız ve kayıp dosya sayısı
+Damga: **`storage-2026-10-20-A`**. Kaldırma listesi güncellendi.
+
+### 🔎 Sınır Aşımında Ne Oluyor (koddan kanıt)
+- Kütüphane (`AsyncStorageModule.java` multiSet/multiGet): istisna yakalanıp callback'e hata olarak
+  verilir → JS promise **reddedilir**; yazma işlem (transaction) içinde olduğu için eski değer korunur.
+- `services/storageService.js`: tüm metotlar hatayı `console.warn` ile yutup `null`/`[]` döner →
+  ekran hiçbir şey fark etmez.
+- **Kritik:** `readPagesUnlocked` okuma hatasında `[]` döner; `addPage`/`deletePage`/`reorderPages`
+  bu boş diziyi yazar → `@ajanda_pages` okunamaz hale gelmişse **tüm Ajandam/Yapılacaklar sayfaları
+  kalıcı olarak silinir**. Gerçek kaynakla (babel + sahte AsyncStorage) yeniden üretildi.
+
+### 🧪 Testler
+- **`tests/storageDiagnostics.test.js`** [NEW, GEÇİCİ] — UTF-8 sayımı, ondalık sayımı, d/points ayrımı,
+  sayfa toplama, tam çalışmada **hiçbir yazma yapılmadığı** ve okuma hatasının raporlandığı.
+  Kasıtlı kırılmayla (UTF-8 sayımı bozma, ölçüme setItem ekleme) testin yakaladığı doğrulandı.
+
+### 📁 Dosyalar
+- `utils/storageDiagnostics.js` **[NEW, GEÇİCİ]**, `tests/storageDiagnostics.test.js` **[NEW, GEÇİCİ]**
+- `app/index.js` (geçici bağlantı), `utils/diagnosticLog.js` (damga + kaldırma listesi)
+
+---
+
 ## 📅 [2026-10-13] - SORUN B: Preview Profili + İz Gecikmesinin Kaynağını Ayıran Ölçümler
 
 Üretim davranışına **dokunulmadı**: yalnızca ölçüm, `eas.json` profili ve dokümantasyon.

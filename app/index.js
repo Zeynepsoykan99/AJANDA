@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Alert, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -12,6 +12,8 @@ import PrivacySettingsModal from '../components/PrivacySettingsModal';
 import { useTheme } from '../context/ThemeContext';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
 import { getPrivacyPolicyUrl } from '../constants/links';
+// GECICI (teshis/Faz 0 depolama olcumu): kaldirilacak
+import { runStorageDiagnostics } from '../utils/storageDiagnostics';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -32,6 +34,25 @@ export default function HomeScreen() {
     { id: 'notlarim', label: t('home.menuNotes', 'notlarım'), route: '/defterlerim', icon: 'notebook-outline' },
     { id: 'todolist', label: t('home.menuTodoList', 'yapılacaklar'), route: '/todolist', icon: 'format-list-checkbox' },
   ];
+
+  // ⚠️ GECICI (Faz 0): depolama olcumu. Cift dokunusta ikinci olcum baslamasin.
+  const storageDiagRunningRef = React.useRef(false);
+  const handleStorageDiagnostics = async () => {
+    if (storageDiagRunningRef.current) return;
+    storageDiagRunningRef.current = true;
+    try {
+      const { summary } = await runStorageDiagnostics();
+      Alert.alert('Depolama ölçümü (geçici)', summary, [
+        { text: 'Kapat', style: 'cancel' },
+        { text: 'Paylaş', onPress: () => Share.share({ message: summary }).catch(() => {}) },
+      ]);
+    } catch (error) {
+      console.warn('Depolama olcumu basarisiz:', error);
+      Alert.alert('Depolama ölçümü (geçici)', `Hata: ${String(error?.message || error)}`);
+    } finally {
+      storageDiagRunningRef.current = false;
+    }
+  };
 
   const handleMenuPress = (item) => {
     router.push(item.route);
@@ -137,6 +158,18 @@ export default function HomeScreen() {
         >
           <Text style={[styles.privacyLinkText, { color: colors.accent }]}>
             PDF testi (geçici)
+          </Text>
+        </TouchableOpacity>
+
+        {/* ⚠️ GECICI (Faz 0): depolama olcumu. Olcum bitince BU BLOK ve
+            utils/storageDiagnostics.js SILINECEK. Yalnizca OKUR, veri yazmaz. */}
+        <TouchableOpacity
+          activeOpacity={0.6}
+          onPress={handleStorageDiagnostics}
+          style={styles.privacyLink}
+        >
+          <Text style={[styles.privacyLinkText, { color: colors.accent }]}>
+            Depolama ölçümü (geçici)
           </Text>
         </TouchableOpacity>
 

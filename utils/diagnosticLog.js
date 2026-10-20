@@ -34,6 +34,14 @@
  *   - components/stationery/PaperSheet.js      (countRulingElements disa aktarimi;
  *                                              YALNIZCA tani icin kullaniliyor)
  *   - tests/perfMeasurement.test.js            (olcum altyapisi testleri)
+ *   - utils/storageDiagnostics.js             (TUM DOSYA — Faz 0 depolama olcumu;
+ *                                              bulut yedekleme / Faz 1 karari
+ *                                              verilince silinecek)
+ *   - app/index.js                            (runStorageDiagnostics import'u,
+ *                                              handleStorageDiagnostics ve
+ *                                              "Depolama ölçümü (geçici)" baglantisi;
+ *                                              Alert/Share import'lari yalnizca bunun icin)
+ *   - tests/storageDiagnostics.test.js        (olcum aritmetigi testleri)
  * Bulmak için: grep -rn "diagnosticLog" --include=*.js .
  *
  * Çıktı `console.log` ile yazılır; Metro terminalinde görünür.
@@ -49,11 +57,12 @@
  * Her tanı turunda elle güncellenir; Metro'ya bağlandığınızda açılışta yazılır.
  * Konsolda bu damgayı görmüyorsanız cihaz ESKİ paketi çalıştırıyor demektir.
  */
-export const BUILD_STAMP = 'perf-2026-10-15-H';
+export const BUILD_STAMP = 'storage-2026-10-20-A';
 
 /** Bu damgada neler var (rapordaki adımlarla eşleşsin diye) */
 export const BUILD_NOTES =
-  'SORUN B: ekran/derleme etiketi + tuval olcusu + render sayaclari + renderCommit';
+  'SORUN B: ekran/derleme etiketi + tuval olcusu + render sayaclari + renderCommit; ' +
+  'Faz 0: ana menude "Depolama ölçümü (geçici)" (storage:* satirlari)';
 
 /** Teşhis loglarını tek yerden kapatmak için. Kaldırmadan önce false yapılabilir. */
 export const DIAGNOSTICS_ENABLED = true;
