@@ -4,6 +4,29 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-20] - Yeni Development Build + expo-document-picker
+
+### 📦 Native değişiklik
+- **`expo-document-picker ~14.0.8`** eklendi (SDK 54 uyumlu sürüm, `npx expo install`). JS'te henüz
+  kullanılmıyor; ileride elle içe aktarma için. Android'de izin eklemiyor (yalnızca `OPEN_DOCUMENT`
+  `<queries>` girdisi); config plugin'i yalnızca iOS iCloud içindir. `app.json` ve `eas.json` değişmedi.
+- Önceki development build'den (`ed287f89`) bu yana başka native bağımlılık değişikliği yok.
+
+### 🏗️ Development build
+- **Build id:** `5d2578bc-7ac0-4e4d-9c26-d7884208cb4d` — 2026-10-20, profil `development`, Android,
+  commit `a7021c2e`. Kuyruk ~31 dk, derleme ~13 dk.
+- **Son kullanma:** 2026-11-03.
+- JS bu derlemede değil, Metro'dan (`npm start`) gelir.
+
+### ⚠️ Notlar
+- **EAS artefaktları 14 gün sonra siliniyor** (önceki dev build `8e92348b` 17 Ekim'de silindi, link
+  `NoSuchKey` 404 veriyordu). **APK indirilip bir kopyası saklanmalı.**
+- **İmza anahtarı tüm build'lerde aynı:** EAS'te bu uygulama için tek varsayılan anahtar var; preview
+  APK'nın gerçek imzası bu anahtarla eşleşti. Development build mevcut uygulamanın üzerine veri
+  kaybı olmadan kurulabilir. (Parmak izi burada yazılmaz.)
+
+---
+
 ## 📅 [2026-10-20] - Banner Hata Varyantı, Kapak Sözleşmesi, Hata Enjeksiyonu, Veri Yedeği, Test Koruması, flushCost
 
 Veri biçimi, depolama şeması ve çizim/ses davranışı **değişmedi**; bağımlılık eklenmedi, APK build alınmadı.
