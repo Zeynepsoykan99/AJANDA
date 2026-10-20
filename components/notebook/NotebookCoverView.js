@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -44,6 +44,8 @@ import DatePickerModal from '../../components/ui/DatePickerModal';
 import GlobalSearchModal from '../../components/ui/GlobalSearchModal';
 import MonthlyMoodAnalyticsModal from '../diary/MonthlyMoodAnalyticsModal';
 import { StorageService } from '../../services/storageService';
+import { guardStorageWrites, isStorageReadError } from '../../services/storageErrorEvents';
+import StorageReadErrorState from '../ui/StorageReadErrorState';
 import { isSameDay, formatFilterDate } from '../../components/ui/GlobalFilterHeader';
 
 const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
@@ -80,6 +82,8 @@ export default function NotebookCoverView({
 
   const [notebook, setNotebook] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  // Kayitli defter okunamadiysa "bulunamadi" yerine hata durumu gosterilir
+  const [loadError, setLoadError] = useState(false);
   const [isCoverEditorVisible, setIsCoverEditorVisible] = useState(false);
   const [isTemplateModalVisible, setIsTemplateModalVisible] = useState(false);
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
@@ -125,8 +129,12 @@ export default function NotebookCoverView({
   const [textColor, setTextColor] = useState('#4E342E');
   const [textFontSize, setTextFontSize] = useState(24);
 
-  const storageRef = useRef(storage);
-  storageRef.current = storage;
+  // Yazma metotlari korunur: basarisiz yazma kullaniciya "Kaydedilemedi" olarak
+  // bildirilir ve null doner (bu gorunum null'u zaten "yazilmadi" sayiyor).
+  // load korunmaz: okuma hatasi asagida hata durumuna donusur.
+  const guardedStorage = useMemo(() => guardStorageWrites(storage), [storage]);
+  const storageRef = useRef(guardedStorage);
+  storageRef.current = guardedStorage;
 
   // Kapak çizimleri ve metinleri ayrı alanlara yazıldığı için ayrı debounce zamanlayıcıları kullanılır
   const drawingsSaveTimeoutRef = useRef(null);
@@ -141,6 +149,7 @@ export default function NotebookCoverView({
       (async () => {
         try {
           const savedNotebook = await storageRef.current.load();
+          if (isActive) setLoadError(false);
           if (isActive && savedNotebook) {
             const targetId = savedNotebook?.id || 'diary';
             const hasPin = await SecurityService.hasPin(targetId);
@@ -160,6 +169,7 @@ export default function NotebookCoverView({
           }
         } catch (error) {
           console.warn('Defter yüklenirken hata:', error);
+        if (isActive && isStorageReadError(error)) setLoadError(true);
         } finally {
           if (isActive) setIsLoading(false);
         }
@@ -403,6 +413,14 @@ export default function NotebookCoverView({
             style={{ aspectRatio: 0.72, maxWidth: 420, borderRadius: 8, alignSelf: 'center' }}
           />
         </View>
+      </AnimatedSafeAreaView>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <AnimatedSafeAreaView style={[styles.safeArea, animatedBgStyle]} edges={['top', 'bottom']}>
+        <StorageReadErrorState onBack={() => router.back()} />
       </AnimatedSafeAreaView>
     );
   }

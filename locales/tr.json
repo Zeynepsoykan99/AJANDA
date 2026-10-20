@@ -496,5 +496,12 @@
     "autoHandwritingNote": "Kapatırsanız Ajandam ve Yapılacaklar sayfalarında el yazınız aranabilir olmaz. Kement aracıyla “metne çevir” yine çalışır.",
     "autoTranscribeLabel": "Sesli notları otomatik metne çevir",
     "autoTranscribeNote": "Kapatırsanız kayıt yine çalışır ama metin üretilmez. Bir notu daha sonra kendiniz çevirebilirsiniz."
+  },
+  "storage": {
+    "readErrorTitle": "Kayıtlı veriler okunamadı",
+    "readErrorDesc": "Bu bölümün verileri şu anda okunamıyor. Verilerinizi korumak için burada ekleme, silme ve sıralama kapatıldı.",
+    "saveFailedTitle": "Kaydedilemedi",
+    "saveFailedDesc": "Son değişiklikleriniz cihaza kaydedilemedi. Ekranda görünen içerik henüz kalıcı değil.",
+    "searchPartial": "Bazı kayıtlar okunamadı; arama sonuçları eksik olabilir."
   }
 }

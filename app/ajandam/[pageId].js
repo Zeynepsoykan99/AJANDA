@@ -18,6 +18,12 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { StorageService } from '../../services/storageService';
+import {
+  guardWrite,
+  isStorageReadError,
+  reportStorageWriteError,
+} from '../../services/storageErrorEvents';
+import StorageReadErrorState from '../../components/ui/StorageReadErrorState';
 import { getPageTemplate, getTemplateEdgeColor, PAGE_CATEGORIES } from '../../constants/pageTemplates';
 import useDynamicEdgeColor from '../../hooks/useDynamicEdgeColor';
 import TodoPage from '../../components/pages/TodoPage';
@@ -74,6 +80,13 @@ import PrivacyNoticeModal, {
  */
 const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
 
+/**
+ * Sayfa alanlarini diske yazar. Yazma (veya oncesindeki okuma) basarisiz olursa
+ * kullaniciya "Kaydedilemedi" bildirilir ve null doner; ekrandaki durum
+ * DEGISTIRILMEZ (bellekteki icerik korunur). Yeniden deneme yapmaz.
+ */
+const persistPage = (id, updates) => guardWrite(StorageService.updatePage(id, updates));
+
 export default function PageViewScreen() {
   // GECICI (teshis/SORUN B): bir cizgi boyunca EBEVEYN ekran kac kez render oldu
   bumpRender('screen');
@@ -96,6 +109,8 @@ export default function PageViewScreen() {
 
   const [page, setPage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  // Kayitli sayfalar okunamadiysa "bulunamadi" yerine hata durumu gosterilir
+  const [loadError, setLoadError] = useState(false);
 
   // Şablon ve Dinamik Kenar Rengi (Edge Color)
   const template = page ? getPageTemplate(page.category, page.templateId) : null;
@@ -191,6 +206,7 @@ export default function PageViewScreen() {
         }
       } catch (error) {
         console.warn('Sayfa yüklenirken hata:', error);
+        if (isStorageReadError(error)) setLoadError(true);
       } finally {
         setIsLoading(false);
       }
@@ -243,7 +259,12 @@ export default function PageViewScreen() {
     try {
       await StorageService.updatePage(pageId, pending);
     } catch (error) {
-      console.error('Bekleyen sayfa degisikligi yazilamadi:', error);
+      // Yazilamayan degisiklik kaybolmasin: bekleyen yuke GERI eklenir, boylece bir
+      // sonraki dogal kayit (yeni degisiklik, arka plana gecis, ekrandan ayrilma)
+      // onu da tasir. Zamanlayici KURULMAZ: bu bir yeniden deneme dongusu degildir.
+      // Arada gelen daha yeni degisiklikler oncelikli.
+      pendingSaveRef.current = { ...pending, ...(pendingSaveRef.current || {}) };
+      reportStorageWriteError(error);
     }
   }, [pageId]);
 
@@ -329,7 +350,7 @@ export default function PageViewScreen() {
               : current
           );
         }
-        await StorageService.updatePage(pageId, {
+        await persistPage(pageId, {
           recognizedText: result.text,
           recognizedWords: result.words,
         });
@@ -420,14 +441,14 @@ export default function PageViewScreen() {
       if (current.length === 0) return prev;
       const updatedDrawings = current.slice(0, current.length - 1);
       const updated = { ...prev, drawings: updatedDrawings };
-      StorageService.updatePage(prev.id, { drawings: updatedDrawings });
+      persistPage(prev.id, { drawings: updatedDrawings });
 
       // Geri alınınca tanımayı yeniden çalıştır
       if (recognitionTimeoutRef.current) {
         clearTimeout(recognitionTimeoutRef.current);
       }
       if (updatedDrawings.length === 0) {
-        StorageService.updatePage(prev.id, { recognizedText: '', recognizedWords: [] });
+        persistPage(prev.id, { recognizedText: '', recognizedWords: [] });
       } else {
         recognitionTimeoutRef.current = setTimeout(async () => {
           // Kullanici otomatik taniimayi kapattiysa cizgiler cihaz disina cikmaz.
@@ -435,7 +456,7 @@ export default function PageViewScreen() {
           if (!(await getPrivacySettings()).autoHandwriting) return;
           const result = await recognizeHandwriting(updatedDrawings, { language: i18n.language || 'tr' });
           if (result.success && !result.aborted && !result.stale) {
-            StorageService.updatePage(prev.id, {
+            persistPage(prev.id, {
               recognizedText: result.text,
               recognizedWords: result.words,
             });
@@ -465,7 +486,7 @@ export default function PageViewScreen() {
     setPage((prev) => {
       const current = prev.drawings || [];
       const updatedDrawings = current.filter((s) => !selectedStrokeIds.includes(s.id));
-      StorageService.updatePage(prev.id, { drawings: updatedDrawings });
+      persistPage(prev.id, { drawings: updatedDrawings });
       return { ...prev, drawings: updatedDrawings };
     });
 
@@ -659,7 +680,7 @@ export default function PageViewScreen() {
         );
         const updatedTextBlocks = [...(prev.textBlocks || []), ...newBlocks];
 
-        StorageService.updatePage(prev.id, {
+        persistPage(prev.id, {
           drawings: remainingDrawings,
           textBlocks: updatedTextBlocks,
         });
@@ -741,7 +762,7 @@ export default function PageViewScreen() {
         const updated = { ...prev, stickers: updatedStickers };
 
         // Kaydet
-        StorageService.updatePage(prev.id, { stickers: updatedStickers });
+        persistPage(prev.id, { stickers: updatedStickers });
 
         return updated;
       });
@@ -757,7 +778,7 @@ export default function PageViewScreen() {
           s.id === stickerId ? { ...s, x: newX, y: newY } : s
         );
         const updated = { ...prev, stickers: updatedStickers };
-        StorageService.updatePage(prev.id, { stickers: updatedStickers });
+        persistPage(prev.id, { stickers: updatedStickers });
         return updated;
       });
     },
@@ -771,7 +792,7 @@ export default function PageViewScreen() {
           s.id === stickerId ? { ...s, scale: newScale } : s
         );
         const updated = { ...prev, stickers: updatedStickers };
-        StorageService.updatePage(prev.id, { stickers: updatedStickers });
+        persistPage(prev.id, { stickers: updatedStickers });
         return updated;
       });
     },
@@ -797,7 +818,7 @@ export default function PageViewScreen() {
 
         const timer = setTimeout(() => {
           if (pendingStickerDeleteRef.current?.sticker?.id === stickerId) {
-            StorageService.updatePage(prev.id, { stickers: updatedStickers });
+            persistPage(prev.id, { stickers: updatedStickers });
             pendingStickerDeleteRef.current = null;
             setUndoToast({ visible: false, message: '' });
           }
@@ -850,7 +871,7 @@ export default function PageViewScreen() {
             (b) => !idsToDelete.includes(b.id)
           );
           const updatedDrawings = [...(prev.drawings || []), ...pending.removedStrokes];
-          StorageService.updatePage(prev.id, {
+          persistPage(prev.id, {
             drawings: updatedDrawings,
             textBlocks: updatedTextBlocks,
           });
@@ -862,7 +883,7 @@ export default function PageViewScreen() {
       if (pending.type === 'strokes_delete') {
         setPage((prev) => {
           const updatedDrawings = [...(prev.drawings || []), ...pending.removedStrokes];
-          StorageService.updatePage(prev.id, { drawings: updatedDrawings });
+          persistPage(prev.id, { drawings: updatedDrawings });
           return { ...prev, drawings: updatedDrawings };
         });
         return;
@@ -871,7 +892,7 @@ export default function PageViewScreen() {
       if (pending.type === 'text_delete' && pending.deletedBlocks) {
         setPage((prev) => {
           const updatedTextBlocks = [...(prev.textBlocks || []), ...pending.deletedBlocks];
-          StorageService.updatePage(prev.id, { textBlocks: updatedTextBlocks });
+          persistPage(prev.id, { textBlocks: updatedTextBlocks });
           return { ...prev, textBlocks: updatedTextBlocks };
         });
         return;
@@ -886,7 +907,7 @@ export default function PageViewScreen() {
             }
             return b;
           });
-          StorageService.updatePage(prev.id, { textBlocks: updatedTextBlocks });
+          persistPage(prev.id, { textBlocks: updatedTextBlocks });
           return { ...prev, textBlocks: updatedTextBlocks };
         });
         return;
@@ -895,7 +916,7 @@ export default function PageViewScreen() {
       if (pending.sticker) {
         setPage((prev) => {
           const updatedStickers = [...(prev.stickers || []), pending.sticker];
-          StorageService.updatePage(prev.id, { stickers: updatedStickers });
+          persistPage(prev.id, { stickers: updatedStickers });
           return { ...prev, stickers: updatedStickers };
         });
         return;
@@ -913,7 +934,7 @@ export default function PageViewScreen() {
           (b) => !idsToDelete.includes(b.id)
         );
         const updatedDrawings = [...(prev.drawings || []), ...lastConversion.removedStrokes];
-        StorageService.updatePage(prev.id, {
+        persistPage(prev.id, {
           drawings: updatedDrawings,
           textBlocks: updatedTextBlocks,
         });
@@ -942,7 +963,7 @@ export default function PageViewScreen() {
       if (pending.type === 'sticker_delete' && pending.sticker) {
         // Guncelleyici yalnizca state OKUMAK icin kullaniliyordu ve icinde yan
         // etki vardi. Guncel sayfa artik pageRef uzerinden okunuyor.
-        StorageService.updatePage(pageId, { stickers: pageRef.current?.stickers || [] });
+        persistPage(pageId, { stickers: pageRef.current?.stickers || [] });
       }
       setUndoToast({ visible: false, message: '' });
     }
@@ -965,7 +986,9 @@ export default function PageViewScreen() {
     const message = t('agenda.deleteConfirmMessage', 'Bu sayfayı silmek istediğinize emin misiniz?');
     
     const executeDelete = async () => {
-      await StorageService.deletePage(page.id);
+      const result = await guardWrite(StorageService.deletePage(page.id));
+      // Silme diske yazilamadiysa sayfa kayitli: ekrandan cikilmaz
+      if (!result) return;
       router.back();
     };
 
@@ -1033,7 +1056,8 @@ export default function PageViewScreen() {
           reminder: updatedReminder,
         };
 
-        await StorageService.updatePage(page.id, { reminder: updatedReminder });
+        const saved = await persistPage(page.id, { reminder: updatedReminder });
+        if (!saved) return;
         setPage(updated);
         setIsReminderModalVisible(false);
       } catch (error) {
@@ -1057,7 +1081,8 @@ export default function PageViewScreen() {
           reminder: null,
         };
 
-        await StorageService.updatePage(page.id, { reminder: null });
+        const saved = await persistPage(page.id, { reminder: null });
+        if (!saved) return;
         setPage(updated);
         setIsReminderModalVisible(false);
       } catch (error) {
@@ -1071,7 +1096,7 @@ export default function PageViewScreen() {
   const handleAddAudioNote = useCallback((newAudioNote) => {
     setPage((prev) => {
       const updatedAudioNotes = [...(prev.audioNotes || []), newAudioNote];
-      StorageService.updatePage(prev.id, { audioNotes: updatedAudioNotes });
+      persistPage(prev.id, { audioNotes: updatedAudioNotes });
       return { ...prev, audioNotes: updatedAudioNotes };
     });
   }, []);
@@ -1081,7 +1106,7 @@ export default function PageViewScreen() {
     await AudioService.deleteAudioFile(AudioService.resolveAudioUri(audioNote));
     setPage((prev) => {
       const updatedAudioNotes = (prev.audioNotes || []).filter((n) => n.id !== audioNote.id);
-      StorageService.updatePage(prev.id, { audioNotes: updatedAudioNotes });
+      persistPage(prev.id, { audioNotes: updatedAudioNotes });
       return { ...prev, audioNotes: updatedAudioNotes };
     });
   }, []);
@@ -1098,7 +1123,7 @@ export default function PageViewScreen() {
         transcript: transcript || updatedNotes[noteIndex].transcript,
         transcriptStatus: status,
       };
-      StorageService.updatePage(prev.id, { audioNotes: updatedNotes });
+      persistPage(prev.id, { audioNotes: updatedNotes });
       return { ...prev, audioNotes: updatedNotes };
     });
   }, []);
@@ -1138,7 +1163,7 @@ export default function PageViewScreen() {
       } else {
         updatedFlags = [...existingFlags, flagData];
       }
-      StorageService.updatePage(prev.id, { indexFlags: updatedFlags });
+      persistPage(prev.id, { indexFlags: updatedFlags });
       return { ...prev, indexFlags: updatedFlags };
     });
   }, []);
@@ -1147,7 +1172,7 @@ export default function PageViewScreen() {
   const handleDeleteIndexFlag = useCallback((flagId) => {
     setPage((prev) => {
       const updatedFlags = (prev.indexFlags || []).filter((f) => f.id !== flagId);
-      StorageService.updatePage(prev.id, { indexFlags: updatedFlags });
+      persistPage(prev.id, { indexFlags: updatedFlags });
       return { ...prev, indexFlags: updatedFlags };
     });
   }, []);
@@ -1160,6 +1185,18 @@ export default function PageViewScreen() {
       >
         <StatusBar style="dark" backgroundColor={targetEdgeColor} />
         <ActivityIndicator size="large" color={colors.accent} />
+      </AnimatedSafeAreaView>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <AnimatedSafeAreaView
+        style={[styles.safeArea, { backgroundColor: targetEdgeColor }, animatedBgStyle]}
+        edges={['top', 'bottom']}
+      >
+        <StatusBar style="dark" backgroundColor={targetEdgeColor} />
+        <StorageReadErrorState onBack={() => router.back()} />
       </AnimatedSafeAreaView>
     );
   }

@@ -496,5 +496,12 @@
     "autoHandwritingNote": "Si vous désactivez cette option, votre écriture ne sera pas recherchable dans les pages Mon agenda et À faire. L’action « convertir en texte » de l’outil lasso continue de fonctionner.",
     "autoTranscribeLabel": "Convertir automatiquement les notes vocales en texte",
     "autoTranscribeNote": "Si vous désactivez cette option, l’enregistrement fonctionne toujours mais aucun texte n’est produit. Vous pourrez convertir une note vous-même plus tard."
+  },
+  "storage": {
+    "readErrorTitle": "Impossible de lire les données enregistrées",
+    "readErrorDesc": "Les données de cette section ne peuvent pas être lues pour le moment. Pour protéger vos données, l’ajout, la suppression et le réordonnancement sont désactivés ici.",
+    "saveFailedTitle": "Enregistrement impossible",
+    "saveFailedDesc": "Vos dernières modifications n’ont pas pu être enregistrées sur l’appareil. Le contenu affiché n’est pas encore permanent.",
+    "searchPartial": "Certains éléments n’ont pas pu être lus ; les résultats de recherche peuvent être incomplets."
   }
 }

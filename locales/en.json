@@ -496,5 +496,12 @@
     "autoHandwritingNote": "If you turn this off, your handwriting will not be searchable on My Agenda and To-Do pages. The lasso tool’s “convert to text” still works.",
     "autoTranscribeLabel": "Convert voice notes to text automatically",
     "autoTranscribeNote": "If you turn this off, recording still works but no text is produced. You can convert a note yourself later."
+  },
+  "storage": {
+    "readErrorTitle": "Saved data could not be read",
+    "readErrorDesc": "The data for this section cannot be read right now. To protect your data, adding, deleting and reordering are turned off here.",
+    "saveFailedTitle": "Could not save",
+    "saveFailedDesc": "Your latest changes could not be saved to the device. The content on screen is not permanent yet.",
+    "searchPartial": "Some records could not be read; search results may be incomplete."
   }
 }

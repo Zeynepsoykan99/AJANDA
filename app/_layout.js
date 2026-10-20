@@ -16,6 +16,8 @@ import {
 import { startSessionAutoLock } from '../services/biometricService';
 import { cleanupLegacyPlaintextPins } from '../services/securityService';
 import { loadPrivacySettings } from '../services/privacySettingsService';
+import { subscribeStorageWriteFailed } from '../services/storageErrorEvents';
+import { useTranslation } from 'react-i18next';
 // GECICI (teshis): kaldirilacak
 import { logBuildStamp } from '../utils/diagnosticLog';
 
@@ -117,6 +119,7 @@ export default function RootLayout() {
 function ThemedApp() {
   const router = useRouter();
   const { colors, isLoaded } = useTheme();
+  const { t } = useTranslation();
 
   // Ön plan uygulama içi bildirim banner durumu
   const [inAppBanner, setInAppBanner] = useState({
@@ -141,6 +144,24 @@ function ThemedApp() {
   useEffect(() => {
     loadPrivacySettings();
   }, []);
+
+  // Bir kayit diske yazilamazsa kullaniciya "Kaydedilemedi" gosterilir. Sikligi
+  // storageErrorEvents sinirlar (pencere basina en fazla bir kez).
+  useEffect(
+    () =>
+      subscribeStorageWriteFailed(() => {
+        setInAppBanner({
+          visible: true,
+          title: t('storage.saveFailedTitle', 'Kaydedilemedi'),
+          message: t(
+            'storage.saveFailedDesc',
+            'Son değişiklikleriniz cihaza kaydedilemedi. Ekranda görünen içerik henüz kalıcı değil.'
+          ),
+          data: null,
+        });
+      }),
+    [t]
+  );
 
   // GECICI (teshis): cihazin hangi JS paketini calistirdigini acilista yazar
   useEffect(() => {

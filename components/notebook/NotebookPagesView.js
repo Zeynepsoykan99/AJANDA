@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -49,6 +49,8 @@ import IndexFlagsRail from '../stationery/IndexFlagsRail';
 import { AudioService } from '../../services/audioService';
 import { addSessionLockListener } from '../../services/biometricService';
 import { StorageService } from '../../services/storageService';
+import { guardStorageWrites, isStorageReadError } from '../../services/storageErrorEvents';
+import StorageReadErrorState from '../ui/StorageReadErrorState';
 import { isSameDay, formatFilterDate } from '../../components/ui/GlobalFilterHeader';
 import { SecurityService } from '../../services/securityService';
 import { captureRef } from 'react-native-view-shot';
@@ -118,6 +120,8 @@ export default function NotebookPagesView({
 
   const [notebook, setNotebook] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  // Kayitli defter okunamadiysa "bulunamadi" yerine hata durumu gosterilir
+  const [loadError, setLoadError] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(() => SecurityService.isSessionUnlocked('diary'));
 
   // Uygulama arka plandan tolerans suresini asarak dondugunde oturum kilitleri
@@ -169,8 +173,12 @@ export default function NotebookPagesView({
   const selectionBounds = lassoSelection.bounds;
   const selectedStrokes = lassoSelection.strokes;
 
-  const storageRef = useRef(storage);
-  storageRef.current = storage;
+  // Yazma metotlari korunur: basarisiz yazma kullaniciya "Kaydedilemedi" olarak
+  // bildirilir ve null doner (bu gorunum null'u zaten "yazilmadi" sayiyor).
+  // load korunmaz: okuma hatasi asagida hata durumuna donusur.
+  const guardedStorage = useMemo(() => guardStorageWrites(storage), [storage]);
+  const storageRef = useRef(guardedStorage);
+  storageRef.current = guardedStorage;
 
   const scrollViewRef = useRef(null);
   const saveTimeoutRef = useRef(null);
@@ -252,6 +260,7 @@ export default function NotebookPagesView({
         }
       } catch (error) {
         console.warn('Defter yüklenirken hata:', error);
+        if (isStorageReadError(error)) setLoadError(true);
       } finally {
         setIsLoading(false);
       }
@@ -1287,6 +1296,14 @@ export default function NotebookPagesView({
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.accent} />
         </View>
+      </AnimatedSafeAreaView>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <AnimatedSafeAreaView style={[styles.safeArea, { backgroundColor: targetEdgeColor }, animatedBgStyle]} edges={['top', 'bottom']}>
+        <StorageReadErrorState onBack={() => router.back()} />
       </AnimatedSafeAreaView>
     );
   }

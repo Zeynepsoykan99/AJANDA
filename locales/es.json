@@ -496,5 +496,12 @@
     "autoHandwritingNote": "Si lo desactivas, tu escritura no se podrá buscar en las páginas de Mi agenda y Tareas. La acción «convertir en texto» de la herramienta de lazo sigue funcionando.",
     "autoTranscribeLabel": "Convertir notas de voz en texto automáticamente",
     "autoTranscribeNote": "Si lo desactivas, la grabación sigue funcionando pero no se genera texto. Puedes convertir una nota tú mismo más tarde."
+  },
+  "storage": {
+    "readErrorTitle": "No se pudieron leer los datos guardados",
+    "readErrorDesc": "Los datos de esta sección no se pueden leer en este momento. Para proteger tus datos, se han desactivado aquí las acciones de añadir, eliminar y reordenar.",
+    "saveFailedTitle": "No se pudo guardar",
+    "saveFailedDesc": "Tus últimos cambios no se pudieron guardar en el dispositivo. El contenido en pantalla aún no es permanente.",
+    "searchPartial": "Algunos registros no se pudieron leer; los resultados de búsqueda pueden estar incompletos."
   }
 }

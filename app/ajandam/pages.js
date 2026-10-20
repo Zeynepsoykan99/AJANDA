@@ -13,6 +13,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { StorageService } from '../../services/storageService';
+import { guardWrite, isStorageReadError } from '../../services/storageErrorEvents';
+import StorageReadErrorState from '../../components/ui/StorageReadErrorState';
 import PageThumbnail from '../../components/PageThumbnail';
 import AddPageModal from '../../components/AddPageModal';
 import ListSkeleton from '../../components/ui/ListSkeleton';
@@ -36,6 +38,9 @@ export default function PagesScreen() {
   const [pages, setPages] = useState([]);
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  // Kayitli sayfalar okunamadiysa liste yerine hata durumu gosterilir ve
+  // ekleme/silme kapatilir: okunamayan verinin uzerine yazilmasin
+  const [loadError, setLoadError] = useState(false);
   const [filterDate, setFilterDate] = useState(null);
   const [undoToast, setUndoToast] = useState({ visible: false, message: '' });
   const [reminderTarget, setReminderTarget] = useState(null);
@@ -65,19 +70,28 @@ export default function PagesScreen() {
   const loadPages = async () => {
     try {
       const savedPages = await StorageService.getPages();
+      setLoadError(false);
       const ajandaPages = savedPages.filter(p => p.category !== 'todo');
       setPages(ajandaPages.sort((a, b) => (b.order || 0) - (a.order || 0)));
     } catch (error) {
       console.warn('Sayfalar yüklenirken hata:', error);
+      if (isStorageReadError(error)) setLoadError(true);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Kalici silme. Diske yazilamazsa sayfa kayitta duruyor demektir: kullanici
+  // bilgilendirilir ve liste diskle esitlenir (sayfa kaybolmus gibi gorunmesin).
+  const commitDelete = async (id) => {
+    const result = await guardWrite(StorageService.deletePage(id));
+    if (!result) loadPages();
+  };
+
   // Yeni sayfa ekle
   const handleAddPage = useCallback(
     async (newPage) => {
-      const updatedPages = await StorageService.addPage(newPage);
+      const updatedPages = await guardWrite(StorageService.addPage(newPage));
       if (updatedPages) {
         const ajandaPages = updatedPages.filter(p => p.category !== 'todo');
         setPages(ajandaPages.sort((a, b) => (b.order || 0) - (a.order || 0)));
@@ -121,7 +135,10 @@ export default function PagesScreen() {
           reminder: updatedReminder,
         };
 
-        await StorageService.updatePage(reminderTarget.id, { reminder: updatedReminder });
+        const saved = await guardWrite(
+          StorageService.updatePage(reminderTarget.id, { reminder: updatedReminder })
+        );
+        if (!saved) return;
         setPages((prev) =>
           prev.map((p) => (p.id === reminderTarget.id ? updatedPage : p))
         );
@@ -147,7 +164,8 @@ export default function PagesScreen() {
           reminder: null,
         };
 
-        await StorageService.updatePage(reminderTarget.id, { reminder: null });
+        const saved = await guardWrite(StorageService.updatePage(reminderTarget.id, { reminder: null }));
+        if (!saved) return;
         setPages((prev) =>
           prev.map((p) => (p.id === reminderTarget.id ? updatedPage : p))
         );
@@ -164,7 +182,7 @@ export default function PagesScreen() {
     // Önceki bekleyen silme varsa hemen kalıcılaştır
     if (pendingDeleteRef.current) {
       clearTimeout(pendingDeleteRef.current.timer);
-      StorageService.deletePage(pendingDeleteRef.current.item.id);
+      commitDelete(pendingDeleteRef.current.item.id);
       pendingDeleteRef.current = null;
     }
 
@@ -174,7 +192,7 @@ export default function PagesScreen() {
     // 4.5 saniye sonra kalıcı silme zamanlayıcısı
     const timer = setTimeout(async () => {
       if (pendingDeleteRef.current?.item?.id === pageToDelete.id) {
-        await StorageService.deletePage(pageToDelete.id);
+        await commitDelete(pageToDelete.id);
         pendingDeleteRef.current = null;
         setUndoToast({ visible: false, message: '' });
       }
@@ -209,7 +227,7 @@ export default function PagesScreen() {
       clearTimeout(pendingDeleteRef.current.timer);
       const itemToDelete = pendingDeleteRef.current.item;
       pendingDeleteRef.current = null;
-      await StorageService.deletePage(itemToDelete.id);
+      await commitDelete(itemToDelete.id);
       setUndoToast({ visible: false, message: '' });
     }
   }, []);
@@ -219,7 +237,7 @@ export default function PagesScreen() {
     return () => {
       if (pendingDeleteRef.current) {
         clearTimeout(pendingDeleteRef.current.timer);
-        StorageService.deletePage(pendingDeleteRef.current.item.id);
+        guardWrite(StorageService.deletePage(pendingDeleteRef.current.item.id));
       }
     };
   }, []);
@@ -277,6 +295,8 @@ export default function PagesScreen() {
       <View style={[{ flex: 1 }, isTablet && styles.tabletContainer]}>
         {isLoading ? (
           <ListSkeleton count={4} />
+        ) : loadError ? (
+          <StorageReadErrorState onBack={() => router.back()} />
         ) : (
           <FlatList
             data={displayPages}
@@ -303,13 +323,15 @@ export default function PagesScreen() {
       </View>
 
       {/* FAB - Yeni Sayfa Ekle */}
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => setIsAddModalVisible(true)}
-        style={[styles.fab, { backgroundColor: colors.accent }]}
-      >
-        <MaterialCommunityIcons name="plus" size={28} color="#FFFFFF" />
-      </TouchableOpacity>
+      {!loadError && (
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => setIsAddModalVisible(true)}
+          style={[styles.fab, { backgroundColor: colors.accent }]}
+        >
+          <MaterialCommunityIcons name="plus" size={28} color="#FFFFFF" />
+        </TouchableOpacity>
+      )}
 
       {/* Sayfa Ekleme Modal */}
       <AddPageModal

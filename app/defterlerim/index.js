@@ -15,6 +15,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { StorageService } from '../../services/storageService';
+import { guardWrite, isStorageReadError } from '../../services/storageErrorEvents';
+import StorageReadErrorState from '../../components/ui/StorageReadErrorState';
 import { getCoverTemplateById } from '../../constants/coverTemplates';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 import ImageWithSkeleton from '../../components/ui/ImageWithSkeleton';
@@ -44,6 +46,8 @@ export default function NotebooksScreen() {
 
   const [notebooks, setNotebooks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  // Defterler okunamadiysa raf yerine hata durumu gosterilir ve defter ekleme kapatilir
+  const [loadError, setLoadError] = useState(false);
   const [filterDate, setFilterDate] = useState(null);
   const [isCreateVisible, setIsCreateVisible] = useState(false);
   const [actionTarget, setActionTarget] = useState(null);
@@ -68,9 +72,16 @@ export default function NotebooksScreen() {
   }, [notebooks, filterDate]);
 
   const loadNotebooks = useCallback(async () => {
-    const list = await StorageService.getNotebooks();
-    setNotebooks(list || []);
-    setIsLoading(false);
+    try {
+      const list = await StorageService.getNotebooks();
+      setNotebooks(list || []);
+      setLoadError(false);
+    } catch (error) {
+      console.warn('Defterler yüklenirken hata:', error);
+      if (isStorageReadError(error)) setLoadError(true);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   // Ekran her odaklandığında güncel listeyi oku (defter içinde yapılan düzenlemeler sıralamaya yansır)
@@ -91,7 +102,7 @@ export default function NotebooksScreen() {
   const handleCreate = useCallback(
     async ({ title, coverTemplateId }) => {
       setIsCreateVisible(false);
-      const created = await StorageService.createNotebook({ title, coverTemplateId });
+      const created = await guardWrite(StorageService.createNotebook({ title, coverTemplateId }));
       if (created) await loadNotebooks();
     },
     [loadNotebooks]
@@ -112,7 +123,7 @@ export default function NotebooksScreen() {
       const target = renameTarget;
       setRenameTarget(null);
       if (!target) return;
-      await StorageService.updateNotebookMeta(target.id, { title });
+      await guardWrite(StorageService.updateNotebookMeta(target.id, { title }));
       await loadNotebooks();
     },
     [renameTarget, loadNotebooks]
@@ -137,7 +148,11 @@ export default function NotebooksScreen() {
 
     if (result.success) {
       const nextLocked = !isCurrentlyLocked;
-      await StorageService.updateNotebookMeta(target.id, { isLocked: nextLocked });
+      const saved = await guardWrite(StorageService.updateNotebookMeta(target.id, { isLocked: nextLocked }));
+      if (!saved) {
+        await loadNotebooks();
+        return;
+      }
       if (nextLocked) {
         unlockSession(target.id);
       } else {
@@ -160,7 +175,7 @@ export default function NotebooksScreen() {
     const target = actionTarget;
     setActionTarget(null);
     if (!target) return;
-    const deleted = await StorageService.deleteNotebook(target.id);
+    const deleted = await guardWrite(StorageService.deleteNotebook(target.id));
     if (!deleted) return;
     setNotebooks((prev) => prev.filter((nb) => nb.id !== target.id));
     undoActionRef.current = deleted;
@@ -177,7 +192,7 @@ export default function NotebooksScreen() {
   const handleTogglePin = useCallback(async (notebook) => {
     if (!notebook?.id) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    await StorageService.toggleNotebookPin(notebook.id);
+    await guardWrite(StorageService.toggleNotebookPin(notebook.id));
     await loadNotebooks();
   }, [loadNotebooks]);
 
@@ -186,7 +201,7 @@ export default function NotebooksScreen() {
     undoActionRef.current = null;
     setUndoToast({ visible: false, message: '' });
     if (!notebook) return;
-    await StorageService.restoreNotebook(notebook);
+    await guardWrite(StorageService.restoreNotebook(notebook));
     await loadNotebooks();
   }, [loadNotebooks]);
 
@@ -288,14 +303,16 @@ export default function NotebooksScreen() {
         filterDate={filterDate}
         onSelectDate={setFilterDate}
         rightActions={
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => setIsCreateVisible(true)}
-            style={[styles.headerButton, styles.addButton, { backgroundColor: colors.accent, borderColor: colors.accent }]}
-            accessibilityLabel={t('notebooks.addNotebook', 'Defter Ekle')}
-          >
-            <MaterialCommunityIcons name="plus" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
+          loadError ? null : (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setIsCreateVisible(true)}
+              style={[styles.headerButton, styles.addButton, { backgroundColor: colors.accent, borderColor: colors.accent }]}
+              accessibilityLabel={t('notebooks.addNotebook', 'Defter Ekle')}
+            >
+              <MaterialCommunityIcons name="plus" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          )
         }
       />
 
@@ -303,6 +320,8 @@ export default function NotebooksScreen() {
       <View style={[styles.listWrapper, isTablet && styles.tabletContainer]}>
         {isLoading ? (
           <ActivityIndicator size="large" color={colors.accent} style={styles.loader} />
+        ) : loadError ? (
+          <StorageReadErrorState onBack={() => router.back()} />
         ) : (
           <FlatList
             key={`shelf_${numColumns}`}

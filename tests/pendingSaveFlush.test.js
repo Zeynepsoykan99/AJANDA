@@ -51,6 +51,9 @@ const buildSaver = (source, label) => {
   const disk = {};
   const refs = { saveTimeoutRef: { current: null }, pendingSaveRef: { current: null } };
   let writeCount = 0;
+  // Yazma hatasi senaryosu icin: true iken updatePage disk-dolu hatasi firlatir
+  let failWrites = false;
+  const reports = [];
 
   // eslint-disable-next-line no-new-func
   const api = new Function(
@@ -65,6 +68,7 @@ const buildSaver = (source, label) => {
     'dlog',
     'len',
     'textLen',
+    'reportStorageWriteError',
     body + '\nreturn { flushPendingSave, scheduleSave };'
   )(
     refs.saveTimeoutRef,
@@ -73,6 +77,7 @@ const buildSaver = (source, label) => {
     {
       async updatePage(id, updates) {
         assert.strictEqual(id, 'page_1', label + ': yazma dogru sayfaya gitmeli');
+        if (failWrites) throw new Error('database or disk is full');
         writeCount += 1;
         Object.assign(disk, updates);
       },
@@ -80,10 +85,20 @@ const buildSaver = (source, label) => {
     console,
     () => {},
     () => 0,
-    () => 0
+    () => 0,
+    (error) => reports.push(error)
   );
 
-  return { ...api, disk, refs, getWriteCount: () => writeCount };
+  return {
+    ...api,
+    disk,
+    refs,
+    reports,
+    getWriteCount: () => writeCount,
+    setFailWrites: (value) => {
+      failWrites = value;
+    },
+  };
 };
 
 console.log('--- Bekleyen Kayit / Flush Testleri ---');
@@ -177,6 +192,49 @@ console.log('--- Bekleyen Kayit / Flush Testleri ---');
     console.log('OK Test 5: flush eski zamanlayiciyi iptal ediyor, ikinci yazma yok');
   }
 
+  // --- Test 5b: yazma basarisiz olursa bekleyen yuk KAYBOLMUYOR ------
+  // Eskiden pendingSaveRef yazmadan once sifirlaniyor, hata yalnizca loglaniyordu:
+  // yazilamayan cizim bir sonraki kayitta da diske gitmiyordu.
+  for (const [label, source] of [['ajandam', ajandamSource], ['todolist', todolistSource]]) {
+    const { scheduleSave, flushPendingSave, disk, refs, reports, setFailWrites, getWriteCount } =
+      buildSaver(source, label);
+
+    setFailWrites(true);
+    scheduleSave({ drawings: ['cizim-1'] }, 1000);
+    await flushPendingSave(); // disk dolu
+    assert.strictEqual(getWriteCount(), 0, label + ': basarisiz yazma sayilmamali');
+    assert.strictEqual(reports.length, 1, label + ': yazma hatasi kullaniciya bildirilmeli');
+    assert.deepStrictEqual(
+      refs.pendingSaveRef.current,
+      { drawings: ['cizim-1'] },
+      label + ': yazilamayan degisiklik bekleyen yukte kalmali'
+    );
+    assert.strictEqual(refs.saveTimeoutRef.current, null, label + ': yeniden deneme zamanlayicisi KURULMAMALI');
+
+    // Disk bosaldi; kullanici yeni bir degisiklik yapti -> ikisi birlikte yazilir
+    setFailWrites(false);
+    scheduleSave({ textBlocks: ['metin'] }, 1000);
+    await flushPendingSave();
+    assert.deepStrictEqual(
+      disk,
+      { drawings: ['cizim-1'], textBlocks: ['metin'] },
+      label + ': onceki basarisiz degisiklik bir sonraki kayitla diske gitmeli'
+    );
+    assert.strictEqual(refs.pendingSaveRef.current, null);
+  }
+  {
+    // Yazma uctayken gelen daha yeni deger, geri eklenen eski degeri ezmeli
+    const { scheduleSave, flushPendingSave, refs, setFailWrites } = buildSaver(ajandamSource, 'ajandam');
+    setFailWrites(true);
+    scheduleSave({ drawings: ['eski'] }, 1000);
+    const flushing = flushPendingSave();
+    scheduleSave({ drawings: ['yeni'] }, 1000);
+    await flushing;
+    assert.deepStrictEqual(refs.pendingSaveRef.current.drawings, ['yeni'], 'daha yeni degisiklik oncelikli olmali');
+    clearTimeout(refs.saveTimeoutRef.current);
+  }
+  console.log('OK Test 5b: yazma hatasinda bekleyen yuk korunuyor, bildirim var, zamanlayici yok');
+
   // --- Test 6: todolist ekrani da ayni mekanizmayi kullaniyor --------
   {
     const { scheduleSave, disk } = buildSaver(todolistSource, 'todolist');
@@ -225,8 +283,8 @@ function runSourceChecks() {
       const updater = /setPage\(\(prev\) => [\s\S]*?\);/.exec(m[0]);
       assert.ok(updater, label + ': ' + fn + ' setPage guncelleyicisi icermeli');
       assert.ok(
-        !/StorageService|setTimeout/.test(updater[0]),
-        label + ': ' + fn + ' guncelleyicisi SAF olmali (StorageService/setTimeout icermemeli)'
+        !/StorageService|persistPage|setTimeout/.test(updater[0]),
+        label + ': ' + fn + ' guncelleyicisi SAF olmali (StorageService/persistPage/setTimeout icermemeli)'
       );
       assert.ok(
         /scheduleSave\(/.test(m[0]),
@@ -236,7 +294,7 @@ function runSourceChecks() {
 
     // A3: sticker silme onayi artik guncelleyici icinde yazmiyor
     assert.ok(
-      /StorageService\.updatePage\(pageId, \{ stickers: pageRef\.current\?\.stickers \|\| \[\] \}\);/.test(
+      /persistPage\(pageId, \{ stickers: pageRef\.current\?\.stickers \|\| \[\] \}\);/.test(
         source
       ),
       label + ': sticker silme yazmasi guncelleyici disinda, pageRef uzerinden olmali'

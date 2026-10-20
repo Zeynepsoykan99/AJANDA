@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { StorageService } from '../../services/storageService';
 import { searchAllData } from '../../services/searchService';
+import { isStorageReadError } from '../../services/storageErrorEvents';
 import { getPageDisplayTitle } from '../../utils/pageTitleHelper';
 
 const DATE_LOCALE_MAP = {
@@ -60,6 +61,8 @@ export default function GlobalSearchModal({
   const [results, setResults] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  // Bir veri kaynagi okunamadiysa sonuclarin eksik olabilecegi acikca soylenir
+  const [hasReadError, setHasReadError] = useState(false);
 
   // In-memory veri önbelleği (diskten tekrar tekrar okumayı engeller)
   const cachedPagesRef = useRef(null);
@@ -84,20 +87,23 @@ export default function GlobalSearchModal({
 
       // Verileri bir kez belleğe al
       (async () => {
-        try {
-          const [pages, cover, diary, notebooks] = await Promise.all([
-            StorageService.getPages(),
-            StorageService.getCover(),
-            StorageService.getDiary(),
-            StorageService.getNotebooks(),
-          ]);
-          cachedPagesRef.current = pages || [];
-          cachedCoverRef.current = cover || null;
-          cachedDiaryRef.current = diary || null;
-          cachedNotebooksRef.current = notebooks || [];
-        } catch (e) {
-          console.warn('Arama verileri önbelleğe alınamadı:', e);
-        }
+        // Kaynaklar AYRI AYRI okunur: biri okunamazsa digerlerinde arama yine calisir.
+        // Okunamayan kaynak bos/yok olarak onbellege alinir (aramada tekrar okunmaz)
+        // ve kullaniciya sonuclarin eksik olabilecegi soylenir.
+        const [pages, cover, diary, notebooks] = await Promise.allSettled([
+          StorageService.getPages(),
+          StorageService.getCover(),
+          StorageService.getDiary(),
+          StorageService.getNotebooks(),
+        ]);
+        const failed = [pages, cover, diary, notebooks].filter((r) => r.status === 'rejected');
+        failed.forEach((r) => console.warn('Arama verisi okunamadı:', r.reason));
+        setHasReadError(failed.some((r) => isStorageReadError(r.reason)));
+        cachedPagesRef.current = pages.status === 'fulfilled' ? pages.value || [] : [];
+        cachedCoverRef.current = cover.status === 'fulfilled' ? cover.value || null : null;
+        // false: "okunamadi" — null olsaydi searchAllData gunlugu yeniden okumaya calisirdi
+        cachedDiaryRef.current = diary.status === 'fulfilled' ? diary.value || null : false;
+        cachedNotebooksRef.current = notebooks.status === 'fulfilled' ? notebooks.value || [] : [];
       })();
     }
   }, [visible, initialCategory]);
@@ -127,14 +133,21 @@ export default function GlobalSearchModal({
       }
 
       setHasSearched(true);
-      const searchResults = await searchAllData(
-        trimmed,
-        { category: cat },
-        cachedPagesRef.current,
-        cachedCoverRef.current,
-        cachedDiaryRef.current,
-        cachedNotebooksRef.current
-      );
+      let searchResults = [];
+      try {
+        searchResults = await searchAllData(
+          trimmed,
+          { category: cat },
+          cachedPagesRef.current,
+          cachedCoverRef.current,
+          cachedDiaryRef.current,
+          cachedNotebooksRef.current
+        );
+      } catch (error) {
+        // Onbellek henuz dolmadan arama yapilirsa searchAllData kendisi okur
+        console.warn('Arama yapılamadı:', error);
+        if (isStorageReadError(error)) setHasReadError(true);
+      }
 
       // Bu arama tamamlanana kadar yenisi baslatildiysa sonucu yok say
       if (requestId !== searchRequestIdRef.current) return;
@@ -314,6 +327,14 @@ export default function GlobalSearchModal({
 
           {/* ── İçerik Alanı (Sonuçlar veya Boş Durum) ── */}
           <View style={styles.contentArea}>
+            {hasReadError ? (
+              <View style={[styles.readErrorNotice, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <MaterialCommunityIcons name="database-alert-outline" size={16} color={colors.textSecondary} />
+                <Text style={[styles.readErrorText, { color: colors.textSecondary }]}>
+                  {t('storage.searchPartial', 'Bazı kayıtlar okunamadı; arama sonuçları eksik olabilir.')}
+                </Text>
+              </View>
+            ) : null}
             {!hasSearched ? (
               // 1. Arama Yapılmamışken Başlangıç İpucu
               <View style={styles.emptyStateContainer}>
@@ -461,6 +482,21 @@ export default function GlobalSearchModal({
 }
 
 const styles = StyleSheet.create({
+  readErrorNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  readErrorText: {
+    flex: 1,
+    fontSize: 13,
+  },
   container: {
     flex: 1,
   },

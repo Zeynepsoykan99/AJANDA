@@ -4,6 +4,47 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-20] - Depolama Güvenliği: Okuma Hatasında Yazma Yok + "Kaydedilemedi" Uyarısı
+
+Faz 1'den bağımsız iki küçük güvenlik düzeltmesi. Veri biçimi, depolama şeması, ölçüm aracı ve
+damga **değişmedi**; bağımlılık eklenmedi, build alınmadı.
+
+### 🛡️ 1. Okuma hatasında yazma yolu kapatıldı — `services/storageService.js`
+- `readJson` / `writeJson`: "anahtar yok (null/boş)" ile "okuma hatası" ayrıldı. getItem reddi
+  (ör. Android CursorWindow), bozuk JSON ve beklenmeyen yapı → **`STORAGE_READ_FAILED`** fırlatılır.
+- `readPagesUnlocked`, `readDiary`, `readNotebooks` artık boş liste/varsayılan **dönmez**; o işlemde
+  **hiçbir yazma yapılmaz** (eskiden addPage/deletePage/reorderPages boş listeyi yazıp tüm sayfaları siliyordu).
+- Sesli not göçü ve defter normalizasyonu yalnızca **başarılı okumadan sonra** yazar (`persistMigration`);
+  göç yazılamazsa okuma bozulmaz.
+- Silmelerde yan etkiler (ses dosyası silme, hatırlatıcı iptali) **yazma başarılı olduktan sonra**.
+- Kilitler (`withPagesLock`, `withJournalLock`) değişmedi; hatadan sonra kuyruk çalışmaya devam ediyor.
+
+### 🔔 2. Yazma hatası kullanıcıya gösteriliyor — `services/storageErrorEvents.js` [NEW]
+- Sayfa/günlük/defter yazma metotları hatayı yutmuyor → **`STORAGE_WRITE_FAILED`** fırlatıyor.
+- Ekranlar `guardWrite` / `persistPage` / `guardStorageWrites` ile yakalayıp `reportStorageWriteError`'a iletiyor;
+  `app/_layout.js` mevcut `InAppNotificationBanner` ile **"Kaydedilemedi"** gösteriyor. **30 sn'de en fazla bir kez.**
+- Ekrandaki (bellekteki) içerik sıfırlanmıyor. `flushPendingSave` yazılamayan yükü bekleyen yüke geri ekliyor
+  (zamanlayıcı kurmuyor, yeniden deneme yok); sonraki doğal kayıt onu da taşıyor.
+
+### 🧱 Okuma hatası durumu — `components/ui/StorageReadErrorState.js` [NEW]
+Ajandam/Yapılacaklar listeleri ve sayfaları, Notlarım rafı, defter kapağı ve sayfaları: "bulunamadı/boş"
+yerine **"Kayıtlı veriler okunamadı"**; ekleme düğmeleri gizli. Global arama kaynakları ayrı okur, okunamayan
+varsa "sonuçlar eksik olabilir" notu gösterir. 5 dile `storage.*` anahtarları eklendi.
+
+### 🧪 Testler
+- **`tests/storageReadWriteErrors.test.js`** [NEW] — gerçek kaynak babel + sahte AsyncStorage. Eski sürüm
+  (`54ed7b9a`, git'ten) okuma hatasında tüm sayfaları **siliyordu** (kanıt); yeni sürüm hiç yazmıyor.
+  Okuma hatası / yazma hatası / anahtar yok ayrı ayrı; Günlük+Notlarım 17 işlem eski ve yeni sürümde;
+  göç; kilit kuyruğu; bildirim sınırı. Test yarıda kalırsa (sonsuz bekleme) çıkış kodu zorla 1.
+- `tests/pendingSaveFlush.test.js` — Test 5b (yazma hatasında yük korunuyor, bildirim, zamanlayıcı yok).
+- `tests/audioNoteMigration.test.js` — göç yazması artık `persistMigration` üzerinden.
+- 10 kasıtlı kırılmanın 10'u yakalandı.
+
+### 📋 Kapsam dışı (bilinçli)
+Tema, dil, ajanda kapağı (`@ajanda_cover`) ve son çizim rengi metotları hâlâ hatayı yutuyor.
+
+---
+
 ## 📅 [2026-10-20] - Bulut Yedekleme Faz 0: Cihazda Depolama Ölçümü (GEÇİCİ)
 
 Üretim davranışına, veri biçimine **dokunulmadı**; bağımlılık eklenmedi, build alınmadı.
