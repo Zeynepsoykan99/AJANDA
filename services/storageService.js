@@ -7,6 +7,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NotificationService } from './notificationService.js';
 import { AudioService } from './audioService.js';
 import { createStorageError, STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from './storageErrorEvents.js';
+// GECICI (teshis): hata enjeksiyonu (yalnizca __DEV__) ve storage:flushCost olcumu — kaldirilacak
+import { shouldFailRead, shouldFailWrite } from '../utils/storageFaultInjection.js';
+import { dlog, nowMs } from '../utils/diagnosticLog.js';
 
 const KEYS = {
   THEME: '@ajanda_theme',
@@ -61,13 +64,24 @@ const withPagesLock = (task) => {
  * @returns {Promise<any|null>} anahtar yoksa null
  * @throws STORAGE_READ_FAILED
  */
+// ⚠️ GEÇİCİ (teşhis/SORUN B): her anahtarın son okuma maliyeti. Aynı işlemdeki
+// yazma bunu alıp tek satır `storage:flushCost` yazar. Anahtar bazında tutulur:
+// sayfa ve defter kuyrukları birbirinden bağımsız çalıştığı için karışmasınlar.
+const lastReadCost = new Map();
+
 const readJson = async (key, isValidShape) => {
   let raw;
+  const t0 = nowMs();
   try {
+    // GECICI (teshis): __DEV__ hata enjeksiyonu; release'te her zaman false
+    if (shouldFailRead(key)) {
+      throw new Error('[HATA ENJEKSİYONU] Row too big to fit into CursorWindow (simüle)');
+    }
     raw = await AsyncStorage.getItem(key);
   } catch (error) {
     throw createStorageError(STORAGE_READ_FAILED, key, error);
   }
+  const t1 = nowMs();
   if (raw === null || raw === undefined || raw === '') return null;
   let parsed;
   try {
@@ -75,6 +89,7 @@ const readJson = async (key, isValidShape) => {
   } catch (error) {
     throw createStorageError(STORAGE_READ_FAILED, key, error);
   }
+  lastReadCost.set(key, { readMs: t1 - t0, parseMs: nowMs() - t1 });
   if (isValidShape && !isValidShape(parsed)) {
     throw createStorageError(STORAGE_READ_FAILED, key, new Error('beklenmeyen veri yapısı'));
   }
@@ -86,11 +101,29 @@ const readJson = async (key, isValidShape) => {
  * @throws STORAGE_WRITE_FAILED
  */
 const writeJson = async (key, value) => {
+  const t0 = nowMs();
+  const text = JSON.stringify(value);
+  const t1 = nowMs();
   try {
-    await AsyncStorage.setItem(key, JSON.stringify(value));
+    // GECICI (teshis): __DEV__ hata enjeksiyonu; release'te her zaman false
+    if (shouldFailWrite(key)) {
+      throw new Error('[HATA ENJEKSİYONU] database or disk is full (simüle)');
+    }
+    await AsyncStorage.setItem(key, text);
   } catch (error) {
     throw createStorageError(STORAGE_WRITE_FAILED, key, error);
   }
+  // GECICI (teshis/SORUN B): yazma bittikten SONRA tek satir; cizim sirasinda log yok
+  const read = lastReadCost.get(key);
+  lastReadCost.delete(key);
+  dlog('storage:flushCost', {
+    key,
+    readMs: read ? read.readMs.toFixed(1) : '-',
+    parseMs: read ? read.parseMs.toFixed(1) : '-',
+    stringifyMs: (t1 - t0).toFixed(1),
+    setItemMs: (nowMs() - t1).toFixed(1),
+    chars: text.length,
+  });
 };
 
 /**
@@ -509,22 +542,14 @@ export const StorageService = {
   },
 
   // ─── Kapak (Cover) ───────────────────────────────────
-  getCover: async () => {
-    try {
-      const data = await AsyncStorage.getItem(KEYS.COVER);
-      return data ? JSON.parse(data) : null;
-    } catch (error) {
-      console.warn('StorageService.getCover hata:', error);
-      return null;
-    }
-  },
+  // Ajanda kapağı çizim tuttuğu için sayfalarla aynı sözleşme: anahtar yoksa null,
+  // okuma hatasında STORAGE_READ_FAILED, yazma hatasında STORAGE_WRITE_FAILED.
+  // Eskiden okuma hatası null dönüyordu; ekran varsayılan kapağı gösterip ilk
+  // düzenlemede okunamayan kapağın üzerine yazıyordu.
+  getCover: async () => readJson(KEYS.COVER, isPlainObject),
 
   setCover: async (coverData) => {
-    try {
-      await AsyncStorage.setItem(KEYS.COVER, JSON.stringify(coverData));
-    } catch (error) {
-      console.warn('StorageService.setCover hata:', error);
-    }
+    await writeJson(KEYS.COVER, coverData);
   },
 
   // ─── Sayfalar ─────────────────────────────────────────

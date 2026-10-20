@@ -9,6 +9,8 @@
  * okunup gercek haliyle calistirilir.
  */
 const assert = require('assert');
+// Asenkron akis yarida kalirsa (sonsuz bekleme) 0 ile cikip gecmis gorunmesin
+const markComplete = require('./helpers/completionGuard')(__filename);
 const fs = require('fs');
 const path = require('path');
 
@@ -172,6 +174,7 @@ const INITIAL = [{ id: 'p1', drawings: [], stickers: [], recognizedText: '' }];
   console.log('OK Test 7: defter ve sayfa kuyrukları birbirinden bağımsız');
 
   console.log('--- TÜM SAYFA YAZMA KİLİDİ TESTLERİ BAŞARIYLA GEÇTİ! ---');
+  markComplete();
 })().catch((e) => {
   console.error(e);
   process.exit(1);

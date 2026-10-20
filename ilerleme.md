@@ -4,6 +4,50 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-20] - Banner Hata Varyantı, Kapak Sözleşmesi, Hata Enjeksiyonu, Veri Yedeği, Test Koruması, flushCost
+
+Veri biçimi, depolama şeması ve çizim/ses davranışı **değişmedi**; bağımlılık eklenmedi, APK build alınmadı.
+Damga değişmedi (`storage-2026-10-20-A`).
+
+### 🔔 "Kaydedilemedi" hata semantiğinde
+`InAppNotificationBanner`'a `variant` eklendi (varsayılan `'reminder'` → zil + başarı titreşimi, değişmedi).
+`'error'` → `alert-circle-outline`, uyarı rengi, `NotificationFeedbackType.Error`. Yalnızca depolama hatası kullanıyor.
+
+### 🛡️ Ajanda kapağı sözleşmede
+`getCover` okuma hatasında `STORAGE_READ_FAILED`, `setCover` yazma hatasında `STORAGE_WRITE_FAILED`.
+**Bulgu:** eskiden okunamayan kapakta varsayılan kapak gösteriliyor, ilk düzenleme okunamayan kapağın
+üzerine yazıyordu. Kapak ekranı artık hata durumu gösteriyor; ajanda sayfalarına erişim kapanmasın diye
+"Ajanda sayfalarına git" (yalnızca gezinme) eklendi. Tema, dil, çizim rengi dokunulmadı.
+
+### 🧪 Flush yük önceliği kanıtı
+`pendingSaveFlush` Test 5c: 2 ekran × 200 tohumlu rastgele dizi (zamanla / uçuşta zamanla / başarılı-başarısız
+flush). Her adımda: bekleyen yük alan başına tek değer ve her alan EN SON zamanlanan değer; sonda disk her
+alanda en yeni değeri taşıyor.
+
+### 🧯 Hata enjeksiyonu (GEÇİCİ, yalnızca `__DEV__`)
+`utils/storageFaultInjection.js`, `app/storage-faults.js`, `components/ui/FaultInjectionBadge.js`.
+Anahtar bazında okuma/yazma hatası; açıkken her ekranda kırmızı "HATA ENJEKSİYONU AÇIK" göstergesi.
+Release kanıtı: test (`__DEV__` false/tanımsız/"true"/1 → kapalı) + `npx expo export --no-bytecode` üretim
+paketi: prelude `__DEV__=false`, `FAULT_INJECTION_AVAILABLE = false` sabite katlanmış, menü bağlantısı
+pakette yerinde `false` (kaldırılmış).
+
+### 💾 "Veriyi yedekle" (GEÇİCİ araç, kalıcı biçim)
+`utils/storageBackup.js`: tüm anahtarlar → `documentDirectory/backups/ajanda-backup-<zaman>.json`
+(`format: ajanda-backup`, `schemaVersion: 1`, ham değer + bayt + cyrb53 özet, okunamayan anahtarlar,
+ses manifesti). Geri okunarak doğrulanıyor. Salt okunur. Paylaşmadan önce şifresiz uyarısı (5 dil).
+
+### 🧪 Test altyapısı
+`tests/helpers/completionGuard.js`: asenkron akış yarıda kalırsa (sonsuz bekleme) çıkış kodu 1.
+11 asenkron test dosyasına bağlandı. Tarama: bugünkü hâlde hiçbiri yarıda kalmıyordu; korumasız sürüm
+sonsuz beklemede 0 ile çıkıyordu (kanıtlandı).
+
+### 📏 GEÇİCİ tanı — `storage:flushCost`
+Her başarılı yazmadan SONRA tek satır: `key readMs parseMs stringifyMs setItemMs chars`. Sıcak yolda log yok.
+
+### 🧪 Kasıtlı kırılmalar: 14/14 yakalandı.
+
+---
+
 ## 📅 [2026-10-20] - Depolama Güvenliği: Okuma Hatasında Yazma Yok + "Kaydedilemedi" Uyarısı
 
 Faz 1'den bağımsız iki küçük güvenlik düzeltmesi. Veri biçimi, depolama şeması, ölçüm aracı ve

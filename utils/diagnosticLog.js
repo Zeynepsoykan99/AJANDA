@@ -42,6 +42,24 @@
  *                                              "Depolama ölçümü (geçici)" baglantisi;
  *                                              Alert/Share import'lari yalnizca bunun icin)
  *   - tests/storageDiagnostics.test.js        (olcum aritmetigi testleri)
+ *   - services/storageService.js              (storage:flushCost: lastReadCost,
+ *                                              readJson/writeJson icindeki nowMs
+ *                                              olcumleri ve dlog satiri; ayrica
+ *                                              shouldFailRead/shouldFailWrite
+ *                                              enjeksiyon kontrolleri ve importlari)
+ *   - utils/storageFaultInjection.js          (TUM DOSYA — hata enjeksiyonu, yalnizca __DEV__)
+ *   - app/storage-faults.js                   (TUM DOSYA — enjeksiyon ekrani)
+ *   - components/ui/FaultInjectionBadge.js    (TUM DOSYA + app/_layout.js'teki kullanimi)
+ *   - app/index.js                            ({__DEV__ && ...} enjeksiyon baglantisi;
+ *                                              "Veriyi yedekle (geçici)" baglantisi,
+ *                                              handleStorageBackup/shareBackupFile ve
+ *                                              expo-sharing importu)
+ *   - utils/storageBackup.js                  (GECICI ARAC — ama dosya bicimi kalici
+ *                                              yedek ozelliginin temeli; kalici ozellige
+ *                                              tasinmadan SILINMEMELI)
+ *   - tests/storageFaultInjection.test.js, tests/storageBackup.test.js
+ *                                              (aracla birlikte; yedek gidis-donus
+ *                                              testleri kalici ozellige tasinmali)
  * Bulmak için: grep -rn "diagnosticLog" --include=*.js .
  *
  * Çıktı `console.log` ile yazılır; Metro terminalinde görünür.

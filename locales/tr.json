@@ -502,6 +502,9 @@
     "readErrorDesc": "Bu bölümün verileri şu anda okunamıyor. Verilerinizi korumak için burada ekleme, silme ve sıralama kapatıldı.",
     "saveFailedTitle": "Kaydedilemedi",
     "saveFailedDesc": "Son değişiklikleriniz cihaza kaydedilemedi. Ekranda görünen içerik henüz kalıcı değil.",
-    "searchPartial": "Bazı kayıtlar okunamadı; arama sonuçları eksik olabilir."
+    "searchPartial": "Bazı kayıtlar okunamadı; arama sonuçları eksik olabilir.",
+    "openAgendaPages": "Ajanda sayfalarına git",
+    "backupShareTitle": "Yedek dosyasını paylaş",
+    "backupShareWarning": "Bu dosya günlüğünüzün ve notlarınızın içeriğini ŞİFRESİZ, düz metin olarak içerir. Yalnızca size ait bir yere paylaşın."
   }
 }

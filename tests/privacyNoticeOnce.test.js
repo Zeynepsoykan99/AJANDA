@@ -9,6 +9,8 @@
  * fonksiyonları çıkarılıp aynı senaryoda çalıştırılır.
  */
 const assert = require('assert');
+// Asenkron akis yarida kalirsa (sonsuz bekleme) 0 ile cikip gecmis gorunmesin
+const markComplete = require('./helpers/completionGuard')(__filename);
 const fs = require('fs');
 const path = require('path');
 
@@ -367,4 +369,5 @@ function runSourceChecks() {
   console.log('OK Test 14: NSSpeechRecognitionUsageDescription gercegi yansitiyor');
 
   console.log('--- TUM BILGILENDIRME TESTLERI BASARIYLA GECTI! ---');
+  markComplete();
 }

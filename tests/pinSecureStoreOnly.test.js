@@ -17,6 +17,8 @@
  * senaryoda çalıştırılır.
  */
 const assert = require('assert');
+// Asenkron akis yarida kalirsa (sonsuz bekleme) 0 ile cikip gecmis gorunmesin
+const markComplete = require('./helpers/completionGuard')(__filename);
 const fs = require('fs');
 const path = require('path');
 
@@ -373,4 +375,5 @@ function runSourceChecks() {
   console.log('OK Test 14: security.pinUnsupported bes dilde de tanimli');
 
   console.log('--- TUM PIN SECURESTORE-ONLY TESTLERI BASARIYLA GECTI! ---');
+  markComplete();
 }

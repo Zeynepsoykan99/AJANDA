@@ -10,6 +10,8 @@
  * calistirilir.
  */
 const assert = require('assert');
+// Asenkron akis yarida kalirsa (sonsuz bekleme) 0 ile cikip gecmis gorunmesin
+const markComplete = require('./helpers/completionGuard')(__filename);
 const fs = require('fs');
 const path = require('path');
 
@@ -196,4 +198,5 @@ function runSourceChecks() {
   console.log('OK Test 7: modal acilisinda onceki oturumun aramalari gecersiz kiliniyor');
 
   console.log('--- TUM ARAMA YARISI TESTLERI BASARIYLA GECTI! ---');
+  markComplete();
 }

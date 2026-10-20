@@ -11,6 +11,8 @@
  * gercek koruma deseni ayni senaryoda calistirilir.
  */
 const assert = require('assert');
+// Asenkron akis yarida kalirsa (sonsuz bekleme) 0 ile cikip gecmis gorunmesin
+const markComplete = require('./helpers/completionGuard')(__filename);
 const fs = require('fs');
 const path = require('path');
 
@@ -271,4 +273,5 @@ function runSourceChecks() {
   console.log('OK Test 11: modal kapanisinda koruma bayraklari sifirlaniyor');
 
   console.log('--- TUM YENIDEN GIRIS TESTLERI BASARIYLA GECTI! ---');
+  markComplete();
 }

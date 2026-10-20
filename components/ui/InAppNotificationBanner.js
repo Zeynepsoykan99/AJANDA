@@ -29,6 +29,8 @@ import useResponsiveLayout from '../../hooks/useResponsiveLayout';
  * @param {object} [data] - Ek yönlendirme verisi ({ pageId, route, category })
  * @param {function} onDismiss - Kapanma callback'i
  * @param {number} [duration=5000] - Otomatik kapanma süresi (ms)
+ * @param {'reminder'|'error'} [variant='reminder'] - 'error': uyarı ikonu, uyarı rengi ve
+ *   hata titreşimi (ör. "Kaydedilemedi"). Varsayılan hatırlatıcı görünümü değişmez.
  */
 export default function InAppNotificationBanner({
   visible,
@@ -37,6 +39,7 @@ export default function InAppNotificationBanner({
   data,
   onDismiss,
   duration = 5000,
+  variant = 'reminder',
 }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -46,12 +49,16 @@ export default function InAppNotificationBanner({
   const translateY = useSharedValue(-200);
   const opacity = useSharedValue(0);
   const timerRef = useRef(null);
+  const isError = variant === 'error';
+  const tint = isError ? ERROR_TINT : colors.accent;
 
   useEffect(() => {
     if (visible) {
       // Titreşim
       try {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Haptics.notificationAsync(
+          isError ? Haptics.NotificationFeedbackType.Error : Haptics.NotificationFeedbackType.Success
+        );
       } catch (e) {}
 
       // Aşağı kayma animasyonu
@@ -74,7 +81,7 @@ export default function InAppNotificationBanner({
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [visible, duration]);
+  }, [visible, duration, isError]);
 
   const handleDismiss = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -125,14 +132,14 @@ export default function InAppNotificationBanner({
           styles.bannerCard,
           {
             backgroundColor: colors.card,
-            borderColor: colors.accent + '35',
+            borderColor: tint + '35',
           },
           isTablet && styles.tabletCard,
         ]}
       >
         {/* Sol: Animasyonlu Zil İkonu */}
-        <View style={[styles.iconBox, { backgroundColor: colors.accent + '18' }]}>
-          <MaterialCommunityIcons name="bell-ring" size={22} color={colors.accent} />
+        <View style={[styles.iconBox, { backgroundColor: tint + '18' }]}>
+          <MaterialCommunityIcons name={isError ? 'alert-circle-outline' : 'bell-ring'} size={22} color={tint} />
         </View>
 
         {/* Orta: Başlık ve Metin */}
@@ -163,6 +170,9 @@ export default function InAppNotificationBanner({
     </Animated.View>
   );
 }
+
+// Hata varyantı için sabit uyarı rengi (temada hata rengi tanımlı değil)
+const ERROR_TINT = '#C0392B';
 
 const styles = StyleSheet.create({
   wrapper: {

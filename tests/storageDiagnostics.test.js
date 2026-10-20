@@ -14,6 +14,8 @@
  */
 
 const assert = require('assert');
+// Asenkron akis yarida kalirsa (sonsuz bekleme) 0 ile cikip gecmis gorunmesin
+const markComplete = require('./helpers/completionGuard')(__filename);
 const fs = require('fs');
 const path = require('path');
 
@@ -196,6 +198,7 @@ console.log('--- Faz 0 Depolama Olcumu Testleri ---');
   assert.ok(lines[lines.length - 1].startsWith('storage:done'), 'son satir done');
   console.log('Test 5 gecti: tam calisma, salt okunur, okuma hatasi raporlaniyor');
   console.log('\nTum depolama olcumu testleri gecti.');
+  markComplete();
 })().catch((e) => {
   console.error(e);
   process.exit(1);

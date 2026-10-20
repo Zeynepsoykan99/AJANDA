@@ -502,6 +502,9 @@
     "readErrorDesc": "Die Daten dieses Bereichs können derzeit nicht gelesen werden. Zum Schutz Ihrer Daten sind Hinzufügen, Löschen und Sortieren hier deaktiviert.",
     "saveFailedTitle": "Speichern fehlgeschlagen",
     "saveFailedDesc": "Ihre letzten Änderungen konnten nicht auf dem Gerät gespeichert werden. Der angezeigte Inhalt ist noch nicht dauerhaft gesichert.",
-    "searchPartial": "Einige Einträge konnten nicht gelesen werden; die Suchergebnisse sind möglicherweise unvollständig."
+    "searchPartial": "Einige Einträge konnten nicht gelesen werden; die Suchergebnisse sind möglicherweise unvollständig.",
+    "openAgendaPages": "Zu den Kalenderseiten",
+    "backupShareTitle": "Sicherungsdatei teilen",
+    "backupShareWarning": "Diese Datei enthält den Inhalt Ihres Tagebuchs und Ihrer Notizen als UNVERSCHLÜSSELTEN Klartext. Teilen Sie sie nur an einen Ort, der Ihnen gehört."
   }
 }

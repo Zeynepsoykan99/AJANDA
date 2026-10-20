@@ -100,8 +100,8 @@ export default function GlobalSearchModal({
         failed.forEach((r) => console.warn('Arama verisi okunamadı:', r.reason));
         setHasReadError(failed.some((r) => isStorageReadError(r.reason)));
         cachedPagesRef.current = pages.status === 'fulfilled' ? pages.value || [] : [];
-        cachedCoverRef.current = cover.status === 'fulfilled' ? cover.value || null : null;
-        // false: "okunamadi" — null olsaydi searchAllData gunlugu yeniden okumaya calisirdi
+        // false: "okunamadi" — null olsaydi searchAllData kapagi/gunlugu yeniden okumaya calisirdi
+        cachedCoverRef.current = cover.status === 'fulfilled' ? cover.value || null : false;
         cachedDiaryRef.current = diary.status === 'fulfilled' ? diary.value || null : false;
         cachedNotebooksRef.current = notebooks.status === 'fulfilled' ? notebooks.value || [] : [];
       })();

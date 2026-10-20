@@ -8,6 +8,8 @@ import { ThemeProvider, useTheme } from '../context/ThemeContext';
 import Skeleton from '../components/ui/Skeleton';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import InAppNotificationBanner from '../components/ui/InAppNotificationBanner';
+// GECICI (teshis): hata enjeksiyonu gostergesi (yalnizca __DEV__) — kaldirilacak
+import FaultInjectionBadge from '../components/ui/FaultInjectionBadge';
 import {
   configureNotificationHandler,
   setupNotificationChannel,
@@ -158,6 +160,7 @@ function ThemedApp() {
             'Son değişiklikleriniz cihaza kaydedilemedi. Ekranda görünen içerik henüz kalıcı değil.'
           ),
           data: null,
+          variant: 'error',
         });
       }),
     [t]
@@ -183,6 +186,7 @@ function ThemedApp() {
           title: content.title || 'AJANDA Hatırlatıcısı',
           message: content.body || '',
           data: content.data || null,
+          variant: 'reminder',
         });
       },
       onResponse: (response) => {
@@ -248,8 +252,12 @@ function ThemedApp() {
         title={inAppBanner.title}
         message={inAppBanner.message}
         data={inAppBanner.data}
+        variant={inAppBanner.variant}
         onDismiss={() => setInAppBanner((prev) => ({ ...prev, visible: false }))}
       />
+
+      {/* GECICI (teshis): hata enjeksiyonu acikken her ekranda gorunur; release'te cizilmez */}
+      <FaultInjectionBadge />
     </>
   );
 }

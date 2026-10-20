@@ -502,6 +502,9 @@
     "readErrorDesc": "Les données de cette section ne peuvent pas être lues pour le moment. Pour protéger vos données, l’ajout, la suppression et le réordonnancement sont désactivés ici.",
     "saveFailedTitle": "Enregistrement impossible",
     "saveFailedDesc": "Vos dernières modifications n’ont pas pu être enregistrées sur l’appareil. Le contenu affiché n’est pas encore permanent.",
-    "searchPartial": "Certains éléments n’ont pas pu être lus ; les résultats de recherche peuvent être incomplets."
+    "searchPartial": "Certains éléments n’ont pas pu être lus ; les résultats de recherche peuvent être incomplets.",
+    "openAgendaPages": "Aller aux pages de l’agenda",
+    "backupShareTitle": "Partager le fichier de sauvegarde",
+    "backupShareWarning": "Ce fichier contient le contenu de votre journal et de vos notes en texte brut NON CHIFFRÉ. Ne le partagez que vers un emplacement qui vous appartient."
   }
 }

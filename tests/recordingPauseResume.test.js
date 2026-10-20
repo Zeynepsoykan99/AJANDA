@@ -11,6 +11,8 @@
  * senaryoda çalıştırılır.
  */
 const assert = require('assert');
+// Asenkron akis yarida kalirsa (sonsuz bekleme) 0 ile cikip gecmis gorunmesin
+const markComplete = require('./helpers/completionGuard')(__filename);
 const fs = require('fs');
 const path = require('path');
 
@@ -436,4 +438,5 @@ function runSourceChecks() {
   console.log('OK Test 15: duraklatma metinleri bes dilde gercek cevirilerle mevcut');
 
   console.log('--- TUM DURAKLAT/DEVAM TESTLERI BASARIYLA GECTI! ---');
+  markComplete();
 }

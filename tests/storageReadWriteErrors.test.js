@@ -40,10 +40,16 @@ const toCjs = (source, filename) =>
     plugins: ['@babel/plugin-transform-modules-commonjs'],
   }).code;
 
-const runModule = (code, requireFn) => {
+const runModule = (code, requireFn, globals = {}) => {
   const module = { exports: {} };
+  const names = Object.keys(globals);
   // eslint-disable-next-line no-new-func
-  new Function('module', 'exports', 'require', code)(module, module.exports, requireFn);
+  new Function('module', 'exports', 'require', ...names, code)(
+    module,
+    module.exports,
+    requireFn,
+    ...names.map((n) => globals[n])
+  );
   return module.exports;
 };
 
@@ -71,8 +77,17 @@ const createFakeStorage = (initial = {}) => {
  * storageService'i verilen kaynakla yukler. storageErrorEvents her zaman GUNCEL
  * kaynaktan gelir (eski surum onu hic import etmiyor).
  */
-const loadService = (serviceSource, fake) => {
+const loadService = (serviceSource, fake, { dev = false } = {}) => {
   const deletedAudio = [];
+  const diagLines = [];
+  // Hata enjeksiyonu GERCEK kaynaktan; __DEV__ degeri disaridan verilir
+  const faults = runModule(
+    toCjs(fs.readFileSync(path.join(ROOT, 'utils', 'storageFaultInjection.js'), 'utf8'), 'storageFaultInjection.js'),
+    () => {
+      throw new Error('storageFaultInjection bagimlilik almamali');
+    },
+    { __DEV__: dev }
+  );
   const cancelledNotifications = [];
   const eventsCode = toCjs(
     fs.readFileSync(path.join(ROOT, 'services', 'storageErrorEvents.js'), 'utf8'),
@@ -95,12 +110,17 @@ const loadService = (serviceSource, fake) => {
       },
     },
     './storageErrorEvents.js': events,
+    '../utils/storageFaultInjection.js': faults,
+    '../utils/diagnosticLog.js': {
+      dlog: (label, data) => diagLines.push({ label, data }),
+      nowMs: () => Date.now(),
+    },
   };
   const service = runModule(toCjs(serviceSource, 'storageService.js'), (id) => {
     if (!(id in fakes)) throw new Error('beklenmeyen require: ' + id);
     return fakes[id];
   });
-  return { StorageService: service.StorageService, events, deletedAudio, cancelledNotifications };
+  return { StorageService: service.StorageService, events, faults, diagLines, deletedAudio, cancelledNotifications };
 };
 
 const NEW_SOURCE = fs.readFileSync(path.join(ROOT, 'services', 'storageService.js'), 'utf8');
@@ -157,16 +177,8 @@ const rejectsWith = async (promise, code, label) => {
 // Beklenen uyari satirlari (goc yazilamadi vb.) cikti kalabaligi yapmasin
 console.warn = () => {};
 
-// Bir await sonsuza dek beklerse (ornegin kilit kuyrugu kilitlenirse) Node olay
-// dongusu bosalip 0 koduyla cikar ve test sessizce "gecmis" gorunur. Son satira
-// ulasilmadiysa cikis kodu zorla basarisiz yapilir.
-let finished = false;
-process.on('exit', () => {
-  if (!finished) {
-    console.error('HATA: testler tamamlanmadi (bir islem sonsuza dek bekledi — kilit kuyrugu kilitlenmis olabilir)');
-    process.exitCode = 1;
-  }
-});
+// Asenkron akis yarida kalirsa (sonsuz bekleme) 0 ile cikip gecmis gorunmesin
+const markComplete = require('./helpers/completionGuard')(__filename);
 
 console.log('--- Depolama Okuma/Yazma Hatasi Testleri ---');
 
@@ -428,7 +440,98 @@ console.log('--- Depolama Okuma/Yazma Hatasi Testleri ---');
     console.log('OK Test 9: "Kaydedilemedi" pencere basina bir kez; koruyucular dogru');
   }
 
-  finished = true;
+  // --- Test 10: ajanda kapagi (@ajanda_cover) ayni sozlesmede ---
+  {
+    const COVER = '@ajanda_cover';
+    const coverValue = JSON.stringify({ templateId: 'cover_1', drawings: [{ id: 's1' }], textBlocks: [] });
+
+    // ESKI: okuma hatasi null donuyordu (ekran varsayilan kapagi gosterip uzerine yaziyordu)
+    const fakeOld = createFakeStorage({ [COVER]: coverValue });
+    const oldSvc = loadService(OLD_SOURCE, fakeOld).StorageService;
+    fakeOld.state.readFailKeys.add(COVER);
+    assert.strictEqual(await oldSvc.getCover(), null, 'ESKI: okunamayan kapak null donuyordu');
+    fakeOld.state.failWrites = true;
+    assert.strictEqual(await oldSvc.setCover({ templateId: 'x' }), undefined, 'ESKI: yazma hatasi yutuluyordu');
+
+    // YENI
+    const fake = createFakeStorage({ [COVER]: coverValue });
+    const { StorageService } = loadService(NEW_SOURCE, fake);
+    fake.state.readFailKeys.add(COVER);
+    await rejectsWith(StorageService.getCover(), 'STORAGE_READ_FAILED', 'getCover okuma hatasi');
+    fake.state.readFailKeys.clear();
+    for (const [label, raw] of [['bozuk JSON', '{"templateId"'], ['nesne degil', '[1,2]']]) {
+      const f2 = createFakeStorage({ [COVER]: raw });
+      await rejectsWith(loadService(NEW_SOURCE, f2).StorageService.getCover(), 'STORAGE_READ_FAILED', 'kapak ' + label);
+      assert.deepStrictEqual(f2.state.writes, [], 'kapak ' + label + ': yazma yok');
+    }
+    fake.state.failWrites = true;
+    await rejectsWith(StorageService.setCover({ templateId: 'x' }), 'STORAGE_WRITE_FAILED', 'setCover yazma hatasi');
+    assert.strictEqual(fake.data.get(COVER), coverValue, 'yazma hatasinda eski kapak kalmali');
+    fake.state.failWrites = false;
+    const fakeEmpty = createFakeStorage({});
+    assert.strictEqual(await loadService(NEW_SOURCE, fakeEmpty).StorageService.getCover(), null, 'kapak yoksa null');
+    console.log('OK Test 10: ajanda kapagi okuma/yazma sozlesmesinde (eski surum yutuyordu)');
+  }
+
+  // --- Test 11: hata enjeksiyonu servis uzerinden: __DEV__ true calisir, false etkisiz ---
+  {
+    const fake = createFakeStorage({ [PAGES]: threePages() });
+    let getItemCalls = 0;
+    const realGet = fake.api.getItem;
+    fake.api.getItem = async (k) => {
+      getItemCalls += 1;
+      return realGet(k);
+    };
+    const dev = loadService(NEW_SOURCE, fake, { dev: true });
+    assert.strictEqual(dev.faults.setFault('read', PAGES, true), true);
+    const err = await rejectsWith(dev.StorageService.getPages(), 'STORAGE_READ_FAILED', 'enjeksiyon okuma');
+    assert.ok(/HATA ENJEKSİYONU/.test(err.message), 'hata metni enjeksiyon oldugunu soylemeli');
+    assert.strictEqual(getItemCalls, 0, 'enjeksiyon gercek depolamaya gitmemeli');
+    dev.faults.setFault('read', PAGES, false);
+    dev.faults.setFault('write', PAGES, true);
+    await rejectsWith(dev.StorageService.addPage({ id: 'x' }), 'STORAGE_WRITE_FAILED', 'enjeksiyon yazma');
+    assert.deepStrictEqual(fake.state.writes, [], 'enjeksiyonda gercek yazma olmamali');
+    dev.faults.clearAllFaults();
+    await dev.StorageService.addPage({ id: 'x' });
+    assert.deepStrictEqual(fake.json(PAGES).map((p) => p.id), ['a', 'b', 'c', 'x'], 'kapatinca normal');
+
+    const fake2 = createFakeStorage({ [PAGES]: threePages() });
+    const rel = loadService(NEW_SOURCE, fake2, { dev: false });
+    assert.strictEqual(rel.faults.setFault('read', PAGES, true), false, 'release: acilamaz');
+    assert.strictEqual(rel.faults.setFault('write', PAGES, true), false);
+    assert.strictEqual((await rel.StorageService.getPages()).length, 3, 'release: okuma normal');
+    await rel.StorageService.addPage({ id: 'y' });
+    assert.strictEqual(fake2.json(PAGES).length, 4, 'release: yazma normal');
+    console.log('OK Test 11: enjeksiyon __DEV__ iken gercek depolamaya gitmeden hata veriyor; release etkisiz');
+  }
+
+  // --- Test 12: storage:flushCost — her yazmada TEK satir, yazmadan SONRA; okumada yok ---
+  {
+    const fake = createFakeStorage({ [PAGES]: threePages() });
+    const svc = loadService(NEW_SOURCE, fake);
+    await svc.StorageService.getPages();
+    assert.strictEqual(svc.diagLines.length, 0, 'yalnizca okuma log yazmamali');
+    await svc.StorageService.updatePage('a', { drawings: ['x'] });
+    assert.strictEqual(svc.diagLines.length, 1, 'yazma basina tek satir');
+    const { label, data } = svc.diagLines[0];
+    assert.strictEqual(label, 'storage:flushCost');
+    assert.strictEqual(data.key, PAGES);
+    ['readMs', 'parseMs', 'stringifyMs', 'setItemMs'].forEach((k) =>
+      assert.ok(/^\d+\.\d$/.test(data[k]), k + ' ms olarak yazilmali: ' + data[k])
+    );
+    assert.strictEqual(data.chars, fake.data.get(PAGES).length, 'yuk boyutu yazilan metnin uzunlugu');
+    // Yazma basarisizsa satir yazilmaz (maliyet olcumu basarili yazma icin)
+    fake.state.failWrites = true;
+    await svc.StorageService.updatePage('a', { drawings: ['y'] }).catch(() => {});
+    assert.strictEqual(svc.diagLines.length, 1, 'basarisiz yazma satir yazmamali');
+    // Okumasiz yazma (setCover): read alanlari '-'
+    fake.state.failWrites = false;
+    await svc.StorageService.setCover({ templateId: 'c' });
+    assert.strictEqual(svc.diagLines[1].data.readMs, '-');
+    console.log('OK Test 12: storage:flushCost yazma basina tek satir, okuma/parse/stringify/setItem ayri');
+  }
+
+  markComplete();
   console.log('--- TUM DEPOLAMA OKUMA/YAZMA HATASI TESTLERI GECTI ---');
 })().catch((e) => {
   console.error(e);

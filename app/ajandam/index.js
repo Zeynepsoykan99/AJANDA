@@ -15,6 +15,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { StorageService } from '../../services/storageService';
+import { guardWrite, isStorageReadError } from '../../services/storageErrorEvents';
+import StorageReadErrorState from '../../components/ui/StorageReadErrorState';
 import {
   DEFAULT_COVER_TEMPLATE_ID,
   getCoverTemplateById,
@@ -38,6 +40,12 @@ import { getPrivacySettings } from '../../services/privacySettingsService';
  * Kullanıcıyı tam sayfa bir kapak karşılar.
  * Kapağın üzerine çizim yapabilir, metin ekleyebilir ve kapağı değiştirebilir.
  */
+/**
+ * Kapagi diske yazar. Basarisiz olursa "Kaydedilemedi" bildirilir ve null doner;
+ * ekrandaki kapak durumu DEGISTIRILMEZ.
+ */
+const persistCover = (cover) => guardWrite(StorageService.setCover(cover));
+
 const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
 
 export default function AjandamScreen() {
@@ -48,6 +56,9 @@ export default function AjandamScreen() {
 
   const [coverData, setCoverData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  // Kayitli kapak okunamadiysa varsayilan kapak GOSTERILMEZ: gosterilseydi ilk
+  // duzenleme okunamayan kapagin uzerine yazardi
+  const [loadError, setLoadError] = useState(false);
   const [isEditorVisible, setIsEditorVisible] = useState(false);
 
   // Şablon ve Dinamik Kenar Rengi (Edge Color)
@@ -91,6 +102,10 @@ export default function AjandamScreen() {
         }
       } catch (error) {
         console.warn('Kapak yüklenirken hata:', error);
+        if (isStorageReadError(error)) {
+          setLoadError(true);
+          return;
+        }
         setCoverData({
           templateId: DEFAULT_COVER_TEMPLATE_ID,
           drawings: [],
@@ -105,7 +120,7 @@ export default function AjandamScreen() {
   // Kapak şablonunu kaydet
   const handleSaveCover = useCallback(async (newCoverData) => {
     setCoverData(newCoverData);
-    await StorageService.setCover(newCoverData);
+    await persistCover(newCoverData);
   }, []);
 
   // Çizimleri güncelle (debounced auto-save & digital ink recognition)
@@ -114,15 +129,18 @@ export default function AjandamScreen() {
       const updated = { ...prev, drawings: newDrawings };
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = setTimeout(async () => {
-        await StorageService.setCover(updated);
+        await persistCover(updated);
       }, 500);
 
       // Kapak El Yazısı Tanıma
       if (recognitionTimeoutRef.current) clearTimeout(recognitionTimeoutRef.current);
       if (!newDrawings || newDrawings.length === 0) {
-        StorageService.getCover().then((cov) => {
-          if (cov) StorageService.setCover({ ...cov, recognizedText: '', recognizedWords: [] });
-        });
+        // Okuma da yazma da basarisiz olabilir: ikisi de "Kaydedilemedi" olarak bildirilir
+        guardWrite(
+          StorageService.getCover().then((cov) =>
+            cov ? StorageService.setCover({ ...cov, recognizedText: '', recognizedWords: [] }) : null
+          )
+        );
       } else {
         recognitionTimeoutRef.current = setTimeout(async () => {
           // Kullanici otomatik taniimayi kapattiysa cizgiler cihaz disina cikmaz.
@@ -135,14 +153,17 @@ export default function AjandamScreen() {
               recognizedText: result.text,
               recognizedWords: result.words,
             }));
-            const currentCover = await StorageService.getCover();
-            if (currentCover) {
-              await StorageService.setCover({
-                ...currentCover,
-                recognizedText: result.text,
-                recognizedWords: result.words,
-              });
-            }
+            await guardWrite(
+              StorageService.getCover().then((currentCover) =>
+                currentCover
+                  ? StorageService.setCover({
+                      ...currentCover,
+                      recognizedText: result.text,
+                      recognizedWords: result.words,
+                    })
+                  : null
+              )
+            );
           }
         }, 1000);
       }
@@ -157,7 +178,7 @@ export default function AjandamScreen() {
       const updated = { ...prev, textBlocks: newTextBlocks };
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = setTimeout(async () => {
-        await StorageService.setCover(updated);
+        await persistCover(updated);
       }, 400);
       return updated;
     });
@@ -170,11 +191,11 @@ export default function AjandamScreen() {
       if (current.length === 0) return prev;
       const updatedDrawings = current.slice(0, current.length - 1);
       const updated = { ...prev, drawings: updatedDrawings };
-      StorageService.setCover(updated);
+      persistCover(updated);
 
       if (recognitionTimeoutRef.current) clearTimeout(recognitionTimeoutRef.current);
       if (updatedDrawings.length === 0) {
-        StorageService.setCover({ ...updated, recognizedText: '', recognizedWords: [] });
+        persistCover({ ...updated, recognizedText: '', recognizedWords: [] });
       } else {
         recognitionTimeoutRef.current = setTimeout(async () => {
           // Kullanici otomatik taniimayi kapattiysa cizgiler cihaz disina cikmaz.
@@ -182,7 +203,7 @@ export default function AjandamScreen() {
           if (!(await getPrivacySettings()).autoHandwriting) return;
           const result = await recognizeHandwriting(updatedDrawings, { language: i18n.language || 'tr' });
           if (result.success && !result.aborted && !result.stale) {
-            StorageService.setCover({
+            persistCover({
               ...updated,
               recognizedText: result.text,
               recognizedWords: result.words,
@@ -228,6 +249,20 @@ export default function AjandamScreen() {
             style={{ aspectRatio: 0.72, maxWidth: 420, borderRadius: 8, alignSelf: 'center' }} 
           />
         </View>
+      </AnimatedSafeAreaView>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <AnimatedSafeAreaView style={[styles.safeArea, animatedBgStyle]} edges={['top', 'bottom']}>
+        <StorageReadErrorState
+          onBack={() => router.back()}
+          secondaryAction={{
+            label: t('storage.openAgendaPages', 'Ajanda sayfalarına git'),
+            onPress: handleOpenAgenda,
+          }}
+        />
       </AnimatedSafeAreaView>
     );
   }

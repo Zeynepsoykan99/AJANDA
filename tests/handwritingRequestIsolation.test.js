@@ -14,6 +14,8 @@
  * sonra kaynaktaki GERCEK fonksiyon cikarilip ayni senaryoda calistirilir.
  */
 const assert = require('assert');
+// Asenkron akis yarida kalirsa (sonsuz bekleme) 0 ile cikip gecmis gorunmesin
+const markComplete = require('./helpers/completionGuard')(__filename);
 const fs = require('fs');
 const path = require('path');
 
@@ -288,4 +290,5 @@ function runSourceChecks() {
   console.log('OK Test 7: kaynakta modul duzeyinde paylasilan denetleyici kalmadi');
 
   console.log('--- TUM ISTEK YALITIMI TESTLERI BASARIYLA GECTI! ---');
+  markComplete();
 }

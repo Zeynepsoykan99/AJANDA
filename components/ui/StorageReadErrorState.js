@@ -12,8 +12,10 @@ import { useTheme } from '../../context/ThemeContext';
  * eylemlerini göstermez; böylece okunamayan verinin üzerine yazılmaz.
  *
  * @param {function} [onBack] - Verilirse "Geri" bağlantısı gösterilir
+ * @param {{ label: string, onPress: function }} [secondaryAction] - Yazma YAPMAYAN ek
+ *   bir gezinme eylemi (ör. kapak okunamasa da ajanda sayfalarına gitmek)
  */
-export default function StorageReadErrorState({ onBack }) {
+export default function StorageReadErrorState({ onBack, secondaryAction }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
 
@@ -29,6 +31,11 @@ export default function StorageReadErrorState({ onBack }) {
           'Bu bölümün verileri şu anda okunamıyor. Verilerinizi korumak için burada ekleme, silme ve sıralama kapatıldı.'
         )}
       </Text>
+      {secondaryAction ? (
+        <TouchableOpacity onPress={secondaryAction.onPress} style={styles.backButton}>
+          <Text style={[styles.backText, { color: colors.accent }]}>{secondaryAction.label}</Text>
+        </TouchableOpacity>
+      ) : null}
       {onBack ? (
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <Text style={[styles.backText, { color: colors.accent }]}>{t('common.back', 'Geri')}</Text>

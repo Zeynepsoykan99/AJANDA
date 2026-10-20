@@ -14,6 +14,9 @@ import useResponsiveLayout from '../hooks/useResponsiveLayout';
 import { getPrivacyPolicyUrl } from '../constants/links';
 // GECICI (teshis/Faz 0 depolama olcumu): kaldirilacak
 import { runStorageDiagnostics } from '../utils/storageDiagnostics';
+// GECICI arac (veriyi yedekle): kaldirilacak; dosya bicimi kalici yedegin temeli
+import { runStorageBackup } from '../utils/storageBackup';
+import * as Sharing from 'expo-sharing';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -51,6 +54,72 @@ export default function HomeScreen() {
       Alert.alert('Depolama ölçümü (geçici)', `Hata: ${String(error?.message || error)}`);
     } finally {
       storageDiagRunningRef.current = false;
+    }
+  };
+
+  // ⚠️ GECICI arac: "Veriyi yedekle". Salt okunur; yalnizca backups/ altina dosya yazar.
+  const storageBackupRunningRef = React.useRef(false);
+  const shareBackupFile = (fileUri) => {
+    // Paylasmadan once: dosya SIFRESIZ duz metindir
+    Alert.alert(
+      t('storage.backupShareTitle', 'Yedek dosyasını paylaş'),
+      t(
+        'storage.backupShareWarning',
+        'Bu dosya günlüğünüzün ve notlarınızın içeriğini ŞİFRESİZ, düz metin olarak içerir. Yalnızca size ait bir yere paylaşın.'
+      ),
+      [
+        { text: t('common.cancel', 'Vazgeç'), style: 'cancel' },
+        {
+          text: t('common.share', 'Paylaş'),
+          onPress: async () => {
+            try {
+              if (!(await Sharing.isAvailableAsync())) {
+                Alert.alert('Veri yedeği (geçici)', 'Bu cihazda paylaşım kullanılamıyor.');
+                return;
+              }
+              await Sharing.shareAsync(fileUri, { mimeType: 'application/json' });
+            } catch (error) {
+              console.warn('Yedek paylasilamadi:', error);
+              Alert.alert('Veri yedeği (geçici)', `Paylaşılamadı: ${String(error?.message || error)}`);
+            }
+          },
+        },
+      ]
+    );
+  };
+  const handleStorageBackup = async () => {
+    if (storageBackupRunningRef.current) return;
+    storageBackupRunningRef.current = true;
+    try {
+      const r = await runStorageBackup();
+      const kb = (n) => `${(n / 1024).toFixed(1)} KB`;
+      const lines = r.ok
+        ? [
+            'Yedek alındı ve dosyadan geri okunarak doğrulandı.',
+            `Anahtar: ${r.keyCount} · toplam ${kb(r.totalBytes)}`,
+            `Ses dosyası (yalnızca ad/boyut listesi): ${r.audioFiles}`,
+            `Dosya: ${r.fileUri}`,
+          ]
+        : ['YEDEK ALINAMADI — yedek alındı saymayın.', r.reason || 'bilinmeyen hata'];
+      if (r.unreadable.length > 0) {
+        lines.push('', `OKUNAMAYAN ANAHTARLAR (${r.unreadable.length}) — yedekte YOK:`);
+        r.unreadable.forEach((u) => lines.push(`• ${u.key}: ${u.error}`));
+      }
+      Alert.alert(
+        'Veri yedeği (geçici)',
+        lines.join('\n'),
+        r.ok
+          ? [
+              { text: 'Kapat', style: 'cancel' },
+              { text: t('common.share', 'Paylaş'), onPress: () => shareBackupFile(r.fileUri) },
+            ]
+          : [{ text: 'Kapat', style: 'cancel' }]
+      );
+    } catch (error) {
+      console.warn('Yedek alinamadi:', error);
+      Alert.alert('Veri yedeği (geçici)', `YEDEK ALINAMADI: ${String(error?.message || error)}`);
+    } finally {
+      storageBackupRunningRef.current = false;
     }
   };
 
@@ -172,6 +241,32 @@ export default function HomeScreen() {
             Depolama ölçümü (geçici)
           </Text>
         </TouchableOpacity>
+
+        {/* ⚠️ GECICI arac: veriyi yedekle. Bu BLOK ve utils/storageBackup.js kalici
+            yedek ozelligi gelince kaldirilacak (dosya bicimi korunacak). */}
+        <TouchableOpacity
+          activeOpacity={0.6}
+          onPress={handleStorageBackup}
+          style={styles.privacyLink}
+        >
+          <Text style={[styles.privacyLinkText, { color: colors.accent }]}>
+            Veriyi yedekle (geçici)
+          </Text>
+        </TouchableOpacity>
+
+        {/* ⚠️ GECICI (teshis): hata enjeksiyonu YALNIZCA gelistirme derlemesinde.
+            Bu BLOK, app/storage-faults.js ve utils/storageFaultInjection.js kaldirilacak. */}
+        {__DEV__ && (
+          <TouchableOpacity
+            activeOpacity={0.6}
+            onPress={() => router.push('/storage-faults')}
+            style={styles.privacyLink}
+          >
+            <Text style={[styles.privacyLinkText, { color: colors.accent }]}>
+              Hata enjeksiyonu (geçici, yalnızca geliştirme)
+            </Text>
+          </TouchableOpacity>
+        )}
 
         {/* Gizlilik Politikasi — menunun en altinda kucuk bir satir */}
         <TouchableOpacity

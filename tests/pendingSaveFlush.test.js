@@ -13,6 +13,8 @@
  * ayni senaryoda calistirilir.
  */
 const assert = require('assert');
+// Asenkron akis yarida kalirsa (sonsuz bekleme) 0 ile cikip gecmis gorunmesin
+const markComplete = require('./helpers/completionGuard')(__filename);
 const fs = require('fs');
 const path = require('path');
 
@@ -235,6 +237,64 @@ console.log('--- Bekleyen Kayit / Flush Testleri ---');
   }
   console.log('OK Test 5b: yazma hatasinda bekleyen yuk korunuyor, bildirim var, zamanlayici yok');
 
+  // --- Test 5c: geri eklenen ESKI yuk, daha yeni degisikligi ASLA ezmez ---
+  // Alan bazinda "en yeni kazanir" ve yuk sinirli (alan basina tek deger).
+  // Rastgele (tohumlu, tekrarlanabilir) dizilerle: zamanla, ucusta zamanla,
+  // basarili/basarisiz flush karisik. Model: her alanin EN SON zamanlanan degeri.
+  for (const [label, source] of [['ajandam', ajandamSource], ['todolist', todolistSource]]) {
+    let seed = 20261020;
+    const rand = () => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed / 2147483648;
+    };
+    const FIELDS = ['drawings', 'textBlocks', 'data', 'stickers'];
+    for (let run = 0; run < 200; run++) {
+      const { scheduleSave, flushPendingSave, disk, refs, setFailWrites } = buildSaver(source, label);
+      const latest = {};
+      let counter = 0;
+      const scheduleRandom = () => {
+        const field = FIELDS[Math.floor(rand() * FIELDS.length)];
+        const value = `${field}-${++counter}`;
+        latest[field] = value;
+        scheduleSave({ [field]: value }, 100000); // zamanlayici bu testte dolmaz
+      };
+      const steps = 5 + Math.floor(rand() * 25);
+      for (let i = 0; i < steps; i++) {
+        const r = rand();
+        if (r < 0.45) {
+          scheduleRandom();
+        } else {
+          setFailWrites(rand() < 0.6);
+          const flushing = flushPendingSave();
+          // Yazma UCUSTAYKEN yeni degisiklikler (geri ekleme ile yaris)
+          const inFlight = Math.floor(rand() * 3);
+          for (let k = 0; k < inFlight; k++) scheduleRandom();
+          await flushing;
+        }
+        // Yuk sinirli: alan basina tek deger, bilinmeyen alan yok
+        const pendingKeys = Object.keys(refs.pendingSaveRef.current || {});
+        assert.ok(pendingKeys.length <= FIELDS.length, label + ': yuk alan sayisini asmamali');
+        // Bekleyen yukteki her deger, o alanin EN SON zamanlanan degeri olmali
+        pendingKeys.forEach((f) => {
+          assert.strictEqual(
+            refs.pendingSaveRef.current[f],
+            latest[f],
+            `${label} run ${run} adim ${i}: bekleyen ${f} eski bir degere dondu`
+          );
+        });
+      }
+      // Son: disk duzeldi, bir flush daha -> disk her alanda en yeni degeri tasimali
+      setFailWrites(false);
+      await flushPendingSave();
+      if (refs.saveTimeoutRef.current) clearTimeout(refs.saveTimeoutRef.current);
+      Object.keys(latest).forEach((f) => {
+        assert.strictEqual(disk[f], latest[f], `${label} run ${run}: diskte ${f} en yeni deger olmali`);
+      });
+      assert.strictEqual(refs.pendingSaveRef.current, null, label + ': basarili flush sonrasi yuk bos');
+    }
+  }
+  console.log('OK Test 5c: 2x200 rastgele dizide eski yuk yeniyi hic ezmedi, yuk alan basina tek deger');
+
   // --- Test 6: todolist ekrani da ayni mekanizmayi kullaniyor --------
   {
     const { scheduleSave, disk } = buildSaver(todolistSource, 'todolist');
@@ -314,4 +374,5 @@ function runSourceChecks() {
   console.log('OK Test 8: flush yazmalari A1 sayfa kilidi uzerinden gidiyor');
 
   console.log('--- TUM BEKLEYEN KAYIT TESTLERI BASARIYLA GECTI! ---');
+  markComplete();
 }
