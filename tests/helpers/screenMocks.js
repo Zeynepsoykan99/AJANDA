@@ -67,9 +67,11 @@ const useInstanceId = (registry, name) => {
 };
 
 const createScreenMocks = ({ registry, params = {}, windowSize = { width: 800, height: 1200 } }) => {
-  const host = (name) => {
+  const host = (name, { track = false } = {}) => {
     const C = React.forwardRef(function HostMock(props, ref) {
+      const id = useInstanceId(registry, name);
       registry.count(name);
+      if (track) trackProps(registry, name, id, props);
       return React.createElement('div', { ref }, props.children);
     });
     C.displayName = name;
@@ -157,7 +159,8 @@ const createScreenMocks = ({ registry, params = {}, windowSize = { width: 800, h
       View,
       Text,
       ScrollView,
-      TouchableOpacity: host('TouchableOpacity'),
+      // Dugmeler kaydedilir: test erisilebilirlik etiketiyle basabilsin
+      TouchableOpacity: host('TouchableOpacity', { track: true }),
       Pressable: host('Pressable'),
       ActivityIndicator: host('ActivityIndicator'),
       TextInput: host('TextInput'),
@@ -254,6 +257,13 @@ const createScreenMocks = ({ registry, params = {}, windowSize = { width: 800, h
   return { mocks, alerts };
 };
 
+/** Erisilebilirlik etiketiyle kayitli dugmenin son prop'lari */
+const findButton = (registry, label) => {
+  const map = registry.instances.TouchableOpacity;
+  if (!map) return null;
+  return [...map.values()].find((p) => p.accessibilityLabel === label) || null;
+};
+
 /** Aktif sayfanin DrawingCanvas'i (NotebookPagesView aktif sayfada pointerEvents vermez) */
 const activeDrawingCanvas = (registry) => {
   const map = registry.instances.DrawingCanvas;
@@ -262,4 +272,4 @@ const activeDrawingCanvas = (registry) => {
   return all.find((p) => p.pointerEvents === undefined) || all[0] || null;
 };
 
-module.exports = { createRegistry, createScreenMocks, activeDrawingCanvas };
+module.exports = { createRegistry, createScreenMocks, activeDrawingCanvas, findButton };

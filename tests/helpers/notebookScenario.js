@@ -8,7 +8,7 @@
  * cagrisi uzerinden yapilir (gercek tuvalin cizgi bitiminde yaptigi gibi).
  */
 const { installFakeDom, createClock, createLoader, createFakeAsyncStorage, flushMicrotasks } = require('./screenHarness');
-const { createRegistry, createScreenMocks, activeDrawingCanvas } = require('./screenMocks');
+const { createRegistry, createScreenMocks, activeDrawingCanvas, findButton } = require('./screenMocks');
 
 const NOTEBOOKS = '@ajanda_notebooks_v1';
 const DIARY = '@ajanda_diary_v1';
@@ -148,6 +148,12 @@ const openNotebookScreen = async ({ rev, screen = 'notlarim', initial } = {}) =>
       if (!canvas) throw new Error('aktif DrawingCanvas yok');
       const stroke = { id, d: 'M 1 1 L 2 2', color: '#000', strokeWidth: 3, points: [{ x: 1, y: 1 }, { x: 2, y: 2 }] };
       await act(() => canvas.onDrawingsChange([...(canvas.drawings || []), stroke]));
+    },
+    /** Erisilebilirlik etiketli dugmeye basar (ör. 'Yeni Sayfa Ekle') */
+    press: async (label) => {
+      const button = findButton(registry, label);
+      if (!button) throw new Error('dugme yok: ' + label);
+      await act(() => button.onPress());
     },
     keyWrites: () => store.writesFor(key),
     unmount: async () => {

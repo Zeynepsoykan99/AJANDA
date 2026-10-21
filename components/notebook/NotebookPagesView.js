@@ -81,6 +81,13 @@ import {
 
 const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
 
+// Sayfalara her render'da YENI bos dizi / bos fonksiyon verilirse memo'lu alt katmanlar
+// (DrawingCanvas icindeki StaticDrawingsLayer gibi) her ekran render'inda tum sayfalarda
+// bosuna yeniden cizilir. Sabit referanslar bunu onler; dondurulmuslardir ki bir alt
+// bilesen yanlislikla yerinde degistirirse sayfalar arasinda sessizce paylasilmasin.
+const EMPTY_LIST = Object.freeze([]);
+const NOOP = () => {};
+
 /**
  * NotebookPagesView - Defter Sayfaları (Günlüğüm ve Notlarım ortak ekranı)
  * Yatay kaydırmalı çoklu sayfa, serbest çizim, metin, sticker, el yazısını metne dönüştürme,
@@ -1594,8 +1601,8 @@ export default function NotebookPagesView({
                 }}
               >
                 <SmartSnappingProvider
-                  stickers={p.stickers || []}
-                  textBlocks={p.textBlocks || []}
+                  stickers={p.stickers || EMPTY_LIST}
+                  textBlocks={p.textBlocks || EMPTY_LIST}
                   canvasWidth={pageWidth}
                   canvasHeight={pageHeight}
                   ruling={paper.ruling}
@@ -1666,7 +1673,7 @@ export default function NotebookPagesView({
 
                         {/* Post-it Sayfa İşaretleyicileri Rayı */}
                         <IndexFlagsRail
-                          flags={p.indexFlags || []}
+                          flags={p.indexFlags || EMPTY_LIST}
                           onSaveFlag={(flagData) => handleSaveIndexFlag(index, flagData)}
                           onDeleteFlag={(flagId) => handleDeleteIndexFlag(index, flagId)}
                           readOnly={!isActive}
@@ -1678,7 +1685,7 @@ export default function NotebookPagesView({
                     <TextCanvas
                       isTextMode={false}
                       isDrawingMode={isActive && activeMode === 'drawing'}
-                      textBlocks={p.textBlocks || []}
+                      textBlocks={p.textBlocks || EMPTY_LIST}
                       onTextBlocksChange={(blocks) => handleTextBlocksChange(index, blocks)}
                       activeColor={textColor}
                       activeFontSize={textFontSize}
@@ -1690,7 +1697,7 @@ export default function NotebookPagesView({
                           ? 'none'
                           : 'box-none'
                       }
-                      selectedBlockIds={isActive ? selectedBlockIds : []}
+                      selectedBlockIds={isActive ? selectedBlockIds : EMPTY_LIST}
                       onSelectedBlockIdsChange={isActive ? setSelectedBlockIds : undefined}
                     />
 
@@ -1700,14 +1707,14 @@ export default function NotebookPagesView({
                       tool={drawingTool}
                       color={drawingColor}
                       strokeWidth={drawingWidth}
-                      drawings={p.drawings || []}
+                      drawings={p.drawings || EMPTY_LIST}
                       onDrawingsChange={(drawings) => handleDrawingsChange(index, drawings)}
-                      textBlocks={p.textBlocks || []}
+                      textBlocks={p.textBlocks || EMPTY_LIST}
                       onTextBlocksChange={(blocks) => handleTextBlocksChange(index, blocks)}
-                      stickers={p.stickers || []}
+                      stickers={p.stickers || EMPTY_LIST}
                       scribbleEraseEnabled={scribbleEraseEnabled}
                       onScribbleErase={(targets) => handleScribbleErase(index, targets)}
-                      selectedStrokeIds={isActive ? selectedStrokeIds : []}
+                      selectedStrokeIds={isActive ? selectedStrokeIds : EMPTY_LIST}
                       selectionBounds={selectionBounds}
                       onSelectionChange={isActive ? handleSelectionChange : undefined}
                       pointerEvents={!isActive ? 'none' : undefined}
@@ -1741,10 +1748,10 @@ export default function NotebookPagesView({
 
                     {/* Sticker Katmanı */}
                     <StickerCanvas
-                      stickers={p.stickers || []}
-                      onStickerMove={isActive ? handleStickerMove : () => {}}
-                      onStickerResize={isActive ? handleStickerResize : () => {}}
-                      onStickerDelete={isActive ? handleStickerDelete : () => {}}
+                      stickers={p.stickers || EMPTY_LIST}
+                      onStickerMove={isActive ? handleStickerMove : NOOP}
+                      onStickerResize={isActive ? handleStickerResize : NOOP}
+                      onStickerDelete={isActive ? handleStickerDelete : NOOP}
                       isDrawingMode={isActive && activeMode === 'drawing'}
                       isExporting={isActive && isExporting}
                       pointerEvents={!isActive || activeMode === 'drawing' ? 'none' : 'box-none'}
