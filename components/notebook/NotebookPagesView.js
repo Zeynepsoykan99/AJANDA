@@ -559,9 +559,13 @@ export default function NotebookPagesView({
     [pages.length, currentPageIndex, windowWidth, remeasureActiveCanvas]
   );
 
-  // Son kalınan sayfa indeksini AsyncStorage'a debounced kaydet
+  // Son kalınan sayfa indeksini AsyncStorage'a debounced kaydet.
+  // Bağımlılık `notebook` nesnesi DEĞİL, yalnızca yüklenip yüklenmediğidir: nesne
+  // her çizgide değiştiği için effect her çizgide aynı indeksi yeniden yazıyor,
+  // tüm defter anahtarı çizgi başına iki kez yazılıyordu (çift yazma).
+  const hasNotebook = Boolean(notebook);
   useEffect(() => {
-    if (!notebook || isLoading) return;
+    if (!hasNotebook || isLoading) return;
     if (lastPageSaveRef.current) clearTimeout(lastPageSaveRef.current);
     lastPageSaveRef.current = setTimeout(() => {
       storageRef.current.updateMeta?.({ lastPageIndex: currentPageIndex });
@@ -569,7 +573,7 @@ export default function NotebookPagesView({
     return () => {
       if (lastPageSaveRef.current) clearTimeout(lastPageSaveRef.current);
     };
-  }, [currentPageIndex, notebook, isLoading]);
+  }, [currentPageIndex, hasNotebook, isLoading]);
 
   // Bildirim + geri alınabilir işlem kaydı. Her bildirime benzersiz id verilir; böylece art arda gelen
   // bildirimlerde otomatik kapanma süresi yeniden başlar ve Geri Al yalnızca son işlemi geri alır.

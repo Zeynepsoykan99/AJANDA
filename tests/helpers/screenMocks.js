@@ -82,7 +82,9 @@ const createScreenMocks = ({ registry, params = {}, windowSize = { width: 800, h
   });
 
   const ScrollView = React.forwardRef(function ScrollViewMock(props, ref) {
+    const id = useInstanceId(registry, 'ScrollView');
     registry.count('ScrollView');
+    trackProps(registry, 'ScrollView', id, props);
     React.useImperativeHandle(ref, () => ({ scrollTo() {}, scrollToEnd() {} }), []);
     return React.createElement('div', null, props.children);
   });
