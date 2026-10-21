@@ -85,9 +85,8 @@ export default function PaperSheet({
   showMargin = false,
   style,
 }) {
-  // GECICI (teshis): kagit ve (varsa) doku elemanlari bu render'da yeniden uretiliyor
+  // GECICI (teshis): perf:pageAdd / perf:postStroke render sayaci
   bumpRender('paperSheet');
-  if (ruling === 'lined' || ruling === 'grid' || ruling === 'dotted') bumpRender('ruling');
   const [sheetSize, setSheetSize] = useState({ width: 0, height: 0 });
 
   const handleLayout = useCallback((e) => {
@@ -98,62 +97,18 @@ export default function PaperSheet({
     );
   }, []);
 
-  const counts = getRulingCounts(sheetSize.width, sheetSize.height);
-
   return (
     <View
       style={[styles.sheet, { backgroundColor: paperColor }, style]}
       onLayout={handleLayout}
     >
-      {/* Çizgili Kağıt Dokusu */}
-      {ruling === 'lined' && (
-        <View style={styles.rulingContainer} pointerEvents="none">
-          {Array.from({ length: counts.lines }).map((_, i) => (
-            <View
-              key={i}
-              style={[styles.horizontalLine, { backgroundColor: lineColor }]}
-            />
-          ))}
-        </View>
-      )}
-
-      {/* Kareli Kağıt Dokusu (Grid) */}
-      {ruling === 'grid' && (
-        <View style={[styles.rulingContainer, { overflow: 'hidden' }]} pointerEvents="none">
-          <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
-            {Array.from({ length: counts.gridRows }).map((_, i) => (
-              <View
-                key={`gh_${i}`}
-                style={[styles.gridHorizontalLine, { backgroundColor: lineColor }]}
-              />
-            ))}
-          </View>
-          <View style={[StyleSheet.absoluteFillObject, { flexDirection: 'row' }]} pointerEvents="none">
-            {Array.from({ length: counts.gridCols }).map((_, i) => (
-              <View
-                key={`gv_${i}`}
-                style={[styles.gridVerticalLine, { backgroundColor: lineColor }]}
-              />
-            ))}
-          </View>
-        </View>
-      )}
-
-      {/* Noktalı Kağıt Dokusu (Bullet Journal) */}
-      {ruling === 'dotted' && (
-        <View style={styles.rulingContainer} pointerEvents="none">
-          {Array.from({ length: counts.dotRows }).map((_, row) => (
-            <View key={row} style={styles.dottedRow}>
-              {Array.from({ length: counts.dotCols }).map((_, col) => (
-                <View
-                  key={col}
-                  style={[styles.dot, col > 0 && styles.dotSpacing, { backgroundColor: lineColor }]}
-                />
-              ))}
-            </View>
-          ))}
-        </View>
-      )}
+      {/* Kağıt Dokusu (çizgili / kareli / noktalı); memo'lu, bkz. PaperRuling */}
+      <PaperRuling
+        ruling={ruling}
+        lineColor={lineColor}
+        width={sheetSize.width}
+        height={sheetSize.height}
+      />
 
       {/* Sevimli Sol Marj Çizgisi */}
       {showMargin && (
@@ -168,6 +123,79 @@ export default function PaperSheet({
     </View>
   );
 }
+
+/**
+ * Kağıt dokusu: çizgi / ızgara / nokta View'leri.
+ *
+ * PaperSheet'ten AYRI ve memo'ludur. PaperSheet çocuk aldığı için ebeveyn her
+ * render olduğunda (Notlarım'da her çizgide, mount edilmiş TÜM sayfalarda)
+ * yeniden çalışır; doku ise yalnızca tür, renk veya ölçü değişince değişir.
+ * Noktalı kağıtta sayfa başına ~1000 View olduğu için her seferinde yeniden
+ * üretmek gereksiz bir yüktü. Üretilen ağaç öncekiyle birebir aynıdır.
+ *
+ * Prop'lar ilkel değerlerdir (sayılar sheet ölçüsünden İÇERİDE hesaplanır);
+ * nesne verilseydi her render'da yeni referans memo'yu kırardı.
+ */
+const PaperRuling = React.memo(function PaperRuling({ ruling, lineColor, width, height }) {
+  if (ruling !== 'lined' && ruling !== 'grid' && ruling !== 'dotted') return null;
+  // GECICI (teshis): doku elemanlari bu render'da yeniden uretildi
+  bumpRender('ruling');
+  const counts = getRulingCounts(width, height);
+
+  if (ruling === 'lined') {
+    // Çizgili Kağıt Dokusu
+    return (
+      <View style={styles.rulingContainer} pointerEvents="none">
+        {Array.from({ length: counts.lines }).map((_, i) => (
+          <View
+            key={i}
+            style={[styles.horizontalLine, { backgroundColor: lineColor }]}
+          />
+        ))}
+      </View>
+    );
+  }
+
+  if (ruling === 'grid') {
+    // Kareli Kağıt Dokusu (Grid)
+    return (
+      <View style={[styles.rulingContainer, { overflow: 'hidden' }]} pointerEvents="none">
+        <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+          {Array.from({ length: counts.gridRows }).map((_, i) => (
+            <View
+              key={`gh_${i}`}
+              style={[styles.gridHorizontalLine, { backgroundColor: lineColor }]}
+            />
+          ))}
+        </View>
+        <View style={[StyleSheet.absoluteFillObject, { flexDirection: 'row' }]} pointerEvents="none">
+          {Array.from({ length: counts.gridCols }).map((_, i) => (
+            <View
+              key={`gv_${i}`}
+              style={[styles.gridVerticalLine, { backgroundColor: lineColor }]}
+            />
+          ))}
+        </View>
+      </View>
+    );
+  }
+
+  // Noktalı Kağıt Dokusu (Bullet Journal)
+  return (
+    <View style={styles.rulingContainer} pointerEvents="none">
+      {Array.from({ length: counts.dotRows }).map((_, row) => (
+        <View key={row} style={styles.dottedRow}>
+          {Array.from({ length: counts.dotCols }).map((_, col) => (
+            <View
+              key={col}
+              style={[styles.dot, col > 0 && styles.dotSpacing, { backgroundColor: lineColor }]}
+            />
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+});
 
 const styles = StyleSheet.create({
   sheet: {
