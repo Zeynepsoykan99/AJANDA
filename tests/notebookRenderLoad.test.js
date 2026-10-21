@@ -57,6 +57,7 @@ const addPageRenders = async (rev) => {
 
 const BEFORE_STABLE = 'b56c7ca6';
 const BEFORE_RULING = 'c8856f1c';
+const BEFORE_LASSO = 'ab6b26e6';
 
 /**
  * PaperSheet'i verilen surumden yukleyip uc doku ve iki olcu icin cizer;
@@ -217,6 +218,58 @@ async function renderPaperTree(rev) {
     assert.strictEqual(outputs.simdi, outputs[BEFORE_RULING], 'View agaci, stiller ve sirasi ayni olmali');
     assert.ok(outputs.simdi.length > 10000, 'karsilastirma bos olmamali');
     console.log('OK Test 5: kagit ciktisi (View agaci + stiller) once/sonra birebir ayni');
+  }
+
+  // --- Test 6: sayfa ekleme / sayfa gecisi — bos secimi sifirlamak ekstra render uretmiyor ---
+  {
+    const screenRenders = async (rev, action) => {
+      const s = await openNotebookScreen({ rev, initial: { [NOTEBOOKS]: JSON.stringify([deviceLikeNotebook()]) } });
+      await s.tick(2000);
+      // Olcu: sayfa bilesenlerinin (DrawingCanvas) render sayisi. Ekran fonksiyonu
+      // ayni state ile bir kez daha CAGRILABILIR ama React orada durur, cocuklara inmez;
+      // asil maliyet sayfa basina cocuklarin yeniden render'idir.
+      const before = s.registry.snapshot();
+      await action(s);
+      await s.tick(2000);
+      const pageRenders = s.registry.diff(before).drawingCanvas;
+      await s.unmount();
+      return pageRenders;
+    };
+    const addPage = (s) => s.press('Yeni Sayfa Ekle');
+    const swipe = async (s) => {
+      const sv = [...s.registry.instances.ScrollView.values()].find((p) => p.onMomentumScrollEnd);
+      await s.act(() => sv.onMomentumScrollEnd({ nativeEvent: { contentOffset: { x: 800 } } }));
+    };
+    const addBefore = await screenRenders(BEFORE_LASSO, addPage);
+    const addAfter = await screenRenders(undefined, addPage);
+    const swipeBefore = await screenRenders(BEFORE_LASSO, swipe);
+    const swipeAfter = await screenRenders(undefined, swipe);
+    console.log(
+      `  sayfa bileseni render (DrawingCanvas): sayfa ekleme ${addBefore} -> ${addAfter}, sayfa gecisi ${swipeBefore} -> ${swipeAfter}`
+    );
+    assert.strictEqual(addBefore, 30, 'once: sayfa ekleme 15 sayfayi iki kez render etti');
+    assert.strictEqual(addAfter, 15, 'sonra: bir kez');
+    assert.strictEqual(swipeBefore, 28, 'once: sayfa gecisi 14 sayfayi iki kez render etti');
+    assert.strictEqual(swipeAfter, 14, 'sonra: bir kez');
+
+    // Davranis: secim DOLUYKEN sayfa degisirse secim yine temizlenir
+    const s = await openNotebookScreen({ initial: { [NOTEBOOKS]: JSON.stringify([deviceLikeNotebook()]) } });
+    await s.tick(2000);
+    const activeCanvas = () => [...s.registry.instances.DrawingCanvas.values()].find((p) => p.pointerEvents === undefined);
+    await s.act(() =>
+      activeCanvas().onSelectionChange({
+        selectedStrokeIds: ['p0_1'],
+        bounds: { minX: 0, minY: 0, maxX: 1, maxY: 1, width: 1, height: 1 },
+        selectedStrokes: [{ id: 'p0_1' }],
+      })
+    );
+    assert.deepStrictEqual(activeCanvas().selectedStrokeIds, ['p0_1'], 'secim aktif sayfada');
+    await swipe(s);
+    await s.tick(500);
+    assert.deepStrictEqual(activeCanvas().selectedStrokeIds, [], 'sayfa degisince secim temizlenmeli');
+    assert.strictEqual(activeCanvas().selectionBounds, null);
+    await s.unmount();
+    console.log('OK Test 6: bos secim sifirlamasi sayfalari yeniden render ettirmiyor (2x -> 1x); dolu secim yine temizleniyor');
   }
 
   markComplete();

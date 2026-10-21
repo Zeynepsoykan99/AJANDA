@@ -501,8 +501,14 @@ export default function NotebookPagesView({
 
   const activePageId = activePage?.pageId;
   useEffect(() => {
-    // Sayfa değişince önceki sayfanın kement seçimini temizle
-    setLassoSelection({ ids: [], bounds: null, strokes: [] });
+    // Sayfa değişince önceki sayfanın kement seçimini temizle. Seçim zaten boşsa
+    // AYNI state döner: yeni nesne her sayfa geçişinde/eklemede tüm sayfaları
+    // bir kez daha boşuna render ettiriyordu.
+    setLassoSelection((prev) =>
+      prev.ids.length === 0 && !prev.bounds && prev.strokes.length === 0
+        ? prev
+        : { ids: [], bounds: null, strokes: [] }
+    );
 
     // Yeni aktif sayfanın büyütme durumunu oku
     const transform = activePageId ? canvasRefs.current[activePageId]?.getTransform?.() : null;
