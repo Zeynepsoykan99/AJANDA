@@ -25,6 +25,12 @@ const todolistSource = fs.readFileSync(TODOLIST, 'utf8');
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Kalem farkinda zamanlayici GERCEK kaynaktan (utils/penActivity); bu testte kalem
+// hic basilmaz, yani gercek setTimeout gibi davranir. Kalem senaryolari:
+// tests/penDeferredSave.test.js
+const { createLoader } = require('./helpers/screenHarness');
+const penActivity = createLoader({ real: ['utils/penActivity.js'] }).load('utils/penActivity.js');
+
 const FLUSH_RE = /  const flushPendingSave = useCallback\(async \(\) => \{[\s\S]*?\n  \}, \[pageId\]\);/;
 const SCHEDULE_RE = /  const scheduleSave = useCallback\(\n[\s\S]*?\n    \[flushPendingSave\]\n  \);/;
 
@@ -71,6 +77,8 @@ const buildSaver = (source, label) => {
     'len',
     'textLen',
     'reportStorageWriteError',
+    'setPenAwareTimeout',
+    'cancelPenAwareTimeout',
     body + '\nreturn { flushPendingSave, scheduleSave };'
   )(
     refs.saveTimeoutRef,
@@ -88,7 +96,9 @@ const buildSaver = (source, label) => {
     () => {},
     () => 0,
     () => 0,
-    (error) => reports.push(error)
+    (error) => reports.push(error),
+    penActivity.setPenAwareTimeout,
+    penActivity.cancelPenAwareTimeout
   );
 
   return {
@@ -233,7 +243,7 @@ console.log('--- Bekleyen Kayit / Flush Testleri ---');
     scheduleSave({ drawings: ['yeni'] }, 1000);
     await flushing;
     assert.deepStrictEqual(refs.pendingSaveRef.current.drawings, ['yeni'], 'daha yeni degisiklik oncelikli olmali');
-    clearTimeout(refs.saveTimeoutRef.current);
+    penActivity.cancelPenAwareTimeout(refs.saveTimeoutRef.current);
   }
   console.log('OK Test 5b: yazma hatasinda bekleyen yuk korunuyor, bildirim var, zamanlayici yok');
 
@@ -286,7 +296,7 @@ console.log('--- Bekleyen Kayit / Flush Testleri ---');
       // Son: disk duzeldi, bir flush daha -> disk her alanda en yeni degeri tasimali
       setFailWrites(false);
       await flushPendingSave();
-      if (refs.saveTimeoutRef.current) clearTimeout(refs.saveTimeoutRef.current);
+      if (refs.saveTimeoutRef.current) penActivity.cancelPenAwareTimeout(refs.saveTimeoutRef.current);
       Object.keys(latest).forEach((f) => {
         assert.strictEqual(disk[f], latest[f], `${label} run ${run}: diskte ${f} en yeni deger olmali`);
       });

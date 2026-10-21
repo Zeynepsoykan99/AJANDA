@@ -49,6 +49,7 @@ import IndexFlagsRail from '../stationery/IndexFlagsRail';
 import { AudioService } from '../../services/audioService';
 import { addSessionLockListener } from '../../services/biometricService';
 import { StorageService } from '../../services/storageService';
+import { setPenAwareTimeout, cancelPenAwareTimeout } from '../../utils/penActivity';
 import { guardStorageWrites, isStorageReadError } from '../../services/storageErrorEvents';
 import StorageReadErrorState from '../ui/StorageReadErrorState';
 import { isSameDay, formatFilterDate } from '../../components/ui/GlobalFilterHeader';
@@ -566,12 +567,12 @@ export default function NotebookPagesView({
   const hasNotebook = Boolean(notebook);
   useEffect(() => {
     if (!hasNotebook || isLoading) return;
-    if (lastPageSaveRef.current) clearTimeout(lastPageSaveRef.current);
-    lastPageSaveRef.current = setTimeout(() => {
+    if (lastPageSaveRef.current) cancelPenAwareTimeout(lastPageSaveRef.current);
+    lastPageSaveRef.current = setPenAwareTimeout(() => {
       storageRef.current.updateMeta?.({ lastPageIndex: currentPageIndex });
     }, 500);
     return () => {
-      if (lastPageSaveRef.current) clearTimeout(lastPageSaveRef.current);
+      if (lastPageSaveRef.current) cancelPenAwareTimeout(lastPageSaveRef.current);
     };
   }, [currentPageIndex, hasNotebook, isLoading]);
 
@@ -854,8 +855,10 @@ export default function NotebookPagesView({
 
         const updated = { ...prev, pages: currentPages };
 
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-        saveTimeoutRef.current = setTimeout(async () => {
+        // Kalem basiliyken sure dolarsa kayit kalem kalkana kadar ertelenir
+        // (en fazla MAX_PEN_DEFER_MS); bkz. utils/penActivity
+        if (saveTimeoutRef.current) cancelPenAwareTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = setPenAwareTimeout(async () => {
           await storageRef.current.updatePage(currentPages[pageIndex].pageId, {
             drawings: newDrawings,
           });
@@ -881,8 +884,8 @@ export default function NotebookPagesView({
 
         const updated = { ...prev, pages: currentPages };
 
-        if (textBlocksSaveTimeoutRef.current) clearTimeout(textBlocksSaveTimeoutRef.current);
-        textBlocksSaveTimeoutRef.current = setTimeout(async () => {
+        if (textBlocksSaveTimeoutRef.current) cancelPenAwareTimeout(textBlocksSaveTimeoutRef.current);
+        textBlocksSaveTimeoutRef.current = setPenAwareTimeout(async () => {
           await storageRef.current.updatePage(currentPages[pageIndex].pageId, {
             textBlocks: newTextBlocks,
           });
@@ -914,8 +917,8 @@ export default function NotebookPagesView({
         currentPages[pageIndex] = updatedPage;
         const updated = { ...prev, pages: currentPages };
 
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-        saveTimeoutRef.current = setTimeout(async () => {
+        if (saveTimeoutRef.current) cancelPenAwareTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = setPenAwareTimeout(async () => {
           await storageRef.current.updatePage(pageToUpdate.pageId, {
             content: newContent,
             data: {
@@ -1188,7 +1191,7 @@ export default function NotebookPagesView({
 
       // Çizgi silme ve metin ekleme tek seferde kaydedilir; bekleyen debounce kaydı
       // eski çizimleri geri yazmasın diye iptal edilir
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      if (saveTimeoutRef.current) cancelPenAwareTimeout(saveTimeoutRef.current);
 
       setNotebook((prev) => {
         const currentPages = [...(prev?.pages || [])];

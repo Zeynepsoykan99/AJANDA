@@ -58,6 +58,7 @@ import {
   addDrawingPreferencesListener,
 } from '../../services/drawingPreferencesService';
 import { NotificationService } from '../../services/notificationService';
+import { setPenAwareTimeout, cancelPenAwareTimeout } from '../../utils/penActivity';
 import { AudioService } from '../../services/audioService';
 import { transcribeAudioFile } from '../../services/transcriptionService';
 import LassoActionMenu from '../../components/drawing/LassoActionMenu';
@@ -244,7 +245,7 @@ export default function PageViewScreen() {
    */
   const flushPendingSave = useCallback(async () => {
     if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
+      cancelPenAwareTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
     }
     const pending = pendingSaveRef.current;
@@ -281,8 +282,11 @@ export default function PageViewScreen() {
         delay,
       });
       pendingSaveRef.current = { ...(pendingSaveRef.current || {}), ...updates };
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => {
+      if (saveTimeoutRef.current) cancelPenAwareTimeout(saveTimeoutRef.current);
+      // Kalem basiliyken sure dolarsa kayit (parse/stringify) cizgiyi kilitlemesin diye
+      // kalem kalkana kadar ertelenir (en fazla MAX_PEN_DEFER_MS). Arka plana gecis ve
+      // ekrandan ayrilma flush'lari bunu beklemez: flushPendingSave dogrudan cagrilir.
+      saveTimeoutRef.current = setPenAwareTimeout(() => {
         saveTimeoutRef.current = null;
         flushPendingSave();
       }, delay);
