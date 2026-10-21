@@ -4,6 +4,50 @@ Bu dosya, proje boyunca yapılan her kod değişikliği, paket kurulumu ve dosya
 
 ---
 
+## 📅 [2026-10-22] - Notlarım Çift Yazma, Kalem Basılıyken Kayıt Erteleme, Render Yükü, storage:write
+
+Veri biçimi, depolama şeması, bağımlılıklar değişmedi; APK build alınmadı. Damga: `storage-2026-10-22-A`.
+Her düzeltme ayrı commit (cihazda önce/sonra karşılaştırması için).
+
+### 🧪 Test düzeneği (yeni)
+`tests/helpers/screenHarness.js` + `screenMocks.js` + `notebookScenario.js`: ekranlar **gerçek React 19**
+(react-dom + küçük sahte DOM) ile, sahte saat ve sahte AsyncStorage üzerinde çalışır. Ekran, depolama servisi,
+kağıt ve şablonlar gerçek kaynaktan; kaynak çalışma ağacından veya **git sürümünden** okunur (eski sürümleri
+aynı senaryoda çalıştırmak için). Yerel bileşenler sahte; render sayıları gerçek, süreler anlamsız.
+
+### 1) `ecbafbc3` GEÇİCİ tanı: `storage:write`, `perf:pageAdd`, `perf:postStroke`
+- `storage:write`: her `AsyncStorage.setItem` için tek satır (anahtar, kaynak = metot + alanlar, cyrb53 hash,
+  `same` / `sameNoTs` (yalnızca `updatedAt` farklı), bayt, `penParse`/`penStr`, okuma/parse/stringify/setItem ms,
+  `diagMs`). `storage:flushCost` buraya taşındı. Sarmalayıcı yazma sonucunu ve hatayı değiştirmez.
+- `perf:pageAdd`: dokunuştan ilk sakin ana (300 ms uzun kare yok + uçuşta yazma yok + `writeDone` işareti);
+  yazma sayısı/bayt, render sayıları. Ajandam, Yapılacaklar, Notlarım, Günlüğüm.
+- `perf:postStroke`: çizgi sonrası 800 ms; yeni çizgide `cut=1` ile erken kapanır.
+- `utils/penActivity.js` **kalıcı** (tuval başına kalem durumu).
+
+### 2) `544ce0cb` Çift yazma düzeltmesi
+Kök neden: `NotebookPagesView` "son kalınan sayfa" effect'i bağımlılığında `notebook` nesnesi vardı; her çizgi
+effect'i yeniden çalıştırıp 500 ms sonra AYNI `lastPageIndex`'i yazıyordu. İkinci yazma bayat değil, yalnızca
+`updatedAt` farklı. **831344c7 (2026-09-16)** ile başladı (gerçek React ile geçmiş sürümler: 831344c7^ çizgi başına
+1, 831344c7…ecbafbc3 2, şimdi 1). Açılışta ve sayfa değişiminde kayıt aynen sürüyor.
+
+### 3) `b56c7ca6` Kalem basılıyken kayıt erteleme
+`setPenAwareTimeout`: süre dolunca kalem basılıysa kayıt başlamaz, kalkınca aynı gecikmeyle kurulur; en fazla
+2000 ms ertelenir (veri kaybı penceresi ≤ gecikme + 2000 ms). Arka plan / ekrandan çıkış flush'ları beklemez,
+uçuştaki kayıt iptal edilmez. Ajandam, Yapılacaklar, Notlarım/Günlüğüm zamanlayıcıları.
+
+### 4) Render yükü (14 sayfalık defter, gerçek React ile sayıldı)
+- `c8856f1c`: pasif sayfalara sabit `EMPTY_LIST`/`NOOP` → kalıcı çizgi katmanı render'ı çizgide 14 → 1.
+- `ab6b26e6`: kağıt dokusu memo'lu `PaperRuling` → çizgide View render 7003 → 79 (çıktı birebir aynı, testte
+  karşılaştırıldı). Ajandam/Yapılacaklar sayfaları da PaperSheet kullanıyor.
+- `12446441`: boş kement seçimi sayfa değişiminde yeniden yazılmıyor → sayfa ekleme/geçişte sayfa render'ı yarıya.
+
+### 🧪 Testler
+Yeni: `storageWriteProbe`, `notebookDoubleWrite`, `penDeferredSave`, `notebookRenderLoad`. Güncellenen:
+`pendingSaveFlush`, `storageReadWriteErrors` (Test 12), `perfMeasurement`, `audioNoteMigration`. 40 dosya geçiyor.
+Kasıtlı kırılmalar her düzeltmede yakalandı.
+
+---
+
 ## 📅 [2026-10-20] - Yeni Development Build + expo-document-picker
 
 ### 📦 Native değişiklik
