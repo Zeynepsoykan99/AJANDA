@@ -297,8 +297,18 @@ const loadRulingCounter = () => {
   const { bumpRender, snapshotRenders, diffRenders, RENDER_COUNTER_KEYS } = loadCounters();
   assert.deepStrictEqual(
     RENDER_COUNTER_KEYS.slice().sort(),
-    ['drawingCanvas', 'screen', 'staticLayer', 'stickerCanvas', 'textCanvas'],
-    'bes sayac adi tanimli olmali'
+    [
+      'drawingCanvas',
+      'listScreen',
+      'paperSheet',
+      'ruling',
+      'screen',
+      'staticLayer',
+      'stickerCanvas',
+      'textCanvas',
+      'thumbnail',
+    ],
+    'dokuz sayac adi tanimli olmali (perf:pageAdd/postStroke icin dort yeni)'
   );
 
   bumpRender('drawingCanvas');
@@ -406,7 +416,11 @@ const loadRulingCounter = () => {
   const sigStart = CANVAS.indexOf('  diagScreen = ');
   const sigEnd = CANVAS.indexOf('}) {', sigStart);
   assert.ok(sigStart > -1 && sigEnd > sigStart, 'diag* imzasi bulunmali');
-  const rest = CANVAS.slice(0, sigStart) + CANVAS.slice(sigEnd).replace(logBlock, '');
+  // GECICI perf:postStroke penceresi de bir tani blogudur (yalnizca satira yazar)
+  const p = CANVAS.indexOf('postStrokeProbeRef.current = startPostStrokeProbe({');
+  assert.ok(p > -1, 'perf:postStroke baslangici bulunmali');
+  const postBlock = CANVAS.slice(p, CANVAS.indexOf('\n    });', p));
+  const rest = CANVAS.slice(0, sigStart) + CANVAS.slice(sigEnd).replace(logBlock, '').replace(postBlock, '');
   names.forEach(function (n) {
     assert.ok(logBlock.includes(n), n + ' ozet satirinda kullanilmali');
     assert.ok(

@@ -56,6 +56,7 @@ import { SecurityService } from '../../services/securityService';
 import { captureRef } from 'react-native-view-shot';
 // GECICI (teshis/SORUN B): kaldirilacak
 import { bumpRender } from '../../utils/diagnosticLog';
+import { startPageAddProbe } from '../../utils/perfProbes';
 import * as Haptics from 'expo-haptics';
 import ExportLoadingModal from '../ui/ExportLoadingModal';
 import { PdfExportService } from '../../services/pdfExportService';
@@ -613,7 +614,13 @@ export default function NotebookPagesView({
   const handleAddPage = useCallback(async (paperTemplateId) => {
     // Yeni sayfa, o anki aktif sayfanın şablonunu (veya seçilen şablonu) miras alarak StorageService üzerinden eklenir
     const targetTemplateId = paperTemplateId || activePaperTemplateId || notebook?.paperTemplateId || DEFAULT_PAPER_TEMPLATE_ID;
+    // GECICI (teshis): dokunustan ilk sakin ana kadar (perf:pageAdd)
+    const probe = startPageAddProbe(isDiary ? 'gunluk' : 'notlarim', {
+      pagesBefore: notebook?.pages?.length || 0,
+      tpl: targetTemplateId,
+    });
     const result = await storageRef.current.addPage({ paperTemplateId: targetTemplateId });
+    probe.mark('writeDone');
     if (!result) return;
 
     // Henüz kaydedilmemiş (debounce bekleyen) çizimler kaybolmasın diye yalnızca yeni sayfayı state'e ekle
@@ -626,7 +633,7 @@ export default function NotebookPagesView({
       type: 'page_added',
       pageId: newPage.pageId,
     });
-  }, [activePaperTemplateId, notebook?.paperTemplateId, scrollToPageIndex, showUndoToast, t]);
+  }, [activePaperTemplateId, notebook?.paperTemplateId, notebook?.pages?.length, isDiary, scrollToPageIndex, showUndoToast, t]);
 
   // "+" butonuna basıldığında aktif sayfanın şablonunu dinamik miras alarak anında yeni sayfa ekler
   const handleQuickAddPage = useCallback(() => {

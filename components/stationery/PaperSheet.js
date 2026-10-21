@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, PixelRatio } from 'react-native';
 import { PAPER_RULING_CONFIG } from '../../constants/paperRulings';
+// GECICI (teshis): perf:pageAdd / perf:postStroke render sayaclari — kaldirilacak
+import { bumpRender } from '../../utils/diagnosticLog';
 
 // Donanımsal Retina/HDPI 1-fiziksel piksel inceliği
 const HAIRLINE = StyleSheet.hairlineWidth;
@@ -83,6 +85,9 @@ export default function PaperSheet({
   showMargin = false,
   style,
 }) {
+  // GECICI (teshis): kagit ve (varsa) doku elemanlari bu render'da yeniden uretiliyor
+  bumpRender('paperSheet');
+  if (ruling === 'lined' || ruling === 'grid' || ruling === 'dotted') bumpRender('ruling');
   const [sheetSize, setSheetSize] = useState({ width: 0, height: 0 });
 
   const handleLayout = useCallback((e) => {

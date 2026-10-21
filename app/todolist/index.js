@@ -24,12 +24,17 @@ import GlobalFilterHeader, { isSameDay, formatFilterDate } from '../../component
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 import { getPageDisplayTitle } from '../../utils/pageTitleHelper';
 import { NotificationService } from '../../services/notificationService';
+// GECICI (teshis): perf:pageAdd — kaldirilacak
+import { bumpRender } from '../../utils/diagnosticLog';
+import { startPageAddProbe } from '../../utils/perfProbes';
 
 /**
  * TodoListScreen - Yapılacaklar Ana Ekranı
  * Yalnızca To-Do kategorisindeki sayfaları listeler.
  */
 export default function TodoListScreen() {
+  // GECICI (teshis): perf:pageAdd
+  bumpRender('listScreen');
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const { colors } = useTheme();
@@ -91,7 +96,10 @@ export default function TodoListScreen() {
   // Yeni To-Do ekle
   const handleAddTodo = useCallback(
     async (newPage) => {
+      // GECICI (teshis): dokunustan ilk sakin ana kadar (perf:pageAdd)
+      const probe = startPageAddProbe('todo');
       const updatedPages = await guardWrite(StorageService.addPage(newPage));
+      probe.mark('writeDone');
       if (updatedPages) {
         const todos = updatedPages.filter((page) => page.category === 'todo');
         setTodoPages(todos.sort((a, b) => (b.order || 0) - (a.order || 0)));

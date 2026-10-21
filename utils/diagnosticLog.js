@@ -42,11 +42,25 @@
  *                                              "Depolama ölçümü (geçici)" baglantisi;
  *                                              Alert/Share import'lari yalnizca bunun icin)
  *   - tests/storageDiagnostics.test.js        (olcum aritmetigi testleri)
- *   - services/storageService.js              (storage:flushCost: lastReadCost,
- *                                              readJson/writeJson icindeki nowMs
- *                                              olcumleri ve dlog satiri; ayrica
- *                                              shouldFailRead/shouldFailWrite
+ *   - services/storageService.js              (storage:write baglami: lastReadCost,
+ *                                              readJson/writeJson icindeki nowMs/isPenDown
+ *                                              olcumleri, setWriteContext, src() kaynak
+ *                                              etiketleri ve writeJson/writeDiary/
+ *                                              writeNotebooks/mutateNotebook/persistMigration
+ *                                              `source` parametresi, installWriteProbe;
+ *                                              ayrica shouldFailRead/shouldFailWrite
  *                                              enjeksiyon kontrolleri ve importlari)
+ *   - utils/storageWriteProbe.js              (TUM DOSYA — storage:write satiri)
+ *   - utils/perfProbes.js                     (TUM DOSYA — perf:pageAdd, perf:postStroke)
+ *   - components/drawing/DrawingCanvas.js     (postStrokeProbeRef + startPostStrokeProbe)
+ *   - components/notebook/NotebookPagesView.js, app/ajandam/pages.js,
+ *     app/todolist/index.js                   (startPageAddProbe cagrilari;
+ *                                              listScreen sayaci)
+ *   - components/stationery/PaperSheet.js      (paperSheet/ruling sayaclari)
+ *   - components/PageThumbnail.js              (thumbnail sayaci)
+ *   - tests/storageWriteProbe.test.js, tests/perfProbes.test.js
+ *   NOT: utils/penActivity.js GECICI DEGIL (kalem basiliyken kayit erteleme
+ *        bunu kullanir); yalnizca storage:write'taki pen* alanlari tanidir.
  *   - utils/storageFaultInjection.js          (TUM DOSYA — hata enjeksiyonu, yalnizca __DEV__)
  *   - app/storage-faults.js                   (TUM DOSYA — enjeksiyon ekrani)
  *   - components/ui/FaultInjectionBadge.js    (TUM DOSYA + app/_layout.js'teki kullanimi)
@@ -75,12 +89,13 @@
  * Her tanı turunda elle güncellenir; Metro'ya bağlandığınızda açılışta yazılır.
  * Konsolda bu damgayı görmüyorsanız cihaz ESKİ paketi çalıştırıyor demektir.
  */
-export const BUILD_STAMP = 'storage-2026-10-20-A';
+export const BUILD_STAMP = 'storage-2026-10-22-A';
 
 /** Bu damgada neler var (rapordaki adımlarla eşleşsin diye) */
 export const BUILD_NOTES =
   'SORUN B: ekran/derleme etiketi + tuval olcusu + render sayaclari + renderCommit; ' +
-  'Faz 0: ana menude "Depolama ölçümü (geçici)" (storage:* satirlari)';
+  'Faz 0: ana menude "Depolama ölçümü (geçici)" (storage:* satirlari); ' +
+  'storage:write (her yazma) + perf:pageAdd + perf:postStroke';
 
 /** Teşhis loglarını tek yerden kapatmak için. Kaldırmadan önce false yapılabilir. */
 export const DIAGNOSTICS_ENABLED = true;
@@ -208,6 +223,11 @@ const renderCounts = {
   screen: 0,
   textCanvas: 0,
   stickerCanvas: 0,
+  // perf:pageAdd / perf:postStroke icin (Faz 0 sonrasi tur)
+  paperSheet: 0,
+  ruling: 0,
+  listScreen: 0,
+  thumbnail: 0,
 };
 
 /** Bilinen sayaç adları (yazım hatası sessizce kaybolmasın diye) */

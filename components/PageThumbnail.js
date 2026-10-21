@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { PAGE_CATEGORIES, getPageTemplate } from '../constants/pageTemplates';
 import { getPageDisplayTitle, getCategoryDisplayName } from '../utils/pageTitleHelper';
 import PageIndexFlag from './stationery/PageIndexFlag';
+// GECICI (teshis): perf:pageAdd render sayaci — kaldirilacak
+import { bumpRender } from '../utils/diagnosticLog';
 
 /**
  * PageThumbnail - Sayfa önizleme kartı
@@ -17,7 +19,8 @@ import PageIndexFlag from './stationery/PageIndexFlag';
  * @param {function} [onReminder] - Hatırlatıcı kurma / düzenleme
  */
 export default function PageThumbnail({ page, onPress, onLongPress, onDelete, onReminder }) {
-
+  // GECICI (teshis): perf:pageAdd
+  bumpRender('thumbnail');
   const { t, i18n } = useTranslation();
   const category = PAGE_CATEGORIES.find((c) => c.id === page.category);
   const template = getPageTemplate(page.category, page.templateId);

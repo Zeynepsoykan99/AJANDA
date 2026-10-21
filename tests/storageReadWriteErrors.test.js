@@ -80,6 +80,9 @@ const createFakeStorage = (initial = {}) => {
 const loadService = (serviceSource, fake, { dev = false } = {}) => {
   const deletedAudio = [];
   const diagLines = [];
+  const installedOn = [];
+  const writeContexts = [];
+  const penDown = { value: false };
   // Hata enjeksiyonu GERCEK kaynaktan; __DEV__ degeri disaridan verilir
   const faults = runModule(
     toCjs(fs.readFileSync(path.join(ROOT, 'utils', 'storageFaultInjection.js'), 'utf8'), 'storageFaultInjection.js'),
@@ -115,12 +118,34 @@ const loadService = (serviceSource, fake, { dev = false } = {}) => {
       dlog: (label, data) => diagLines.push({ label, data }),
       nowMs: () => Date.now(),
     },
+    // GECICI (teshis): storage:write baglami. Gercek sarmalayicinin testi
+    // tests/storageWriteProbe.test.js'te; burada yalnizca servisin setItem'dan
+    // HEMEN once dogru baglami biraktigi denetlenir.
+    '../utils/storageWriteProbe.js': {
+      installWriteProbe: (storage) => {
+        installedOn.push(storage);
+      },
+      setWriteContext: (context) => {
+        writeContexts.push(context);
+      },
+    },
+    '../utils/penActivity.js': { isPenDown: () => penDown.value },
   };
   const service = runModule(toCjs(serviceSource, 'storageService.js'), (id) => {
     if (!(id in fakes)) throw new Error('beklenmeyen require: ' + id);
     return fakes[id];
   });
-  return { StorageService: service.StorageService, events, faults, diagLines, deletedAudio, cancelledNotifications };
+  return {
+    StorageService: service.StorageService,
+    events,
+    faults,
+    diagLines,
+    deletedAudio,
+    cancelledNotifications,
+    installedOn,
+    writeContexts,
+    penDown,
+  };
 };
 
 const NEW_SOURCE = fs.readFileSync(path.join(ROOT, 'services', 'storageService.js'), 'utf8');
@@ -505,30 +530,52 @@ console.log('--- Depolama Okuma/Yazma Hatasi Testleri ---');
     console.log('OK Test 11: enjeksiyon __DEV__ iken gercek depolamaya gitmeden hata veriyor; release etkisiz');
   }
 
-  // --- Test 12: storage:flushCost — her yazmada TEK satir, yazmadan SONRA; okumada yok ---
+  // --- Test 12: storage:write baglami — her yazmada TEK baglam, setItem'dan HEMEN once ---
+  // (Eski storage:flushCost satiri storage:write'a tasindi; satirin kendisi
+  //  tests/storageWriteProbe.test.js'te gercek sarmalayiciyla sinaniyor.)
   {
     const fake = createFakeStorage({ [PAGES]: threePages() });
     const svc = loadService(NEW_SOURCE, fake);
+    assert.deepStrictEqual(svc.installedOn, [fake.api], 'sarmalayici AsyncStorage uzerine bir kez kurulmali');
     await svc.StorageService.getPages();
-    assert.strictEqual(svc.diagLines.length, 0, 'yalnizca okuma log yazmamali');
-    await svc.StorageService.updatePage('a', { drawings: ['x'] });
-    assert.strictEqual(svc.diagLines.length, 1, 'yazma basina tek satir');
-    const { label, data } = svc.diagLines[0];
-    assert.strictEqual(label, 'storage:flushCost');
-    assert.strictEqual(data.key, PAGES);
-    ['readMs', 'parseMs', 'stringifyMs', 'setItemMs'].forEach((k) =>
-      assert.ok(/^\d+\.\d$/.test(data[k]), k + ' ms olarak yazilmali: ' + data[k])
+    assert.strictEqual(svc.writeContexts.length, 0, 'yalnizca okuma baglam birakmamali');
+    assert.strictEqual(svc.diagLines.length, 0, 'servis artik kendisi dlog yazmamali');
+
+    svc.penDown.value = true;
+    await svc.StorageService.updatePage('a', { drawings: ['x'], textBlocks: [] });
+    assert.strictEqual(svc.writeContexts.length, 1, 'yazma basina tek baglam');
+    const ctx = svc.writeContexts[0];
+    assert.strictEqual(ctx.source, 'updatePage[drawings|textBlocks]', 'kaynak: islem + alanlar');
+    ['readMs', 'parseMs', 'stringifyMs'].forEach((k) =>
+      assert.ok(typeof ctx[k] === 'number' && ctx[k] >= 0, k + ' sayi olmali: ' + ctx[k])
     );
-    assert.strictEqual(data.chars, fake.data.get(PAGES).length, 'yuk boyutu yazilan metnin uzunlugu');
-    // Yazma basarisizsa satir yazilmaz (maliyet olcumu basarili yazma icin)
-    fake.state.failWrites = true;
-    await svc.StorageService.updatePage('a', { drawings: ['y'] }).catch(() => {});
-    assert.strictEqual(svc.diagLines.length, 1, 'basarisiz yazma satir yazmamali');
-    // Okumasiz yazma (setCover): read alanlari '-'
-    fake.state.failWrites = false;
+    assert.strictEqual(ctx.penParse, true, 'parse sirasinda kalem basili');
+    assert.strictEqual(ctx.penStr, true, 'stringify sirasinda kalem basili');
+    svc.penDown.value = false;
+
+    // Enjekte yazma hatasinda baglam BIRAKILMAZ (setItem hic cagrilmaz)
+    const dev = loadService(NEW_SOURCE, createFakeStorage({ [PAGES]: threePages() }), { dev: true });
+    dev.faults.setFault('write', PAGES, true);
+    await dev.StorageService.updatePage('a', { drawings: ['y'] }).catch(() => {});
+    assert.strictEqual(dev.writeContexts.length, 0, 'setItem cagrilmadiysa baglam kalmamali');
+
+    // Okumasiz yazma (setCover): okuma alanlari tanimsiz
     await svc.StorageService.setCover({ templateId: 'c' });
-    assert.strictEqual(svc.diagLines[1].data.readMs, '-');
-    console.log('OK Test 12: storage:flushCost yazma basina tek satir, okuma/parse/stringify/setItem ayri');
+    const cover = svc.writeContexts[1];
+    assert.strictEqual(cover.source, 'setCover');
+    assert.strictEqual(cover.readMs, undefined);
+    assert.strictEqual(cover.penParse, undefined);
+
+    // Defter yolu: meta ve sayfa yazmalari ayri etiketlenmeli (cift yazma teshisi icin)
+    const nbFake = createFakeStorage({ [NOTEBOOKS]: notebooksValue() });
+    const nb = loadService(NEW_SOURCE, nbFake);
+    await nb.StorageService.updateNotebookPage('nb1', 'q1', { drawings: ['z'] });
+    await nb.StorageService.updateNotebookMeta('nb1', { lastPageIndex: 1 });
+    assert.deepStrictEqual(
+      nb.writeContexts.map((c) => c.source),
+      ['updateNotebookPage[drawings]', 'updateNotebookMeta[lastPageIndex]']
+    );
+    console.log('OK Test 12: storage:write baglami yazma basina tek, kaynak etiketi ve kalem alanlari dogru');
   }
 
   markComplete();

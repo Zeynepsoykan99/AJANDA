@@ -7,9 +7,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NotificationService } from './notificationService.js';
 import { AudioService } from './audioService.js';
 import { createStorageError, STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from './storageErrorEvents.js';
-// GECICI (teshis): hata enjeksiyonu (yalnizca __DEV__) ve storage:flushCost olcumu — kaldirilacak
+// GECICI (teshis): hata enjeksiyonu (yalnizca __DEV__) ve storage:write olcumu — kaldirilacak
 import { shouldFailRead, shouldFailWrite } from '../utils/storageFaultInjection.js';
-import { dlog, nowMs } from '../utils/diagnosticLog.js';
+import { nowMs } from '../utils/diagnosticLog.js';
+import { installWriteProbe, setWriteContext } from '../utils/storageWriteProbe.js';
+import { isPenDown } from '../utils/penActivity.js';
+
+// GECICI (teshis): her AsyncStorage.setItem icin tek `storage:write` satiri
+installWriteProbe(AsyncStorage);
 
 const KEYS = {
   THEME: '@ajanda_theme',
@@ -65,7 +70,7 @@ const withPagesLock = (task) => {
  * @throws STORAGE_READ_FAILED
  */
 // ⚠️ GEÇİCİ (teşhis/SORUN B): her anahtarın son okuma maliyeti. Aynı işlemdeki
-// yazma bunu alıp tek satır `storage:flushCost` yazar. Anahtar bazında tutulur:
+// yazma bunu `storage:write` satırına taşır. Anahtar bazında tutulur:
 // sayfa ve defter kuyrukları birbirinden bağımsız çalıştığı için karışmasınlar.
 const lastReadCost = new Map();
 
@@ -84,12 +89,14 @@ const readJson = async (key, isValidShape) => {
   const t1 = nowMs();
   if (raw === null || raw === undefined || raw === '') return null;
   let parsed;
+  // GECICI (teshis): ayristirma sirasinda kalem basili miydi
+  const penParse = isPenDown();
   try {
     parsed = JSON.parse(raw);
   } catch (error) {
     throw createStorageError(STORAGE_READ_FAILED, key, error);
   }
-  lastReadCost.set(key, { readMs: t1 - t0, parseMs: nowMs() - t1 });
+  lastReadCost.set(key, { readMs: t1 - t0, parseMs: nowMs() - t1, penParse });
   if (isValidShape && !isValidShape(parsed)) {
     throw createStorageError(STORAGE_READ_FAILED, key, new Error('beklenmeyen veri yapısı'));
   }
@@ -98,42 +105,55 @@ const readJson = async (key, isValidShape) => {
 
 /**
  * Bir değeri JSON olarak yazar.
+ * @param {string} key
+ * @param {any} value
+ * @param {string} [source] - GEÇİCİ (teşhis): `storage:write` satırındaki kaynak etiketi
  * @throws STORAGE_WRITE_FAILED
  */
-const writeJson = async (key, value) => {
+const writeJson = async (key, value, source = 'unknown') => {
+  // GECICI (teshis): stringify sirasinda kalem basili miydi
+  const penStr = isPenDown();
   const t0 = nowMs();
   const text = JSON.stringify(value);
   const t1 = nowMs();
+  const read = lastReadCost.get(key);
+  lastReadCost.delete(key);
   try {
     // GECICI (teshis): __DEV__ hata enjeksiyonu; release'te her zaman false
     if (shouldFailWrite(key)) {
       throw new Error('[HATA ENJEKSİYONU] database or disk is full (simüle)');
     }
+    // GECICI (teshis): baglam setItem ile AYNI senkron akista birakilir
+    setWriteContext({
+      source,
+      readMs: read ? read.readMs : undefined,
+      parseMs: read ? read.parseMs : undefined,
+      penParse: read ? read.penParse : undefined,
+      stringifyMs: t1 - t0,
+      penStr,
+    });
     await AsyncStorage.setItem(key, text);
   } catch (error) {
     throw createStorageError(STORAGE_WRITE_FAILED, key, error);
   }
-  // GECICI (teshis/SORUN B): yazma bittikten SONRA tek satir; cizim sirasinda log yok
-  const read = lastReadCost.get(key);
-  lastReadCost.delete(key);
-  dlog('storage:flushCost', {
-    key,
-    readMs: read ? read.readMs.toFixed(1) : '-',
-    parseMs: read ? read.parseMs.toFixed(1) : '-',
-    stringifyMs: (t1 - t0).toFixed(1),
-    setItemMs: (nowMs() - t1).toFixed(1),
-    chars: text.length,
-  });
 };
+
+/**
+ * GEÇİCİ (teşhis): kaynak etiketi — işlem adı + değişen alanlar.
+ * @param {string} op
+ * @param {object} [fields]
+ */
+const src = (op, fields) =>
+  fields && typeof fields === 'object' ? `${op}[${Object.keys(fields).join('|')}]` : op;
 
 /**
  * Okuma sırasında yapılan tembel göçün (sesli not, defter normalizasyonu) yazması.
  * Başarısız olursa okuma BOZULMAZ: veri bellekte doğru haliyle döner, göç bir
  * sonraki okumada yeniden denenir. Yalnızca okuma BAŞARILI olduktan sonra çağrılır.
  */
-const persistMigration = async (key, value) => {
+const persistMigration = async (key, value, source = 'migration') => {
   try {
-    await writeJson(key, value);
+    await writeJson(key, value, source);
   } catch (error) {
     console.warn('StorageService: göç sonucu yazılamadı, sonraki okumada yeniden denenecek:', error);
   }
@@ -243,7 +263,7 @@ const readPagesUnlocked = async () => {
   // Sesli notlari yeni dosya-adi modeline tasi ve donusum olduysa diske yaz
   const { pages, changed } = migrateAudioNotesInPages(parsed);
   if (changed) {
-    await persistMigration(KEYS.PAGES, pages);
+    await persistMigration(KEYS.PAGES, pages, 'migration:pages');
   }
   return pages;
 };
@@ -427,7 +447,7 @@ const readDiary = async () => {
   if (parsed !== null) {
     const { notebook: diary, changed } = normalizeNotebook(parsed);
     if (changed) {
-      await persistMigration(KEYS.DIARY, diary);
+      await persistMigration(KEYS.DIARY, diary, 'migration:diary');
     }
     return diary;
   }
@@ -444,13 +464,13 @@ const readDiary = async () => {
     pages: [createEmptyNotebookPage(DEFAULT_PAPER_TEMPLATE_ID)],
   };
   // Varsayılan kaydın yazılamaması okumayı bozmaz; sonraki okumada yeniden yazılır
-  await persistMigration(KEYS.DIARY, defaultDiary);
+  await persistMigration(KEYS.DIARY, defaultDiary, 'createDefaultDiary');
   return defaultDiary;
 };
 
-const writeDiary = async (diary) => {
+const writeDiary = async (diary, source) => {
   const updated = touchNotebook(diary);
-  await writeJson(KEYS.DIARY, updated);
+  await writeJson(KEYS.DIARY, updated, source);
   return updated;
 };
 
@@ -466,13 +486,13 @@ const readNotebooks = async () => {
     return notebook;
   });
   if (anyChanged) {
-    await persistMigration(KEYS.NOTEBOOKS, notebooks);
+    await persistMigration(KEYS.NOTEBOOKS, notebooks, 'migration:notebooks');
   }
   return notebooks;
 };
 
-const writeNotebooks = async (notebooks) => {
-  await writeJson(KEYS.NOTEBOOKS, notebooks);
+const writeNotebooks = async (notebooks, source) => {
+  await writeJson(KEYS.NOTEBOOKS, notebooks, source);
   return notebooks;
 };
 
@@ -491,16 +511,17 @@ const sortNotebooksByUpdatedAt = (notebooks) =>
  * Tek bir defteri güncel liste üzerinde değiştirip kaydeder.
  * @param {string} notebookId
  * @param {(notebook) => { notebook: object, [key: string]: any }} mutate - saf dönüşüm
+ * @param {string} [source] - GEÇİCİ (teşhis): storage:write kaynak etiketi
  * @returns {Promise<object|null>} mutate sonucu (notebook alanı kaydedilmiş defterdir) veya defter yoksa null
  */
-const mutateNotebook = async (notebookId, mutate) => {
+const mutateNotebook = async (notebookId, mutate, source) => {
   const notebooks = await readNotebooks();
   const index = notebooks.findIndex((nb) => nb.id === notebookId);
   if (index === -1) return null;
   const result = mutate(notebooks[index]);
   const saved = touchNotebook(result.notebook);
   notebooks[index] = saved;
-  await writeNotebooks(notebooks);
+  await writeNotebooks(notebooks, source);
   return { ...result, notebook: saved };
 };
 
@@ -549,7 +570,7 @@ export const StorageService = {
   getCover: async () => readJson(KEYS.COVER, isPlainObject),
 
   setCover: async (coverData) => {
-    await writeJson(KEYS.COVER, coverData);
+    await writeJson(KEYS.COVER, coverData, 'setCover');
   },
 
   // ─── Sayfalar ─────────────────────────────────────────
@@ -567,7 +588,7 @@ export const StorageService = {
     withPagesLock(async () => {
       const pages = await readPagesUnlocked();
       pages.push(page);
-      await writeJson(KEYS.PAGES, pages);
+      await writeJson(KEYS.PAGES, pages, 'addPage');
       return pages;
     }),
 
@@ -577,7 +598,7 @@ export const StorageService = {
       const index = pages.findIndex((p) => p.id === pageId);
       if (index !== -1) {
         pages[index] = { ...pages[index], ...updates };
-        await writeJson(KEYS.PAGES, pages);
+        await writeJson(KEYS.PAGES, pages, src('updatePage', updates));
       }
       return pages;
     }),
@@ -587,7 +608,7 @@ export const StorageService = {
       const pages = await readPagesUnlocked();
       const pageToDelete = pages.find((p) => p.id === pageId);
       const filtered = pages.filter((p) => p.id !== pageId);
-      await writeJson(KEYS.PAGES, filtered);
+      await writeJson(KEYS.PAGES, filtered, 'deletePage');
       // Yan etkiler YAZMA BAŞARILI olduktan sonra: yazma başarısız olursa sayfa
       // diskte kalır, sesli notları ve hatırlatıcısı da onunla birlikte kalmalı.
       if (pageToDelete?.reminder?.notificationId) {
@@ -608,7 +629,7 @@ export const StorageService = {
           return page ? { ...page, order: index } : null;
         })
         .filter(Boolean);
-      await writeJson(KEYS.PAGES, reordered);
+      await writeJson(KEYS.PAGES, reordered, 'reorderPages');
       return reordered;
     }),
 
@@ -616,7 +637,7 @@ export const StorageService = {
   // Tüm defter işlemleri withJournalLock kuyruğunda sırayla çalışır.
   getDiary: async () => withJournalLock(readDiary),
 
-  saveDiary: async (diaryData) => withJournalLock(() => writeDiary(diaryData)),
+  saveDiary: async (diaryData) => withJournalLock(() => writeDiary(diaryData, 'saveDiary')),
 
   /**
    * Günlüğün yalnızca üst düzey (kapak / varsayılan şablon) alanlarını güncel kayıt üzerine birleştirir.
@@ -627,28 +648,28 @@ export const StorageService = {
     withJournalLock(async () => {
       const diary = await readDiary();
       const merged = { ...diary, ...pickNotebookMeta(fields) };
-      return writeDiary(notebookWithDefaultPaperApplied(diary, merged));
+      return writeDiary(notebookWithDefaultPaperApplied(diary, merged), src('updateDiaryMeta', fields));
     }),
 
   addDiaryPage: async (pageData = {}) =>
     withJournalLock(async () => {
       const diary = await readDiary();
       const { notebook, newPage } = notebookWithAddedPage(diary, pageData);
-      const updatedDiary = await writeDiary(notebook);
+      const updatedDiary = await writeDiary(notebook, 'addDiaryPage');
       return { updatedDiary, newPage };
     }),
 
   updateDiaryPage: async (pageId, pageUpdates) =>
     withJournalLock(async () => {
       const diary = await readDiary();
-      return writeDiary(notebookWithUpdatedPage(diary, pageId, pageUpdates));
+      return writeDiary(notebookWithUpdatedPage(diary, pageId, pageUpdates), src('updateDiaryPage', pageUpdates));
     }),
 
   deleteDiaryPage: async (pageId) =>
     withJournalLock(async () => {
       const diary = await readDiary();
       const pageToDelete = (diary?.pages || []).find((p) => p.pageId === pageId);
-      const updated = await writeDiary(notebookWithDeletedPage(diary, pageId));
+      const updated = await writeDiary(notebookWithDeletedPage(diary, pageId), 'deleteDiaryPage');
       // Sesli not dosyaları yalnızca silme diske YAZILDIKTAN sonra silinir
       if (pageToDelete?.audioNotes?.length) {
         AudioService.deleteAudioFiles(pageToDelete.audioNotes).catch(() => {});
@@ -665,7 +686,7 @@ export const StorageService = {
     withJournalLock(async () => {
       if (!page?.pageId) return null;
       const diary = await readDiary();
-      return writeDiary(notebookWithRestoredPage(diary, page, index));
+      return writeDiary(notebookWithRestoredPage(diary, page, index), 'restoreDiaryPage');
     }),
 
   // ─── Notlarım (Çoklu Defter) ───────────────────────────
@@ -703,7 +724,7 @@ export const StorageService = {
         pages: [createEmptyNotebookPage(DEFAULT_PAPER_TEMPLATE_ID)],
       };
       const notebooks = await readNotebooks();
-      await writeNotebooks([...notebooks, notebook]);
+      await writeNotebooks([...notebooks, notebook], 'createNotebook');
       return notebook;
     }),
 
@@ -714,7 +735,7 @@ export const StorageService = {
     withJournalLock(async () => {
       const result = await mutateNotebook(notebookId, (nb) => ({
         notebook: notebookWithDefaultPaperApplied(nb, { ...nb, ...pickNotebookMeta(fields) }),
-      }));
+      }), src('updateNotebookMeta', fields));
       return result ? result.notebook : null;
     }),
 
@@ -725,7 +746,7 @@ export const StorageService = {
     withJournalLock(async () => {
       const result = await mutateNotebook(notebookId, (nb) => ({
         notebook: { ...nb, isPinned: !nb.isPinned },
-      }));
+      }), 'toggleNotebookPin');
       return result ? result.notebook : null;
     }),
 
@@ -737,7 +758,7 @@ export const StorageService = {
       const notebooks = await readNotebooks();
       const deleted = notebooks.find((nb) => nb.id === notebookId);
       if (!deleted) return null;
-      await writeNotebooks(notebooks.filter((nb) => nb.id !== notebookId));
+      await writeNotebooks(notebooks.filter((nb) => nb.id !== notebookId), 'deleteNotebook');
       // Sesli not dosyaları yalnızca silme diske YAZILDIKTAN sonra silinir
       if (deleted?.pages) {
         deleted.pages.forEach((p) => {
@@ -757,13 +778,13 @@ export const StorageService = {
       if (!notebook?.id) return null;
       const notebooks = await readNotebooks();
       if (notebooks.some((nb) => nb.id === notebook.id)) return notebook;
-      await writeNotebooks([...notebooks, notebook]);
+      await writeNotebooks([...notebooks, notebook], 'restoreNotebook');
       return notebook;
     }),
 
   addNotebookPage: async (notebookId, pageData = {}) =>
     withJournalLock(async () => {
-      const result = await mutateNotebook(notebookId, (nb) => notebookWithAddedPage(nb, pageData));
+      const result = await mutateNotebook(notebookId, (nb) => notebookWithAddedPage(nb, pageData), 'addNotebookPage');
       return result ? { updatedNotebook: result.notebook, newPage: result.newPage } : null;
     }),
 
@@ -771,7 +792,7 @@ export const StorageService = {
     withJournalLock(async () => {
       const result = await mutateNotebook(notebookId, (nb) => ({
         notebook: notebookWithUpdatedPage(nb, pageId, pageUpdates),
-      }));
+      }), src('updateNotebookPage', pageUpdates));
       return result ? result.notebook : null;
     }),
 
@@ -780,7 +801,7 @@ export const StorageService = {
       const result = await mutateNotebook(notebookId, (nb) => ({
         notebook: notebookWithDeletedPage(nb, pageId),
         deletedPage: (nb.pages || []).find((p) => p.pageId === pageId),
-      }));
+      }), 'deleteNotebookPage');
       // Sesli not dosyaları yalnızca silme diske YAZILDIKTAN sonra silinir
       if (result?.deletedPage?.audioNotes?.length) {
         AudioService.deleteAudioFiles(result.deletedPage.audioNotes).catch(() => {});
@@ -793,7 +814,7 @@ export const StorageService = {
       if (!page?.pageId) return null;
       const result = await mutateNotebook(notebookId, (nb) => ({
         notebook: notebookWithRestoredPage(nb, page, index),
-      }));
+      }), 'restoreNotebookPage');
       return result ? result.notebook : null;
     }),
 

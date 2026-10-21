@@ -29,6 +29,9 @@ import {
   BUILD_KIND,
 } from '../../utils/diagnosticLog';
 import { useZoomableCanvas } from './ZoomableCanvas';
+import { setPenDown } from '../../utils/penActivity';
+// GECICI (teshis): perf:postStroke — kaldirilacak
+import { startPostStrokeProbe } from '../../utils/perfProbes';
 import { createStrokePathBuilder } from '../../utils/strokePathBuilder';
 
 const triggerHaptic = () => {
@@ -184,6 +187,22 @@ export default function DrawingCanvas({
   // beklemesidir. Iki calisma zamani da Date.now() kullanir.
   const dispatchControlRef = useRef(0);
   const strokeActiveRef = useRef(false);
+  // Kalem etkinligi (utils/penActivity): bu tuvale ozgu sabit sahip nesnesi.
+  // Kayit zamanlayicilari kalem basiliyken agir JS isini erteler.
+  const penOwnerRef = useRef({});
+  // GECICI (teshis): cizgi sonrasi 800 ms olcum penceresi (perf:postStroke)
+  const postStrokeProbeRef = useRef(null);
+  useEffect(
+    () => () => {
+      // Tuval kaldirilirken kalem durumu asili kalmasin
+      setPenDown(penOwnerRef.current, false);
+      if (postStrokeProbeRef.current) {
+        postStrokeProbeRef.current.close({ cut: 'unmount' });
+        postStrokeProbeRef.current = null;
+      }
+    },
+    []
+  );
 
   // GECICI (teshis/SORUN B): commit kapanis olcumu. Bagimlilik `currentPath`
   // oldugu icin yalnizca canli iz guncellendiginde calisir; commitStartRef
@@ -635,6 +654,12 @@ export default function DrawingCanvas({
   const handleTouchStart = useCallback(
     (absX, absY, locX, locY, uiSentAt) => {
       const state = stateRef.current;
+      setPenDown(penOwnerRef.current, true);
+      // GECICI (teshis): onceki cizginin sonrasi penceresi bu cizgiyle karismasin
+      if (postStrokeProbeRef.current) {
+        postStrokeProbeRef.current.close({ cut: 1 });
+        postStrokeProbeRef.current = null;
+      }
       // GECICI (teshis/SORUN B): KONTROL. Bkz. dispatchControlRef aciklamasi.
       dispatchControlRef.current = uiSentAt ? Date.now() - uiSentAt : -1;
       strokeFirstEventAtRef.current = uiSentAt || Date.now();
@@ -798,6 +823,15 @@ export default function DrawingCanvas({
     }
     stopFrameMonitor();
     strokeActiveRef.current = false;
+    setPenDown(penOwnerRef.current, false);
+    // GECICI (teshis): cizgi sonrasi 800 ms (render + uzun kare + yazma)
+    if (postStrokeProbeRef.current) postStrokeProbeRef.current.close({ cut: 1 });
+    postStrokeProbeRef.current = startPostStrokeProbe({
+      screen: diagScreen,
+      tpl: diagTemplate,
+      tool: state.tool,
+      pagesMounted: diagPagesMounted,
+    });
     if (state.tool === 'eraser') {
       if (eraseRafIdRef.current) {
         cancelAnimationFrame(eraseRafIdRef.current);
@@ -1042,6 +1076,7 @@ export default function DrawingCanvas({
     }
     stopFrameMonitor();
     strokeActiveRef.current = false;
+    setPenDown(penOwnerRef.current, false);
     if (state.tool === 'eraser') {
       if (eraseRafIdRef.current) {
         cancelAnimationFrame(eraseRafIdRef.current);

@@ -191,7 +191,8 @@ const ANDROID_DIR = 'file:///data/user/0/com.zeynepsoykan.AJANDA/files/audio_not
   assert.ok(
     // Goc yazmasi artik persistMigration uzerinden: yalnizca okuma BASARILI olduktan
     // sonra calisir ve yazilamazsa okumayi bozmaz (bkz. storageReadWriteErrors.test.js)
-    /await persistMigration\(KEYS\.PAGES, pages\);/.test(storageSource),
+    // Ucuncu arguman GECICI teshis etiketi (storage:write kaynak alani)
+    /await persistMigration\(KEYS\.PAGES, pages(, '[^']*')?\);/.test(storageSource),
     'getPages, goc sonrasi sonucu diske yazmali'
   );
   console.log('OK Test 6: goc tum okuma noktalarina bagli ve sonucu kaliciliyor');
